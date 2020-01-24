@@ -62,7 +62,7 @@ policy_metadata = {
 ```
 
 - `name` - Defines the name of the specific policy. This should be unique per policy.
-- `severity` - Defines the severity level of a specific policy. This correlates with the [DENY_LEVEL](#deny_level) to determine if a policy should result in a deny or not.
+- `severity` - Defines the severity level of a specific policy. This correlates with the [DENY_LEVEL](#deny-level) to determine if a policy should result in a deny or not.
 - `errcode` - A unique code that can be used, typically in reference to an FAQ, to look up additional information about the policy, what produces a failure, and how to resolve failures.
 - `targets` - This controls which Kubernetes resources the policy targets. Each target should be the singular of the Kubernetes resource as found in the `Kind` field. Special care should be taken to make sure all target resources maintain similar JSON data paths within the policy logic, or that differences are handled appropriately.
 
