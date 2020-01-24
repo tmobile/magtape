@@ -7,3 +7,4 @@
 **/.DS_Store
 **/.coverage
 **/__pycache__
+deploy/overlays/test
