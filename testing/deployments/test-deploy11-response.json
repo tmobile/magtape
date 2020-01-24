@@ -1,0 +1,9 @@
+{
+    "response": {
+      "allowed": false,
+      "status": {
+        "message": "[FAIL] LOW - Liveness Probe missing for container \"test-deploy11\" (MT1001), [FAIL] LOW - Liveness Probe missing for container \"test-deploy11-sidecar\" (MT1001), [FAIL] LOW - Readiness Probe missing for container \"test-deploy11\" (MT1002), [FAIL] LOW - Readiness Probe missing for container \"test-deploy11-sidecar\" (MT1002), [FAIL] LOW - Resource limits missing (CPU/MEM) for container \"test-deploy11\" (MT1003), [FAIL] LOW - Resource limits missing (CPU/MEM) for container \"test-deploy11-sidecar\" (MT1003), [FAIL] LOW - Resource requests missing (CPU/MEM) for container \"test-deploy11\" (MT1004), [FAIL] LOW - Resource requests missing (CPU/MEM) for container \"test-deploy11-sidecar\" (MT1004)"
+      },
+      "uid": "4c63e05e-8550-46d3-a9d7-b616a71daacf"
+    }
+  }

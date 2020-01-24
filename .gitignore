@@ -1,0 +1,9 @@
+**/ssl
+**/*.crt
+**/*.key
+**/*.pem
+**/*-patched.yaml
+**/.vscode
+**/.DS_Store
+**/.coverage
+**/__pycache__

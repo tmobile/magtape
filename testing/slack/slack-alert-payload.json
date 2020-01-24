@@ -1,0 +1,44 @@
+{
+    "attachments": [
+      {
+        "color": "danger",
+        "fallback": "MagTape detected failures for Deployment \"test-deploy11\" in namespace \"test1\" on cluster \"cluster1\"",
+        "fields": [
+          {
+            "short": "true",
+            "title": "Cluster",
+            "value": "cluster1"
+          },
+          {
+            "short": "true",
+            "title": "Namespace",
+            "value": "test1"
+          },
+          {
+            "short": "true",
+            "title": "MagTape Deny Level",
+            "value": "HIGH"
+          },
+          {
+            "short": "false",
+            "title": "Workload",
+            "value": "deployment/test-deploy11"
+          },
+          {
+            "short": "false",
+            "title": "User",
+            "value": "user1"
+          },
+          {
+            "short": "true",
+            "title": "Customer Alert",
+            "value": "False"
+          }
+        ],
+        "pretext": "MagTape | Policy Denial Detected",
+        "text": "[FAIL] LOW - Liveness Probe missing for container \"test-deploy11\" (MT1001)\n [FAIL] LOW - Liveness Probe missing for container \"test-deploy11-sidecar\" (MT1001)\n [FAIL] LOW - Readiness Probe missing for container \"test-deploy11\" (MT1002)\n [FAIL] LOW - Readiness Probe missing for container \"test-deploy11-sidecar\" (MT1002)\n [FAIL] LOW - Resource limits missing (CPU/MEM) for container \"test-deploy11\" (MT1003)\n [FAIL] LOW - Resource limits missing (CPU/MEM) for container \"test-deploy11-sidecar\" (MT1003)\n [FAIL] LOW - Resource requests missing (CPU/MEM) for container \"test-deploy11\" (MT1004)\n [FAIL] LOW - Resource requests missing (CPU/MEM) for container \"test-deploy11-sidecar\" (MT1004)"
+      }
+    ],
+    "icon_emoji": ":magtape:",
+    "username": "mtbot"
+  }

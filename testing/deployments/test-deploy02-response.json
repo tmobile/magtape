@@ -1,0 +1,9 @@
+{
+  "response": {
+    "allowed": false,
+    "status": {
+      "message": "[FAIL] HIGH - Found privileged Security Context for container \"test-deploy02\" (MT2001), [FAIL] LOW - Liveness Probe missing for container \"test-deploy02\" (MT1001), [FAIL] LOW - Readiness Probe missing for container \"test-deploy02\" (MT1002), [FAIL] LOW - Resource limits missing (CPU/MEM) for container \"test-deploy02\" (MT1003), [FAIL] LOW - Resource requests missing (CPU/MEM) for container \"test-deploy02\" (MT1004)"
+    },
+    "uid": "ec7255ef-1925-473c-902c-8a0fb9bc6b96"
+  }
+}

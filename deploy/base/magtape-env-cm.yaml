@@ -1,0 +1,19 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: magtape-env-cm
+data:
+  FLASK_ENV: "production"
+  PYTHONUNBUFFERED: "TRUE"
+  MAGTAPE_CLUSTER_NAME: "test-cluster"
+  MAGTAPE_LOG_LEVEL: "INFO"
+  MAGTAPE_DENY_LEVEL: "LOW"
+  MAGTAPE_K8S_EVENTS_ENABLED: "TRUE"
+  MAGTAPE_SLACK_ENABLED: "FALSE"
+  MAGTAPE_SLACK_PASSIVE: "FALSE"
+  MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT: "https://hooks.slack.com/services/XXXXXXXX/XXXXXXXX/XXXXXXXXXXXXXXXXXX"
+  MAGTAPE_SLACK_ANNOTATION: "magtape/slack-webhook-url"
+  MAGTAPE_SLACK_USER: "mtbot"
+  MAGTAPE_SLACK_ICON: ":magtape:"
+  OPA_BASE_URL: "http://127.0.0.1:8181"
+  OPA_K8S_PATH: "/v0/data/magtape"

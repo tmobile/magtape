@@ -1,0 +1,9 @@
+resources:
+- magtape-deploy.yaml
+- magtape-env-cm.yaml
+- magtape-ns-roles.yaml
+- magtape-opa-cm.yaml
+- magtape-pdb.yaml
+- magtape-sa.yaml
+- magtape-svc.yaml
+- magtape-vwc.yaml

@@ -1,0 +1,22 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  annotations:
+  labels:
+    component: k8s
+    k8s-app: magtape
+  name: magtape
+  namespace: monitoring
+spec:
+  endpoints:
+  - interval: 30s
+    port: https
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+  namespaceSelector:
+    matchNames:
+    - magtape-system
+  selector:
+    matchLabels:
+      app: magtape

@@ -1,0 +1,7 @@
+resources:
+- ../../base
+
+patchesStrategicMerge:
+- magtape-labels-patch.yaml
+
+namespace: "magtape-system"

@@ -1,0 +1,108 @@
+{
+  "apiVersion": "admission.k8s.io/v1beta1",
+  "kind": "AdmissionReview",
+  "request": {
+    "dryRun": false,
+    "kind": {
+      "group": "apps",
+      "kind": "Deployment",
+      "version": "v1"
+    },
+    "namespace": "test1",
+    "object": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "annotations": {
+          "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app\":\"test-deploy02\"},\"name\":\"test-deploy02\",\"namespace\":\"test1\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app\":\"test-deploy02\"}},\"template\":{\"metadata\":{\"labels\":{\"app\":\"test-deploy02\"}},\"spec\":{\"containers\":[{\"args\":[\"/server\"],\"image\":\"k8s.gcr.io/liveness\",\"name\":\"test-deploy02\",\"securityContext\":{\"privileged\":true}}]}}}}\n"
+        },
+        "creationTimestamp": "2019-08-05T05:11:41Z",
+        "generation": 1,
+        "labels": {
+          "app": "test-deploy02"
+        },
+        "name": "test-deploy02",
+        "namespace": "test1",
+        "uid": "622f1faa-ea2d-4f33-9e13-6c1a4a84e9e3"
+      },
+      "spec": {
+        "progressDeadlineSeconds": 600,
+        "replicas": 1,
+        "revisionHistoryLimit": 10,
+        "selector": {
+          "matchLabels": {
+            "app": "test-deploy02"
+          }
+        },
+        "strategy": {
+          "rollingUpdate": {
+            "maxSurge": "25%",
+            "maxUnavailable": "25%"
+          },
+          "type": "RollingUpdate"
+        },
+        "template": {
+          "metadata": {
+            "creationTimestamp": null,
+            "labels": {
+              "app": "test-deploy02"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "args": [
+                  "/server"
+                ],
+                "image": "k8s.gcr.io/liveness",
+                "imagePullPolicy": "Always",
+                "name": "test-deploy02",
+                "resources": {},
+                "securityContext": {
+                  "privileged": true
+                },
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File"
+              }
+            ],
+            "dnsPolicy": "ClusterFirst",
+            "restartPolicy": "Always",
+            "schedulerName": "default-scheduler",
+            "securityContext": {},
+            "terminationGracePeriodSeconds": 30
+          }
+        }
+      },
+      "status": {}
+    },
+    "oldObject": null,
+    "operation": "CREATE",
+    "options": {
+      "apiVersion": "meta.k8s.io/v1",
+      "kind": "CreateOptions"
+    },
+    "requestKind": {
+      "group": "apps",
+      "kind": "Deployment",
+      "version": "v1"
+    },
+    "requestResource": {
+      "group": "apps",
+      "resource": "deployments",
+      "version": "v1"
+    },
+    "resource": {
+      "group": "apps",
+      "resource": "deployments",
+      "version": "v1"
+    },
+    "uid": "86a0903c-3887-441e-a180-e9436bfa5d14",
+    "userInfo": {
+      "groups": [
+        "system:masters",
+        "system:authenticated"
+      ],
+      "username": "kubernetes-admin"
+    }
+  }
+}

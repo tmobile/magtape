@@ -1,0 +1,30 @@
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: magtape
+webhooks:
+  - name: magtape.webhook.k8s.t-mobile.com
+    clientConfig:
+      service:
+        name: magtape-svc
+        namespace: magtape-system
+        path: "/"
+      caBundle: ==CA_BUNDLE==
+    failurePolicy: Fail
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - "*"
+        apiVersions:
+          - "*"
+        resources:
+          - "deployments"
+          - "statefulsets"
+          - "daemonsets"
+          - "pods"
+          - "poddisruptionbudgets"
+    namespaceSelector:
+      matchLabels:
+        k8s.t-mobile.com/magtape: "enabled"

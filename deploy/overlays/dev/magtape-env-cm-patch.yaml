@@ -1,0 +1,11 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: magtape-env-cm
+data:
+  HTTP_PROXY: "http://proxy.internal.example.com:9090"
+  HTTPS_PROXY: "http://proxy.internal.example.com:9090"
+  NO_PROXY: "127.0.0.1,localhost,.example.com,.cluster.local"
+  http_proxy: "http://proxy.internal.example.com:9090"
+  https_proxy: "http://proxy.internal.example.com:9090"
+  no_proxy: "127.0.0.1,localhost,.example.com,.cluster.local"

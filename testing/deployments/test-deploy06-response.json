@@ -1,0 +1,9 @@
+{
+    "response": {
+      "allowed": false,
+      "status": {
+        "message": "[FAIL] LOW - Resource requests missing (MEM) for container \"test-deploy06\" (MT1004)"
+      },
+      "uid": "d3e21059-ab6a-41c5-993e-147b303966a5"
+    }
+  }

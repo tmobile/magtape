@@ -1,0 +1,4 @@
+resources:
+- ../dev
+patchesStrategicMerge:
+- magtape-env-cm-patch.yaml

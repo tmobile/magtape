@@ -1,0 +1,4 @@
+resources:
+- ../airgap
+patchesStrategicMerge:
+- magtape-env-cm-patch.yaml

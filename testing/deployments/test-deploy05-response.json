@@ -1,0 +1,9 @@
+{
+    "response": {
+      "allowed": false,
+      "status": {
+        "message": "[FAIL] LOW - Resource requests missing (CPU) for container \"test-deploy05\" (MT1004)"
+      },
+      "uid": "38abb20b-8368-48b7-a4d3-d75c2ee3a1b5"
+    }
+  }
