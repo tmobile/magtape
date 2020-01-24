@@ -124,7 +124,7 @@ def main(request_spec):
     allowed = True
     skip_alert = False
     response_message = ""
-    alert_should_send = ""
+    alert_should_send = False
     alert_targets = []
     customer_alert_sent = False
 
@@ -237,6 +237,19 @@ def main(request_spec):
                 "message": response_message
             }
         }
+    
+    # Create K8s Event for target namespace if enabled
+    if k8s_events_enabled == "TRUE":
+
+        app.logger.info("K8s Event are enabled")
+
+        if "FAIL" in response_message or alert_should_send:
+
+            send_k8s_event(magtape_pod_name, namespace, workload_type, workload, response_message)
+
+    else:
+
+        app.logger.info("K8s Events are NOT enabled")
 
     # Send Slack message when failure is detected if enabled    
     if slack_enabled == "TRUE":
@@ -264,11 +277,6 @@ def main(request_spec):
             for slack_target in alert_targets:
 
                 send_slack_alert(response_message, slack_target, slack_user, slack_icon, cluster, namespace, workload, workload_type, request_user, customer_alert_sent, deny_level, allowed)
-
-            if k8s_events_enabled == "TRUE":
-
-                # Create K8s Event for request namespace
-                send_k8s_event(magtape_pod_name, namespace, workload_type, workload, response_message)
 
             # Increment Prometheus Counters
             if allowed:
