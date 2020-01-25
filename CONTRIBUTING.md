@@ -54,4 +54,4 @@ There is a pre-built template for bug ticketing that can be used for reporting i
 
 ## MagTape Policies
 
-Since MagTape makes use of the Rego policy language, there are unlimited possibilities for policies. For now We want to keep a carefully curated list of policies included within the project at this time. We will usually open Issues and label them appropriately to signify policies that we're looking for help on. Please always feel free to share a link/gist to any policies you've created for MagTape and we'll try our best to keep a list and give you a shout out!
+Since MagTape makes use of the Rego policy language, there are unlimited possibilities for policies. For now we want to keep a carefully curated list of policies included within the project. We will usually open Issues and label them appropriately to signify policies that we're looking for help on. Please always feel free to share a link/gist to any policies you've created for MagTape and we'll try our best to keep a list and give you a shout out!
