@@ -49,7 +49,7 @@ The below policies are included by default. The default policies can be removed 
 
 The policy metadata is defined within each policy similar to this:
 
-```json
+```
 policy_metadata = {
 
     # Set MagTape Policy Info
