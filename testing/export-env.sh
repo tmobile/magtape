@@ -1,4 +1,4 @@
-# Copyright 2020 T-Mobile.
+# Copyright 2020 T-Mobile, USA, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# Trademark Disclaimer: Neither the name of T-Mobile, USA, Inc. nor the names of
+# its contributors may be used to endorse or promote products derived from this
+# software without specific prior written permission.
 
 export MAGTAPE_POD_NAME="magtape-abc1234"
 export MAGTAPE_CLUSTER_NAME="test-cluster"
