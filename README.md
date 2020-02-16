@@ -1,3 +1,6 @@
+[![Latest release](https://img.shields.io/github/release/tmobile/magtape.svg)](https://github.com/tmobile/magtape/releases/latest)
+[![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://github.com/tmobile/magtape/blob/master/LICENSE)
+
 # MagTape
 
 MagTape is a Policy-as-Code tool for Kubernetes utilizing the Validating [Admission Webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#admission-webhooks) model. MagTape leverages [OPA](https://www.openpolicyagent.org) under the covers for it's generic policy engine and language, but also adds some additional features and flexibility on top of what OPA offers out of the box.

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2019 T-Mobile.
+# Copyright 2020 T-Mobile.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -150,9 +150,10 @@ def file_passes(filename, refs, regexs):
 def file_extension(filename):
     return os.path.splitext(filename)[1].split(".")[-1].lower()
 
-skipped_dirs = ['Godeps', 'third_party', '_gopath', '_output', '.git', 'cluster/env.sh',
-                "vendor", "test/e2e/generated/bindata.go", "hack/boilerplate/test",
-                "staging/src/k8s.io/kubectl/pkg/generated/bindata.go"]
+skipped_dirs = ['.git', '.vscode',
+                'cluster/env.sh',
+                "hack/boilerplate/test",
+               ]
 
 # list all the files contain 'DO NOT EDIT', but are not generated
 skipped_ungenerated_files = ['hack/lib/swagger.sh', 'hack/boilerplate/boilerplate.py']
