@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright 2019 T-Mobile.
+# Copyright 2020 T-Mobile, USA, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Trademark Disclaimer: Neither the name of T-Mobile, USA, Inc. nor the names of
+# its contributors may be used to endorse or promote products derived from this
+# software without specific prior written permission.
+#
 # This is based on existing work from the Kubernetes project:
 # https://github.com/kubernetes/kubernetes/blob/master/hack/verify-boilerplate.sh
 
@@ -21,9 +25,9 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-KUBE_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
+MAGTAPE_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 
-boilerDir="${KUBE_ROOT}/hack/boilerplate"
+boilerDir="${MAGTAPE_ROOT}/hack/boilerplate"
 boiler="${boilerDir}/boilerplate.py"
 
 files_need_boilerplate=()

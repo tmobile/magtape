@@ -2,6 +2,7 @@
 **/*.crt
 **/*.key
 **/*.pem
+**/*.tmp
 **/*-patched.yaml
 **/.vscode
 **/.DS_Store

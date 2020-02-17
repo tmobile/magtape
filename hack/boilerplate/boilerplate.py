@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2019 T-Mobile.
+# Copyright 2020 T-Mobile, USA, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# Trademark Disclaimer: Neither the name of T-Mobile, USA, Inc. nor the names of
+# its contributors may be used to endorse or promote products derived from this
+# software without specific prior written permission.
 #
 # This is based on existing work from the Kubernetes project:
 # https://github.com/kubernetes/kubernetes/blob/master/hack/boilerplate/boilerplate.py
@@ -150,9 +154,10 @@ def file_passes(filename, refs, regexs):
 def file_extension(filename):
     return os.path.splitext(filename)[1].split(".")[-1].lower()
 
-skipped_dirs = ['Godeps', 'third_party', '_gopath', '_output', '.git', 'cluster/env.sh',
-                "vendor", "test/e2e/generated/bindata.go", "hack/boilerplate/test",
-                "staging/src/k8s.io/kubectl/pkg/generated/bindata.go"]
+skipped_dirs = ['.git', '.vscode',
+                'cluster/env.sh',
+                "hack/boilerplate/test",
+               ]
 
 # list all the files contain 'DO NOT EDIT', but are not generated
 skipped_ungenerated_files = ['hack/lib/swagger.sh', 'hack/boilerplate/boilerplate.py']
