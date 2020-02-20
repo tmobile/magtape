@@ -32,36 +32,23 @@ import sys
 import unittest
 from unittest.mock import patch
 
-os.environ["MAGTAPE_POD_NAME"] = "magtape-abc1234"
-os.environ["MAGTAPE_CLUSTER_NAME"] = "cluster1"
-os.environ["MAGTAPE_DASHBOARD_BASE_DOMAIN"] = "example.com"
-os.environ["MAGTAPE_SLACK_ENABLED"] = "FALSE"
-os.environ["MAGTAPE_SLACK_PASSIVE"] = "FALSE"
-os.environ["MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT"] = "https://hooks.slack.com/services/ABC123/XYZ789"
-os.environ["MAGTAPE_SLACK_ANNOTATION"] = "magtape/slack-webhook-url"
-os.environ["MAGTAPE_SLACK_CHANNEL"] = "test"
-os.environ["MAGTAPE_SLACK_USER"] = "test"
-os.environ["MAGTAPE_SLACK_ICON"] = ":magtape:"
-os.environ["MAGTAPE_DENY_LEVEL"] = "LOW"
-os.environ["MAGTAPE_LOG_LEVEL"] = "INFO"
-os.environ["MAGTAPE_K8S_EVENTS_ENABLED"] = "TRUE"
-os.environ["OPA_BASE_URL"] = "http://127.0.0.1:8181"
-os.environ["OPA_K8S_PATH"] = "/v0/data/magtape"
-
-sys.path.append('./../app/')
-from magtape import app, build_response_message
+sys.path.append('./app/')
+import magtape
 
 class TestRoutes(unittest.TestCase):
 
     def setUp(self):
 
-        self.app = app.test_client()
+        self.app = magtape.app.test_client()
         self.app.testing = True
+        self.k8s_events_enabled = "FALSE"
 
     def tearDown(self):
         pass
 
     def test_healthz(self):
+
+        """Method to test webhook /healthz route"""
 
         result = self.app.get('/healthz')
 
@@ -77,7 +64,7 @@ class TestRoutes(unittest.TestCase):
 
         """Method to test webhook with all fail response from OPA sidecar"""
 
-        with open('../testing/deployments/test-deploy01.json') as json_file:
+        with open('./testing/deployments/test-deploy01.json') as json_file:
 
             request_object_json = json.load(json_file)
 
@@ -85,7 +72,8 @@ class TestRoutes(unittest.TestCase):
 
             self.assertEqual(result.status_code, 200)
             self.assertEqual(json.loads(result.data)["response"]["allowed"], True)
-            
+
+    @patch('magtape.k8s_events_enabled', "FALSE")
     @patch(
         'magtape.build_response_message', 
         return_value = '[FAIL] HIGH - Found privileged Security Context for container "test-deploy02" (MT2001), [FAIL] LOW - Liveness Probe missing for container "test-deploy02" (MT1001), [FAIL] LOW - Readiness Probe missing for container "test-deploy02" (MT1002), [FAIL] LOW - Resource limits missing (CPU/MEM) for container "test-deploy02" (MT1003), [FAIL] LOW - Resource requests missing (CPU/MEM) for container "test-deploy02" (MT1004)'
@@ -94,7 +82,7 @@ class TestRoutes(unittest.TestCase):
 
         """Method to test webhook with all fail response from OPA sidecar"""
 
-        with open('../testing/deployments/test-deploy02.json') as json_file:
+        with open('./testing/deployments/test-deploy02.json') as json_file:
 
             request_object_json = json.load(json_file)
 
