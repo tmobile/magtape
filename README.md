@@ -206,10 +206,6 @@ NOTE: An SSL Cert and Key need to be generated for the Webhook. A helper script 
 
 The [magtape-install.sh](./deploy/scripts/magtape-install.sh) script can be used to quickly get MagTape installed or you can use kustomize directly to incorporate the install into your existing CI/CD workflows.
 
-#### Helm
-
-A Helm chart to handle MagTape installation will be coming soon!
-
 ## Testing
 
 - Create namespace for testing and label it appropriately

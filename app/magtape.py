@@ -51,6 +51,7 @@ app.logger.setLevel(magtape_log_level)
 
 # Set Global Cluster specific variables
 cluster = os.environ['MAGTAPE_CLUSTER_NAME']
+magtape_namespace_name = os.environ['MAGTAPE_NAMESPACE_NAME']
 magtape_pod_name = os.environ['MAGTAPE_POD_NAME']
 
 # Set Global Slack related Info
@@ -317,6 +318,73 @@ def main(request_spec):
     app.logger.debug(f"Admission Review: \n{json.dumps(admissionReview, indent=2, sort_keys=True)}")
 
     return admissionReview
+
+################################################################################
+################################################################################
+################################################################################
+
+def check_cert_expiry(namespace, cert_data):
+
+    """Function to check tls certificate expiration"""
+
+    
+
+################################################################################
+################################################################################
+################################################################################
+
+def cert_init(namespace):
+
+    """Function to generate or validate tls for admission webhook"""
+
+
+    """
+    - Checks to see if secret exists based on ENV Var
+        - Check for specific secret name if none specified, otherwise check for secret name in ENV Var override
+            - If existing secret is found
+                - Check cert expiry
+                    - if cert is expired, rotate
+                - if cert is expired, renew
+                    - update secret
+                    - update VWC resource with cert bundle injected
+                - Create VWC
+            - Check if cert is valid (SAN matches service name.....probably have strong expectance of consistent service name and worry about this later)
+            If secret is not found
+                - generate cert/key via kube-csr mechanism
+                - Approve CSR
+                - Create secret in magtape-system namespace
+                - Create VWC resource with cert bundle injected
+    """
+
+    if "MAGTAPE_TLS_SECRET" in os.environ and os.environ["MAGTAPE_TLS_SECRET"]:
+
+        app.logger.debug("Magtape TLS Secret specified")
+
+        magtape_tls_secret = os.environ["MAGTAPE_TLS_SECRET"]
+
+        # Load k8s client config
+        config.load_incluster_config()
+
+        # Create an instance of the API class
+        api_instance = client.CoreV1Api()
+
+        try:
+        
+            secret_list = api_instance.list_namespaced_secret(namespace, field_selector = 'metadata.name=' + magtape_tls_secret, timeout_seconds = 5).items
+
+            for secret in secret_list:
+
+                app.logger.debug(f"Found secret \"{secret}\" in namespace \"{namespace}\"")
+
+                secret_data = secret.data
+
+        except ApiException as exception:
+
+            print(f"Unable to list secrets in the \"{namespace}\" namespace: {exception}\n")
+
+        
+
+
 
 ################################################################################
 ################################################################################
@@ -612,5 +680,7 @@ def send_slack_alert(response_message,slack_webhook_url, slack_user, slack_icon,
 ################################################################################
 
 if __name__ == "__main__":
+
+    cert_init(magtape_namespace_name)
     
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True, ssl_context=('./ssl/cert.pem', './ssl/key.pem'))

@@ -4,9 +4,16 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: configmap-modifier
 rules:
-- apiGroups: [""]
-  resources: ["configmaps"]
-  verbs: ["update", "patch"]
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  verbs:
+  - get
+  - list
+  - update
+  - patch
 
 ---
 kind: RoleBinding
