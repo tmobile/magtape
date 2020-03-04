@@ -70,7 +70,7 @@ opa_k8s_path = os.environ['OPA_K8S_PATH']
 opa_url = opa_base_url + opa_k8s_path
 
 # Set Deny Level
-deny_level = os.environ['MAGTAPE_DENY_LEVEL']
+magtape_deny_level = os.environ['MAGTAPE_DENY_LEVEL']
 
 # Set Custom Prometheus Counters
 # Request Metrics represent requests to the MagTape API
@@ -140,7 +140,7 @@ def main(request_spec):
     request_user = request_spec['request']['userInfo']['username']
 
     app.logger.info("##################################################################")
-    app.logger.info(f"Deny Level: {deny_level}")
+    app.logger.info(f"Deny Level: {magtape_deny_level}")
     app.logger.info(f"Processing {workload_type}: {namespace}/{workload}")
     app.logger.info(f"Request User: {request_user}")
     app.logger.debug(f"Request Object: \n{json.dumps(request_spec, indent=2, sort_keys=True)}")
@@ -173,13 +173,13 @@ def main(request_spec):
     app.logger.debug(f"Skip Alert: {skip_alert}")
 
     # Set allowed value based on DENY_LEVEL and response_message content
-    if deny_level == "OFF":
+    if magtape_deny_level == "OFF":
 
         app.logger.debug("Deny level detected: OFF")
 
         allowed = True
 
-    elif deny_level == "LOW":
+    elif magtape_deny_level == "LOW":
 
         DENY_LIST = ["[FAIL] HIGH"]
 
@@ -192,7 +192,7 @@ def main(request_spec):
             allowed = False
             alert_should_send = True
 
-    elif deny_level == "MED":
+    elif magtape_deny_level == "MED":
 
         DENY_LIST = ["[FAIL] HIGH", "[FAIL] MED"]
 
@@ -205,7 +205,7 @@ def main(request_spec):
             allowed = False
             alert_should_send = True
 
-    elif deny_level == "HIGH":
+    elif magtape_deny_level == "HIGH":
 
         DENY_LIST = ["[FAIL] HIGH", "[FAIL] MED", "[FAIL] LOW"]
 
@@ -280,7 +280,7 @@ def main(request_spec):
             # Send alerts to all target Slack Webhooks
             for slack_target in alert_targets:
 
-                send_slack_alert(response_message, slack_target, slack_user, slack_icon, cluster, namespace, workload, workload_type, request_user, customer_alert_sent, deny_level, allowed)
+                send_slack_alert(response_message, slack_target, slack_user, slack_icon, cluster, namespace, workload, workload_type, request_user, customer_alert_sent, magtape_deny_level, allowed)
 
             # Increment Prometheus Counters
             if allowed:
@@ -529,7 +529,7 @@ def slack_url_sub(slack_webhook_url):
 ################################################################################
 ################################################################################
 
-def send_slack_alert(response_message,slack_webhook_url, slack_user, slack_icon, cluster, namespace, workload, workload_type, request_user, customer_alert_sent, deny_level, allowed):
+def send_slack_alert(response_message,slack_webhook_url, slack_user, slack_icon, cluster, namespace, workload, workload_type, request_user, customer_alert_sent, magtape_deny_level, allowed):
 
     """Function to format and send Slack alert for policy failures"""
 
@@ -566,7 +566,7 @@ def send_slack_alert(response_message,slack_webhook_url, slack_user, slack_icon,
                 },
                 {
                     "title": "MagTape Deny Level",
-                    "value": f"{deny_level}",
+                    "value": f"{magtape_deny_level}",
                     "short": "true"
                 },
 				{

@@ -18,9 +18,8 @@
 # its contributors may be used to endorse or promote products derived from this
 # software without specific prior written permission.
 
-cd ./app
 # Run tests and get coverage
-coverage run -m unittest discover ./tests/
+coverage run -m unittest discover -v -s ./app/tests/
 
 # Generate and output coverage report
-coverage report --include ./magtape.py
+coverage report --include ./app/magtape.py

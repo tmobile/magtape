@@ -26,10 +26,9 @@
 
 RUN_TYPE="${1}"
 APP_NAME="magtape.py"
-APP_DIR="../../app"
-DEPLOY_DIR="../../deploy"
-KUSTOMIZE_OVERLAY_DIR="${DEPLOY_DIR}/overlays/std"
-POLICY_DIR="../../policies"
+APP_DIR="./app"
+DEPLOY_DIR="./deploy"
+POLICY_DIR="./policies"
 CLUSTER_NAME="cluster1"
 WEBHOOK_NAMESPACE="magtape-system"
 TEST_NAMESPACE="test1"
@@ -66,9 +65,9 @@ build_manifests() {
   # Takes one argument that should be either "apply" or "delete"
   local action="${1}"
 
-  kustomize build "${KUSTOMIZE_OVERLAY_DIR}" | sed \
-    "s/==CA_BUNDLE==/${CA_BUNDLE}/g" \
-    | kubectl "${action}" -f -
+  kubectl -n "${WEBHOOK_NAMESPACE}" apply -f "${DEPLOY_DIR}" --dry-run  -o yaml | \
+    sed -e "s/==CA_BUNDLE==/${CA_BUNDLE}/g" \
+    | kubectl -n "${WEBHOOK_NAMESPACE}" "${action}" -f -
 
 }
 
@@ -77,22 +76,14 @@ build_manifests() {
 # **********************************************
 magtape_install() {
 
-  # Create Namespace for OPA
-  kubectl create ns ${WEBHOOK_NAMESPACE}
-  kubectl label ns ${WEBHOOK_NAMESPACE} openpolicyagent.org/policy=rego --overwrite
-
-  # Create Namespace for testing
-  kubectl create ns ${TEST_NAMESPACE}
-  kubectl label ns ${TEST_NAMESPACE} k8s.t-mobile.com/magtape=enabled --overwrite
-
   # Setup ClusterRoles/ClusterRoleBindings
-  kubectl auth reconcile -f "${DEPLOY_DIR}/base/magtape-cluster-roles.yaml"
+  kubectl auth reconcile -f "${DEPLOY_DIR}/magtape-cluster-rbac.yaml"
 
   # Setup SSL stuff
-  ${DEPLOY_DIR}/scripts/ssl-cert-gen.sh \
-    --service magtape-svc \
-    --secret magtape-certs \
-    --namespace ${WEBHOOK_NAMESPACE}
+  #${DEPLOY_DIR}/scripts/ssl-cert-gen.sh \
+  #  --service magtape-svc \
+  #  --secret magtape-certs \
+  #  --namespace ${WEBHOOK_NAMESPACE}
     
   CA_BUNDLE=$(kubectl get cm -n kube-system extension-apiserver-authentication -o=jsonpath='{.data.client-ca-file}' | base64 | tr -d '\n')
 
@@ -130,10 +121,7 @@ magtape_delete() {
   # Delete MagTape
   build_manifests "delete"
 
-  kubectl delete -f "${DEPLOY_DIR}/base/magtape-cluster-roles.yaml"
-
-  kubectl delete ns ${WEBHOOK_NAMESPACE} --grace-period=0
-  kubectl delete ns ${TEST_NAMESPACE} --grace-period=0
+  #kubectl delete -f "${DEPLOY_DIR}/magtape-cluster-rbac.yaml"
 
 }
 

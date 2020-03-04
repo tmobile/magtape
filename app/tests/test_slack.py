@@ -33,23 +33,7 @@ import sys
 import unittest
 from unittest.mock import patch, Mock
 
-os.environ["MAGTAPE_POD_NAME"] = "magtape-abc1234"
-os.environ["MAGTAPE_CLUSTER_NAME"] = "cluster1"
-os.environ["MAGTAPE_DASHBOARD_BASE_DOMAIN"] = "example.com"
-os.environ["MAGTAPE_SLACK_ENABLED"] = "FALSE"
-os.environ["MAGTAPE_SLACK_PASSIVE"] = "FALSE"
-os.environ["MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT"] = "https://hooks.slack.com/services/ABC123/XYZ789"
-os.environ["MAGTAPE_SLACK_ANNOTATION"] = "magtape/slack-webhook-url"
-os.environ["MAGTAPE_SLACK_CHANNEL"] = "test"
-os.environ["MAGTAPE_SLACK_USER"] = "test"
-os.environ["MAGTAPE_SLACK_ICON"] = ":magtape:"
-os.environ["MAGTAPE_DENY_LEVEL"] = "LOW"
-os.environ["MAGTAPE_LOG_LEVEL"] = "INFO"
-os.environ["MAGTAPE_K8S_EVENTS_ENABLED"] = "TRUE"
-os.environ["OPA_BASE_URL"] = "http://127.0.0.1:8181"
-os.environ["OPA_K8S_PATH"] = "/v0/data/magtape"
-
-sys.path.append('./../app/')
+sys.path.append('./app/')
 from magtape import slack_url_sub
 
 class TestSlack(unittest.TestCase):
@@ -65,12 +49,15 @@ class TestSlack(unittest.TestCase):
 
     def test_slack_url_nosub(self):
 
+        """Method to test Slack call with no URL substitution"""
+
         value = slack_url_sub(self.slack_def_url)
 
         self.assertEqual(value, self.slack_def_url)
 
-    
     def test_slack_url_sub(self):
+
+        """Method to test Slack call with URL substitution"""
 
         os.environ['SLACK_WEBHOOK_URL_BASE'] = self.slack_url_base
 
