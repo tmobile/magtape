@@ -18,6 +18,8 @@
 # its contributors may be used to endorse or promote products derived from this
 # software without specific prior written permission.
 
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 from flask import Flask, request, jsonify
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
@@ -327,7 +329,41 @@ def check_cert_expiry(namespace, cert_data):
 
     """Function to check tls certificate expiration"""
 
-    
+    current_datetime = datetime.datetime.now()
+    tls_cert_decoded = base64.b64decode(cert_data["cert.pem"])
+    tls_cert = x509.load_pem_x509_certificate(tls_cert_decoded, default_backend())
+    expire_days = tls_cert.not_valid_after - current_datetime
+
+    app.logger.info(f"Days until Cert Expiration: {expire_days.days}")
+
+
+    # Determine and report on cert expiry based on number of days from current date
+    if expire_days.days <= 30:
+
+        app.logger.info(f"!WARNING! - Webhook Certificate Expiring Soon. {expire_days.days} days until expired")
+
+        return False
+
+    elif expire_days.days <= 7:
+
+        app.logger.info(f"!!CRITICAL!! - Webhook Certificate Expiring Soon. {expire_days.days} days until expired")
+
+        return False
+
+    elif expire_days.days < 0:
+
+        app.logger.info(f"!!!ERROR!!! - Webhook Certificate Expired")
+
+        return True
+
+################################################################################
+################################################################################
+################################################################################
+
+def gen_cert(namespace, secret_name):
+
+    """Function to generate tls certificate for webhook"""
+
 
 ################################################################################
 ################################################################################
@@ -376,15 +412,20 @@ def cert_init(namespace):
 
                 app.logger.debug(f"Found secret \"{secret}\" in namespace \"{namespace}\"")
 
-                secret_data = secret.data
+                cert_data = secret.data
+
+                # Check certificate expiry
+                if not check_cert_expiry(namespace, cert_data):
+
+                    app.logger.info("Cool")
+
+                else:
+
+                    app.logger.info("Not Cool")
 
         except ApiException as exception:
 
             print(f"Unable to list secrets in the \"{namespace}\" namespace: {exception}\n")
-
-        
-
-
 
 ################################################################################
 ################################################################################
