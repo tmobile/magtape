@@ -51,12 +51,13 @@ log.disabled = True
 magtape_log_level = os.environ['MAGTAPE_LOG_LEVEL']
 app.logger.setLevel(magtape_log_level)
 
-# Set Global Cluster specific variables
+# Set Global variables
 cluster = os.environ['MAGTAPE_CLUSTER_NAME']
 magtape_namespace_name = os.environ['MAGTAPE_NAMESPACE_NAME']
 magtape_pod_name = os.environ['MAGTAPE_POD_NAME']
+magtape_secret_name = "magtape-tls"
 
-# Set Global Slack related Info
+# Set Slack related variables
 slack_enabled = os.environ['MAGTAPE_SLACK_ENABLED']
 slack_passive = os.environ['MAGTAPE_SLACK_PASSIVE']
 slack_webhook_url_default = os.environ['MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT']
@@ -325,6 +326,15 @@ def main(request_spec):
 ################################################################################
 ################################################################################
 
+def build_tls_pair(namespace, secret_name):
+
+    """Function to generate tls certificate and key using Kubernetes API"""
+
+
+################################################################################
+################################################################################
+################################################################################
+
 def check_cert_expiry(namespace, cert_data):
 
     """Function to check tls certificate expiration"""
@@ -360,10 +370,72 @@ def check_cert_expiry(namespace, cert_data):
 ################################################################################
 ################################################################################
 
-def gen_cert(namespace, secret_name):
+def create_or_update_tls_secret(namespace, secret_name, cert_expired, api_instance):
 
-    """Function to generate tls certificate for webhook"""
+    """Function to create or update k8s secret for webhook"""
 
+    try:
+        
+        existing_secret = api_instance.read_namespaced_secret(secret_name, namespace)
+
+    except ApiException as exception:
+
+        print(f"Unable to read secret \"{secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
+
+    if not existing_secret:
+
+        app.logger.info(f"Existing secret \"{secret_name}\" not found in namespace \"{namespace}\"")
+
+        secret_metadata = client.V1ObjectMeta(
+            name=secret_name,
+            namespace=namespace,
+            labels={"app": "magtape"}
+        )
+
+        secret_data = {
+            "cert.pem": "",
+            "key.pem": ""
+        }
+
+        secret = client.V1Secret(
+            metadata=secret_metadata,
+            data=secret_data,
+            type="tls"
+
+        )
+
+        api_instance.create_namespaced_secret(namespace,secret)
+        
+        new_secret = api_instance.read_namespaced_secret(secret_name, namespace)
+
+        if not new_secret:
+
+            app.logger.info(f"Error creating secret \"{secret_name}\" in namespace \"{namespace}\"")
+
+        else:
+
+            app.logger.info(f"Created secret \"{secret_name}\" in namespace \"{namespace}\"")
+
+    secret = client.V1Secret()
+
+    if secret.data == "":
+
+        secret.data = {
+            "cert.pem": "",
+            "key.pem": ""
+        }
+
+        api_instance.patch_namespaced_secret(secret_name, namespace, secret)
+
+        new_secret = api_instance.read_namespaced_secret(secret_name, namespace)
+
+        if not new_secret:
+
+            app.logger.info(f"Error updating secret \"{secret_name}\" in namespace \"{namespace}\"")
+
+        else:
+
+            app.logger.info(f"Updated secret \"{secret_name}\" in namespace \"{namespace}\"")
 
 ################################################################################
 ################################################################################
@@ -375,57 +447,74 @@ def cert_init(namespace):
 
 
     """
-    - Checks to see if secret exists based on ENV Var
-        - Check for specific secret name if none specified, otherwise check for secret name in ENV Var override
-            - If existing secret is found
-                - Check cert expiry
-                    - if cert is expired, rotate
-                - if cert is expired, renew
-                    - update secret
-                    - update VWC resource with cert bundle injected
-                - Create VWC
+    - Check to see if custom secret name specified
+        - if it is, use that for subsequent commands
+        - else use default name
+    - Checks to see if secret exists
+        - If existing secret is found
+            - Check cert expiry
+                - based on threshhold
+            - if cert is expired, renew
+                - update secret
+            - Check if VWC exists
+                - if not
+                    - Create VWC with cert bundle injected
+                        - need to read K8s CA from kubeconfig.....I think
+                - else
+                    - update VWC resource with cert bundle injected?
+        - else
+            - generate cert/key via kube-csr mechanism
+            - Approve CSR
+            - Create secret 
+            - Check if VWC exists
+                - if not
+                    - Create VWC with cert bundle injected
+                - else
+                    - update VWC resource with cert bundle injected?
+
+
+        - Eventually
             - Check if cert is valid (SAN matches service name.....probably have strong expectance of consistent service name and worry about this later)
-            If secret is not found
-                - generate cert/key via kube-csr mechanism
-                - Approve CSR
-                - Create secret in magtape-system namespace
-                - Create VWC resource with cert bundle injected
+    
     """
 
+    # Check if custom secret was specified in ENV vars
     if "MAGTAPE_TLS_SECRET" in os.environ and os.environ["MAGTAPE_TLS_SECRET"]:
-
-        app.logger.debug("Magtape TLS Secret specified")
 
         magtape_tls_secret = os.environ["MAGTAPE_TLS_SECRET"]
 
-        # Load k8s client config
-        config.load_incluster_config()
+        app.logger.debug("Magtape TLS Secret specified")
 
-        # Create an instance of the API class
-        api_instance = client.CoreV1Api()
+    else:
 
-        try:
-        
-            secret_list = api_instance.list_namespaced_secret(namespace, field_selector = 'metadata.name=' + magtape_tls_secret, timeout_seconds = 5).items
+        magtape_tls_secret = magtape_secret_name
 
-            for secret in secret_list:
+    # Load k8s client config
+    config.load_incluster_config()
 
-                app.logger.debug(f"Found secret \"{secret}\" in namespace \"{namespace}\"")
+    # Create an instance of the API class
+    api_instance = client.CoreV1Api()
 
-                cert_data = secret.data
+    try:
+    
+        secret_list = api_instance.list_namespaced_secret(namespace, field_selector = 'metadata.name=' + magtape_tls_secret, timeout_seconds = 5).items
 
-                # Check certificate expiry
-                if not check_cert_expiry(namespace, cert_data):
+        for secret in secret_list:
 
-                    app.logger.info("Cool")
+            app.logger.debug(f"Found secret \"{secret}\" in namespace \"{namespace}\"")
 
-                else:
+            cert_data = secret.data
 
-                    app.logger.info("Not Cool")
+            # Check certificate expiry
+            cert_expired = check_cert_expiry(namespace, cert_data)
 
-        except ApiException as exception:
+            # Handle cert creation or update
+            create_or_update_tls_secret(namespace, magtape_tls_secret, cert_expired, api_instance)
 
-            print(f"Unable to list secrets in the \"{namespace}\" namespace: {exception}\n")
+
+    except ApiException as exception:
+
+        print(f"Unable to list secrets in the \"{namespace}\" namespace: {exception}\n")
 
 ################################################################################
 ################################################################################
