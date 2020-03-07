@@ -20,6 +20,10 @@
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.x509.oid import NameOID
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 from flask import Flask, request, jsonify
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
@@ -56,6 +60,9 @@ cluster = os.environ['MAGTAPE_CLUSTER_NAME']
 magtape_namespace_name = os.environ['MAGTAPE_NAMESPACE_NAME']
 magtape_pod_name = os.environ['MAGTAPE_POD_NAME']
 magtape_secret_name = "magtape-tls"
+magtape_service_name = "magtape-svc"
+magtape_tls_key = ""
+magtape_tls_cert = ""
 
 # Set Slack related variables
 slack_enabled = os.environ['MAGTAPE_SLACK_ENABLED']
@@ -326,18 +333,183 @@ def main(request_spec):
 ################################################################################
 ################################################################################
 
-def build_tls_pair(namespace, secret_name):
+def build_k8s_csr(namespace, service_name, key):
 
-    """Function to generate tls certificate and key using Kubernetes API"""
+    """Function to generate Kubernetes CSR"""
 
+    # Store all dns names used for CN/SAN's
+    dns_names = list()
+    # K8s service intra namespace
+    dns_names[0] = service_name
+    # K8s service inter namespace
+    dns_names[1] = service_name + "." + namespace
+    # K8s service full FQDN and Common Name
+    dns_names[2] = service_name + "." + namespace + ".svc"
+
+    # Setup Certificate Signing Request
+    csr = x509.CertificateSigningRequestBuilder()
+    csr = csr.subject_name(
+        # Provide Common Name
+        x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, dns_names[2])])
+    )
+
+    csr = csr.add_extension(
+        x509.SubjectAlternativeName(dns_names),
+        critical=False,
+    )
+
+    # Sign the CSR with our private key.
+    csr = csr.sign(key, hashes.SHA256(), default_backend())
+
+    csr_pem = csr.public_bytes(serialization.Encoding.PEM)
+
+    # Build Kubernetes CSR
+    k8s_csr_meta = client.V1ObjectMeta(
+        name=dns_names[1],
+        namespace=namespace,
+        labels={"app": "magtape"}
+    )
+
+    k8s_csr_spec = client.V1beta1CertificateSigningRequestSpec(
+        groups={"system:authenticated"},
+        usages=[
+            "digital signature", 
+            "key encipherment", 
+            "server auth"
+        ],
+        requests=base64.b64encode(csr_pem)
+    )
+
+    k8s_csr = client.V1beta1CertificateSigningRequest(
+        metadata=k8s_csr_meta,
+        spec=k8s_csr_spec
+    )
+
+    return k8s_csr
 
 ################################################################################
 ################################################################################
 ################################################################################
 
-def check_cert_expiry(namespace, cert_data):
+def submit_and_approve_k8s_csr(namespace, k8s_csr, api_instance):
 
-    """Function to check tls certificate expiration"""
+    """Function to submit or approve a Kubernetes CSR"""
+
+    new_k8s_csr_name = k8s_csr.V1ObjectMeta.name
+
+    # List existing Kubernetes CSR's
+    try:
+        
+        k8s_csrs = api_instance.list_certificate_signing_request(timeout_seconds = 5)
+
+    except ApiException as exception:
+
+        app.logger.info(f"Unable to list existing certificate requests: {exception}\n")
+
+    for csr in k8s_csrs:
+
+        csr_name = csr.V1ObjectMeta.name
+
+        if csr_name == new_k8s_csr_name:
+
+            try:
+
+                api_instance.delete_certificate_signing_request(csr_name)
+
+            except ApiException as exception:
+
+                app.logger.info(f"Unable to delete existing certificate request \"{csr_name}\": {exception}\n")
+
+            app.logger.info(f"Existing certificate request deleted")
+
+            break
+
+    # Create K8s CSR resource
+    try:
+
+        api_instance.create_certificate_signing_request(k8s_csr)
+
+    except ApiException as exception:
+
+        app.logger.info(f"Unable to create certificate request \"{new_k8s_csr_name}\": {exception}\n")
+
+    # Read newly created K8s CSR resource
+    try:
+        new_k8s_csr_body = api_instance.read_certificate_signing_request_status(new_k8s_csr_name)
+
+    except ApiException as exception:
+
+        app.logger.info(f"Unable to read certificate request status for \"{new_k8s_csr_name}\": {exception}\n")
+
+    new_k8s_csr_approval_conditions = api_instance.V1beta1CertificateSigningRequestCondition(
+        last_update_time=datetime.datetime.now(datetime.timezone.utc),
+        message='This certificate was approved by MagTape',
+        reason='MT-Approve',
+        type='Approved'
+    ) 
+
+    # Update the CSR status
+    new_k8s_csr_body.status.conditions = [new_k8s_csr_approval_conditions]
+
+    # Patch the k8s CSR resource
+    try:
+
+        api_instance.replace_certificate_signing_request_approval(new_k8s_csr_name, new_k8s_csr_body)
+
+    except ApiException as exception:
+
+        app.logger.info(f"Unable to update certificate request status for \"{new_k8s_csr_name}\": {exception}\n")
+
+    # Retreive new 
+
+    app.logger.info(f"Certificate signing request \"{new_k8s_csr_name}\" is approved")
+
+    return new_k8s_csr_body
+
+################################################################################
+################################################################################
+################################################################################
+
+def get_tls_cert_from_request(namespace, secret_name, service_name, api_instance):
+
+    """Function to retrieve tls certificate from approved Kubernetes CSR"""
+
+    
+            
+################################################################################
+################################################################################
+################################################################################
+
+def build_tls_pair(namespace, secret_name, service_name, api_instance):
+
+    """Function to generate signed tls certificate for admission webhook"""
+
+    # Generate private key to use for CSR
+    magtape_tls_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+        backend=default_backend()
+    )
+
+    # Build K8s CSR
+    cert_request = build_k8s_csr(namespace, service_name, magtape_tls_key)
+
+    cert_request = submit_and_approve_k8s_csr(namespace, cert_request, api_instance)
+
+    tls_cert = 
+
+
+    return tls_pair
+
+    
+
+################################################################################
+################################################################################
+################################################################################
+
+def cert_expired(namespace, cert_data):
+
+    """Function to check tls certificate return number of days until expiration"""
 
     current_datetime = datetime.datetime.now()
     tls_cert_decoded = base64.b64decode(cert_data["cert.pem"])
@@ -346,41 +518,48 @@ def check_cert_expiry(namespace, cert_data):
 
     app.logger.info(f"Days until Cert Expiration: {expire_days.days}")
 
+    return expire_days.days
 
-    # Determine and report on cert expiry based on number of days from current date
-    if expire_days.days <= 30:
+################################################################################
+################################################################################
+################################################################################
 
-        app.logger.info(f"!WARNING! - Webhook Certificate Expiring Soon. {expire_days.days} days until expired")
+def cert_should_update(namespace, cert_data):
 
-        return False
+    """Function to check if tls certificate should be updated"""
 
-    elif expire_days.days <= 7:
-
-        app.logger.info(f"!!CRITICAL!! - Webhook Certificate Expiring Soon. {expire_days.days} days until expired")
-
-        return False
-
-    elif expire_days.days < 0:
-
-        app.logger.info(f"!!!ERROR!!! - Webhook Certificate Expired")
+    if cert_data == "":
 
         return True
 
+    days = cert_expired(namespace, cert_data)
+
+    # Determine and report on cert expiry based on number of days from current date.
+    # Cert should be valid for a year, but we update sooner to be safe
+    if days <= 180:
+
+        return True
+
+    else:
+
+        return False
+
 ################################################################################
 ################################################################################
 ################################################################################
 
-def create_or_update_tls_secret(namespace, secret_name, cert_expired, api_instance):
+def write_tls_pair(namespace, secret_name, tls_pair, api_instance):
 
-    """Function to create or update k8s secret for webhook"""
+    """Function to create or update k8s secret for admission webhook"""
 
+    # Try and read secret
     try:
         
         existing_secret = api_instance.read_namespaced_secret(secret_name, namespace)
 
     except ApiException as exception:
 
-        print(f"Unable to read secret \"{secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
+        app.logger.info(f"Unable to read secret \"{secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
 
     if not existing_secret:
 
@@ -393,8 +572,8 @@ def create_or_update_tls_secret(namespace, secret_name, cert_expired, api_instan
         )
 
         secret_data = {
-            "cert.pem": "",
-            "key.pem": ""
+            "cert.pem":  tls_pair["cert.pem"],
+            "key.pem":  tls_pair["key.pem"]
         }
 
         secret = client.V1Secret(
@@ -411,6 +590,7 @@ def create_or_update_tls_secret(namespace, secret_name, cert_expired, api_instan
         if not new_secret:
 
             app.logger.info(f"Error creating secret \"{secret_name}\" in namespace \"{namespace}\"")
+            exit()
 
         else:
 
@@ -421,8 +601,8 @@ def create_or_update_tls_secret(namespace, secret_name, cert_expired, api_instan
     if secret.data == "":
 
         secret.data = {
-            "cert.pem": "",
-            "key.pem": ""
+            "cert.pem": tls_pair["cert.pem"],
+            "key.pem": tls_pair["key.pem"]
         }
 
         api_instance.patch_namespaced_secret(secret_name, namespace, secret)
@@ -441,47 +621,14 @@ def create_or_update_tls_secret(namespace, secret_name, cert_expired, api_instan
 ################################################################################
 ################################################################################
 
-def cert_init(namespace):
+def init_tls_pair(namespace):
 
-    """Function to generate or validate tls for admission webhook"""
-
-
-    """
-    - Check to see if custom secret name specified
-        - if it is, use that for subsequent commands
-        - else use default name
-    - Checks to see if secret exists
-        - If existing secret is found
-            - Check cert expiry
-                - based on threshhold
-            - if cert is expired, renew
-                - update secret
-            - Check if VWC exists
-                - if not
-                    - Create VWC with cert bundle injected
-                        - need to read K8s CA from kubeconfig.....I think
-                - else
-                    - update VWC resource with cert bundle injected?
-        - else
-            - generate cert/key via kube-csr mechanism
-            - Approve CSR
-            - Create secret 
-            - Check if VWC exists
-                - if not
-                    - Create VWC with cert bundle injected
-                - else
-                    - update VWC resource with cert bundle injected?
-
-
-        - Eventually
-            - Check if cert is valid (SAN matches service name.....probably have strong expectance of consistent service name and worry about this later)
-    
-    """
+    """Function to load or create tls for admission webhook"""
 
     # Check if custom secret was specified in ENV vars
     if "MAGTAPE_TLS_SECRET" in os.environ and os.environ["MAGTAPE_TLS_SECRET"]:
 
-        magtape_tls_secret = os.environ["MAGTAPE_TLS_SECRET"]
+        magtape_secret_name = os.environ["MAGTAPE_TLS_SECRET"]
 
         app.logger.debug("Magtape TLS Secret specified")
 
@@ -497,24 +644,24 @@ def cert_init(namespace):
 
     try:
     
-        secret_list = api_instance.list_namespaced_secret(namespace, field_selector = 'metadata.name=' + magtape_tls_secret, timeout_seconds = 5).items
-
-        for secret in secret_list:
-
-            app.logger.debug(f"Found secret \"{secret}\" in namespace \"{namespace}\"")
-
-            cert_data = secret.data
-
-            # Check certificate expiry
-            cert_expired = check_cert_expiry(namespace, cert_data)
-
-            # Handle cert creation or update
-            create_or_update_tls_secret(namespace, magtape_tls_secret, cert_expired, api_instance)
-
+        secret = api_instance.read_namespaced_secret(magtape_secret_name, namespace)
 
     except ApiException as exception:
 
-        print(f"Unable to list secrets in the \"{namespace}\" namespace: {exception}\n")
+        app.logger.info(f"Unable to read secret in the \"{namespace}\" namespace: {exception}\n")
+
+    cert_data = secret.data
+
+    # Check if cert should be updated
+    if cert_should_update(namespace, cert_data):
+
+        app.logger.info(f"Generating new cert/key pair for TLS")
+
+        # Generate TLS Pair
+        tls_pair = build_tls_pair(namespace, magtape_secret_name, magtape_service_name, api_instance)
+
+        # Handle cert creation or update
+        write_tls_pair(namespace, magtape_tls_secret, tls_pair, api_instance)
 
 ################################################################################
 ################################################################################
@@ -811,6 +958,6 @@ def send_slack_alert(response_message,slack_webhook_url, slack_user, slack_icon,
 
 if __name__ == "__main__":
 
-    cert_init(magtape_namespace_name)
+    init_tls_pair(magtape_namespace_name)
     
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True, ssl_context=('./ssl/cert.pem', './ssl/key.pem'))
