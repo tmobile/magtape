@@ -1,12 +1,13 @@
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: events-creator
+  name: magtape-write
 rules:
 - apiGroups:
+  - certificates.k8s.io
   - events.k8s.io
-  - ""
   resources:
+    - certificatesigningrequests
     - events
   verbs:
     - get
@@ -14,12 +15,13 @@ rules:
     - watch
     - create
     - update
+    - delete
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: magtape-kube-mgmt
+  name: magtape-read
 rules:
 - apiGroups:
   - ""
@@ -56,7 +58,7 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: magtape-events-creator
+  name: magtape-write-crb
 roleRef:
   kind: ClusterRole
   name: events-creator
@@ -70,10 +72,10 @@ subjects:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: magtape-kube-mgmt
+  name: magtape-read-crb
 roleRef:
   kind: ClusterRole
-  name: magtape-kube-mgmt
+  name: magtape-read
   apiGroup: rbac.authorization.k8s.io
 subjects:
 - kind: ServiceAccount

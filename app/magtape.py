@@ -59,7 +59,7 @@ app.logger.setLevel(magtape_log_level)
 cluster = os.environ['MAGTAPE_CLUSTER_NAME']
 magtape_namespace_name = os.environ['MAGTAPE_NAMESPACE_NAME']
 magtape_pod_name = os.environ['MAGTAPE_POD_NAME']
-magtape_secret_name = "magtape-tls"
+magtape_secret_name = "magtape-tls-test"
 magtape_service_name = "magtape-svc"
 magtape_tls_key = ""
 magtape_tls_cert = ""
@@ -340,11 +340,11 @@ def build_k8s_csr(namespace, service_name, key):
     # Store all dns names used for CN/SAN's
     dns_names = list()
     # K8s service intra namespace
-    dns_names[0] = service_name
+    dns_names.insert(0, service_name)
     # K8s service inter namespace
-    dns_names[1] = service_name + "." + namespace
+    dns_names.insert(1, service_name + "." + namespace)
     # K8s service full FQDN and Common Name
-    dns_names[2] = service_name + "." + namespace + ".svc"
+    dns_names.insert(2, service_name + "." + namespace + ".svc")
 
     # Setup Certificate Signing Request
     csr = x509.CertificateSigningRequestBuilder()
@@ -354,7 +354,11 @@ def build_k8s_csr(namespace, service_name, key):
     )
 
     csr = csr.add_extension(
-        x509.SubjectAlternativeName(dns_names),
+        x509.SubjectAlternativeName([
+            x509.DNSName(dns_names[0]),
+            x509.DNSName(dns_names[1]),
+            x509.DNSName(dns_names[2]),
+        ]),
         critical=False,
     )
 
@@ -365,7 +369,7 @@ def build_k8s_csr(namespace, service_name, key):
 
     # Build Kubernetes CSR
     k8s_csr_meta = client.V1ObjectMeta(
-        name=dns_names[1],
+        name=dns_names[1] + ".cert-request",
         namespace=namespace,
         labels={"app": "magtape"}
     )
@@ -377,7 +381,7 @@ def build_k8s_csr(namespace, service_name, key):
             "key encipherment", 
             "server auth"
         ],
-        requests=base64.b64encode(csr_pem)
+        request= base64.b64encode(csr_pem).decode()
     )
 
     k8s_csr = client.V1beta1CertificateSigningRequest(
@@ -385,49 +389,61 @@ def build_k8s_csr(namespace, service_name, key):
         spec=k8s_csr_spec
     )
 
+    app.logger.debug(f"CSR: {k8s_csr}\n")
+
     return k8s_csr
 
 ################################################################################
 ################################################################################
 ################################################################################
 
-def submit_and_approve_k8s_csr(namespace, k8s_csr, api_instance):
+def submit_and_approve_k8s_csr(namespace, k8s_csr):
 
     """Function to submit or approve a Kubernetes CSR"""
 
-    new_k8s_csr_name = k8s_csr.V1ObjectMeta.name
+    new_k8s_csr_name = k8s_csr.metadata.name
 
-    # List existing Kubernetes CSR's
+    # Read existing Kubernetes CSR
     try:
         
-        k8s_csrs = api_instance.list_certificate_signing_request(timeout_seconds = 5)
+        client.CertificatesV1beta1Api().read_certificate_signing_request(new_k8s_csr_name)
 
     except ApiException as exception:
 
-        app.logger.info(f"Unable to list existing certificate requests: {exception}\n")
+        if exception.status != 404:
 
-    for csr in k8s_csrs:
+            app.logger.info(f"Problem reading existing certificate requests: {exception}\n")
+            sys.exit()
 
-        csr_name = csr.V1ObjectMeta.name
+        elif exception.status == 404:
 
-        if csr_name == new_k8s_csr_name:
+            app.logger.info(f"Did not find existing certificate requests\n")
+            
+    else:  
 
-            try:
+        try:
 
-                api_instance.delete_certificate_signing_request(csr_name)
+            client.CertificatesV1beta1Api().delete_certificate_signing_request(new_k8s_csr_name)
 
-            except ApiException as exception:
+        except ApiException as exception:
 
-                app.logger.info(f"Unable to delete existing certificate request \"{csr_name}\": {exception}\n")
+            if exception.status != 404:
+
+                app.logger.info(f"Unable to delete existing certificate request \"{new_k8s_csr_name}\": {exception}\n")
+                sys.exit()
+            
+            elif exception.status == 404:
+
+                app.logger.info(f"Existing certificate request \"{new_k8s_csr_name}\" not found")
+        else:
 
             app.logger.info(f"Existing certificate request deleted")
-
-            break
 
     # Create K8s CSR resource
     try:
 
-        api_instance.create_certificate_signing_request(k8s_csr)
+        print("I'M HERE!!!")
+        client.CertificatesV1beta1Api().create_certificate_signing_request(k8s_csr)
 
     except ApiException as exception:
 
@@ -435,13 +451,14 @@ def submit_and_approve_k8s_csr(namespace, k8s_csr, api_instance):
 
     # Read newly created K8s CSR resource
     try:
-        new_k8s_csr_body = api_instance.read_certificate_signing_request_status(new_k8s_csr_name)
+        
+        new_k8s_csr_body = client.CertificatesV1beta1Api().read_certificate_signing_request_status(new_k8s_csr_name)
 
     except ApiException as exception:
 
         app.logger.info(f"Unable to read certificate request status for \"{new_k8s_csr_name}\": {exception}\n")
 
-    new_k8s_csr_approval_conditions = api_instance.V1beta1CertificateSigningRequestCondition(
+    new_k8s_csr_approval_conditions = client.CertificatesV1beta1Api().V1beta1CertificateSigningRequestCondition(
         last_update_time=datetime.datetime.now(datetime.timezone.utc),
         message='This certificate was approved by MagTape',
         reason='MT-Approve',
@@ -454,7 +471,7 @@ def submit_and_approve_k8s_csr(namespace, k8s_csr, api_instance):
     # Patch the k8s CSR resource
     try:
 
-        api_instance.replace_certificate_signing_request_approval(new_k8s_csr_name, new_k8s_csr_body)
+        client.CertificatesV1beta1Api().replace_certificate_signing_request_approval(new_k8s_csr_name, new_k8s_csr_body)
 
     except ApiException as exception:
 
@@ -470,17 +487,18 @@ def submit_and_approve_k8s_csr(namespace, k8s_csr, api_instance):
 ################################################################################
 ################################################################################
 
-def get_tls_cert_from_request(namespace, secret_name, service_name, api_instance):
+def get_tls_cert_from_request(namespace, secret_name, cert_request):
 
     """Function to retrieve tls certificate from approved Kubernetes CSR"""
 
-    
-            
+    tls_cert = ""
+
+    return tls_cert
 ################################################################################
 ################################################################################
 ################################################################################
 
-def build_tls_pair(namespace, secret_name, service_name, api_instance):
+def build_tls_pair(namespace, secret_name, service_name):
 
     """Function to generate signed tls certificate for admission webhook"""
 
@@ -492,14 +510,14 @@ def build_tls_pair(namespace, secret_name, service_name, api_instance):
     )
 
     # Build K8s CSR
-    cert_request = build_k8s_csr(namespace, service_name, magtape_tls_key)
+    k8s_csr = build_k8s_csr(namespace, service_name, magtape_tls_key)
 
-    cert_request = submit_and_approve_k8s_csr(namespace, cert_request, api_instance)
+    cert_request = submit_and_approve_k8s_csr(namespace, k8s_csr)
 
-    tls_cert = 
+    tls_cert = get_tls_cert_from_request(namespace, magtape_secret_name, cert_request)
 
 
-    return tls_pair
+    return tls_cert
 
     
 
@@ -548,14 +566,14 @@ def cert_should_update(namespace, cert_data):
 ################################################################################
 ################################################################################
 
-def write_tls_pair(namespace, secret_name, tls_pair, api_instance):
+def write_tls_pair(namespace, secret_name, tls_pair):
 
     """Function to create or update k8s secret for admission webhook"""
 
     # Try and read secret
     try:
         
-        existing_secret = api_instance.read_namespaced_secret(secret_name, namespace)
+        existing_secret = client.CoreV1Api().read_namespaced_secret(secret_name, namespace)
 
     except ApiException as exception:
 
@@ -583,9 +601,9 @@ def write_tls_pair(namespace, secret_name, tls_pair, api_instance):
 
         )
 
-        api_instance.create_namespaced_secret(namespace,secret)
+        client.CoreV1Api().create_namespaced_secret(namespace,secret)
         
-        new_secret = api_instance.read_namespaced_secret(secret_name, namespace)
+        new_secret = client.CoreV1Api().read_namespaced_secret(secret_name, namespace)
 
         if not new_secret:
 
@@ -605,9 +623,9 @@ def write_tls_pair(namespace, secret_name, tls_pair, api_instance):
             "key.pem": tls_pair["key.pem"]
         }
 
-        api_instance.patch_namespaced_secret(secret_name, namespace, secret)
+        client.CoreV1Api().patch_namespaced_secret(secret_name, namespace, secret)
 
-        new_secret = api_instance.read_namespaced_secret(secret_name, namespace)
+        new_secret = client.CoreV1Api().read_namespaced_secret(secret_name, namespace)
 
         if not new_secret:
 
@@ -626,31 +644,34 @@ def init_tls_pair(namespace):
     """Function to load or create tls for admission webhook"""
 
     # Check if custom secret was specified in ENV vars
-    if "MAGTAPE_TLS_SECRET" in os.environ and os.environ["MAGTAPE_TLS_SECRET"]:
+    magtape_tls_secret = os.getenv("MAGTAPE_TLS_SECRET", magtape_secret_name)
 
-        magtape_secret_name = os.environ["MAGTAPE_TLS_SECRET"]
+    if magtape_tls_secret != magtape_secret_name:
 
         app.logger.debug("Magtape TLS Secret specified")
-
-    else:
-
-        magtape_tls_secret = magtape_secret_name
 
     # Load k8s client config
     config.load_incluster_config()
 
-    # Create an instance of the API class
-    api_instance = client.CoreV1Api()
-
     try:
     
-        secret = api_instance.read_namespaced_secret(magtape_secret_name, namespace)
+        secret = client.CoreV1Api().read_namespaced_secret(magtape_secret_name, namespace)
 
     except ApiException as exception:
 
-        app.logger.info(f"Unable to read secret in the \"{namespace}\" namespace: {exception}\n")
+        if exception.status != 404:
 
-    cert_data = secret.data
+            app.logger.info(f"Unable to read secret in the \"{namespace}\" namespace: {exception}\n")
+            sys.exit()
+        elif exception.status == 404:
+
+            app.logger.info(f"Did not find secret \"{magtape_secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
+            
+            cert_data = ""
+
+    else:
+
+        cert_data = secret.data
 
     # Check if cert should be updated
     if cert_should_update(namespace, cert_data):
@@ -658,10 +679,10 @@ def init_tls_pair(namespace):
         app.logger.info(f"Generating new cert/key pair for TLS")
 
         # Generate TLS Pair
-        tls_pair = build_tls_pair(namespace, magtape_secret_name, magtape_service_name, api_instance)
+        tls_pair = build_tls_pair(namespace, magtape_secret_name, magtape_service_name)
 
         # Handle cert creation or update
-        write_tls_pair(namespace, magtape_tls_secret, tls_pair, api_instance)
+        write_tls_pair(namespace, magtape_tls_secret, tls_pair)
 
 ################################################################################
 ################################################################################
