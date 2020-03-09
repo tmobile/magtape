@@ -65,9 +65,11 @@ build_manifests() {
   # Takes one argument that should be either "apply" or "delete"
   local action="${1}"
 
-  kubectl -n "${WEBHOOK_NAMESPACE}" apply -f "${DEPLOY_DIR}" --dry-run  -o yaml | \
-  sed -e "s/==CA_BUNDLE==/${CA_BUNDLE}/g" |\
-  kubectl -n "${WEBHOOK_NAMESPACE}" "${action}" -f -
+  kubectl -n "${WEBHOOK_NAMESPACE}" apply -f "${DEPLOY_DIR}"
+
+  #kubectl -n "${WEBHOOK_NAMESPACE}" apply -f "${DEPLOY_DIR}" --dry-run  -o yaml | \
+  #sed -e "s/==CA_BUNDLE==/${CA_BUNDLE}/g" |\
+  #kubectl -n "${WEBHOOK_NAMESPACE}" "${action}" -f -
 
 }
 
@@ -88,10 +90,10 @@ magtape_install() {
   #kubectl auth reconcile -f "${DEPLOY_DIR}/magtape-cluster-rbac.yaml"
 
   # Setup SSL stuff
-  hack/ssl-cert-gen.sh \
-    --service magtape-svc \
-    --secret magtape-certs \
-    --namespace ${WEBHOOK_NAMESPACE}
+  #hack/ssl-cert-gen.sh \
+  #  --service magtape-svc \
+  #  --secret magtape-certs \
+  #  --namespace ${WEBHOOK_NAMESPACE}
     
   CA_BUNDLE=$(kubectl get cm -n kube-system extension-apiserver-authentication -o=jsonpath='{.data.client-ca-file}' | base64 | tr -d '\n')
 

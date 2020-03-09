@@ -5,7 +5,7 @@ metadata:
   labels:
     app: magtape
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: magtape
@@ -17,7 +17,7 @@ spec:
       serviceAccountName: magtape-sa
       containers:
       - name: magtape
-        image: tmobile/magtape:2.0.0
+        image: jmsearcy/python3-tkev:1.4
         ports:
         - containerPort: 5000
         command: [/app/magtape.py]
@@ -58,18 +58,31 @@ spec:
         volumeMounts:
           - name: script
             mountPath: /app
-          - name: certs
-            mountPath: /app/ssl
-            readOnly: true
+          - name: magtape-tls
+            mountPath: /ssl
       - name: opa
         image: openpolicyagent/opa:0.16.1
         args:
           - "run"
           - "--server"
-          - "--tls-cert-file=/app/ssl/cert.pem"
-          - "--tls-private-key-file=/app/ssl/key.pem"
+          - "--tls-cert-file=/ssl/cert.pem"
+          - "--tls-private-key-file=/ssl/key.pem"
           - "--addr=0.0.0.0:443"
           - "--addr=http://127.0.0.1:8181"
+        readinessProbe:
+          httpGet:
+            path: /health
+            scheme: HTTPS
+            port: 443
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            scheme: HTTPS
+            port: 443
+          initialDelaySeconds: 5
+          periodSeconds: 10
         resources:
           limits:
             cpu: "500m"
@@ -78,9 +91,8 @@ spec:
             cpu: 50m
             memory: 128Mi
         volumeMounts:
-          - name: certs
-            mountPath: /app/ssl
-            readOnly: true
+          - name: magtape-tls
+            mountPath: /ssl
       - name: kube-mgmt
         image: openpolicyagent/kube-mgmt:0.10
         args:
@@ -101,7 +113,9 @@ spec:
             items:
               - key: script
                 path: magtape.py
-        - name: certs
-          secret:
-            secretName: magtape-certs
+        - name: magtape-tls
+          emptyDir: {}
+        #- name: certs
+        #  secret:
+        #    secretName: magtape-tls
       terminationGracePeriodSeconds: 5

@@ -8,6 +8,8 @@ rules:
   - events.k8s.io
   resources:
     - certificatesigningrequests
+    - certificatesigningrequests/approval
+    - certificatesigningrequests/status
     - events
   verbs:
     - get
@@ -61,7 +63,7 @@ metadata:
   name: magtape-write-crb
 roleRef:
   kind: ClusterRole
-  name: events-creator
+  name: magtape-write
   apiGroup: rbac.authorization.k8s.io
 subjects:
 - kind: ServiceAccount
