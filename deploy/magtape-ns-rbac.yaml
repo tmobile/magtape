@@ -7,15 +7,25 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - configmaps
   - secrets
   verbs:
   - get
   - list
   - watch
   - create
+  - patch
   - update
   - delete
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
 
 ---
 kind: RoleBinding

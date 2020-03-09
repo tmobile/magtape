@@ -2,6 +2,8 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: magtape-write
+  labels:
+    app: magtape
 rules:
 - apiGroups:
   - certificates.k8s.io
@@ -24,6 +26,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: magtape-read
+  labels:
+    app: magtape
 rules:
 - apiGroups:
   - ""
@@ -61,6 +65,8 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: magtape-write-crb
+  labels:
+    app: magtape
 roleRef:
   kind: ClusterRole
   name: magtape-write
@@ -75,6 +81,8 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: magtape-read-crb
+  labels:
+    app: magtape
 roleRef:
   kind: ClusterRole
   name: magtape-read

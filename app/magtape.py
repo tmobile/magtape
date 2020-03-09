@@ -61,10 +61,12 @@ magtape_namespace_name = os.environ['MAGTAPE_NAMESPACE_NAME']
 magtape_pod_name = os.environ['MAGTAPE_POD_NAME']
 magtape_tls_pair_secret_name = "magtape-tls"
 magtape_tls_rootca_secret_name = "magtape-tls-ca"
+magtape_byoc_annotation = "magtape-byoc"
 magtape_service_name = "magtape-svc"
-magtape_tls_path = "/ssl"
+magtape_tls_path = "/tls"
 magtape_tls_key = ""
 magtape_tls_cert = ""
+magtape_vwc_name = "magtape-vwc"
 
 # Set Slack related variables
 slack_enabled = os.environ['MAGTAPE_SLACK_ENABLED']
@@ -331,6 +333,50 @@ def main(request_spec):
 
     return admissionReview
 
+###############################################################################$
+################################################################################
+################################################################################
+
+def check_for_byoc(namespace, secret, core_api):
+
+    """Function to check for the "Bring Your Own Cert" annotation"""
+
+    secret_name = secret.metadata.name
+    secret_annotations = secret.metadata.annotations
+
+    if secret_annotations and magtape_byoc_annotation in secret_annotations:
+
+        app.logger.info(f"Detected the \"Bring Your Own Cert\" annotation for secret \"{secret_name}\"")
+
+        try:
+
+            secret = core_api.read_namespaced_secret(magtape_tls_rootca_secret_name, namespace)
+
+        except ApiException as exception:
+
+            if exception.status != 404:
+
+                app.logger.info(f"An error occurred while trying to read secret \"{magtape_tls_rootca_secret_name}\" in the \"{namespace}\" namespace:\n{exception}\n")
+                sys.exit()
+
+            else:
+
+                app.logger.info(f"\"Bring Your Own Cert\" annotation specified, but secret \"{magtape_tls_rootca_secret_name}\" was not found in the \"{namespace}\" namespace:\n{exception}\n")
+                sys.exit()   
+
+        if "rootca.pem" in secret.data and secret.data["rootca.pem"] != "":         
+
+            return True
+
+        else:
+
+            app.logger.info(f"No key found or value is blank for \"rootca.pem\" in \"{secret.metadata.name}\" secret")
+            sys.exit()
+
+    else:
+
+        return False
+
 ################################################################################
 ################################################################################
 ################################################################################
@@ -421,7 +467,8 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
 
         elif exception.status == 404:
 
-            app.logger.info(f"Did not find existing certificate requests\n")
+            app.logger.info(f"Did not find existing certificate requests")
+            app.logger.debug(f"Exception:\n{exception}\n")
             
     else:  
 
@@ -439,6 +486,7 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
             elif exception.status == 404:
 
                 app.logger.info(f"Existing certificate request \"{new_k8s_csr_name}\" not found")
+                app.logger.debug(f"Exception:\n{exception}\n")
         else:
 
             app.logger.info(f"Existing certificate request deleted")
@@ -451,7 +499,8 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
 
     except ApiException as exception:
 
-        app.logger.info(f"Unable to create certificate request \"{new_k8s_csr_name}\": {exception}\n")
+        app.logger.info(f"Unable to create certificate request \"{new_k8s_csr_name}\"\n")
+        app.logger.debug(f"Exception:\n{exception}\n")
 
     # Read newly created K8s CSR resource
     try:
@@ -460,7 +509,8 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
 
     except ApiException as exception:
 
-        app.logger.info(f"Unable to read certificate request status for \"{new_k8s_csr_name}\": {exception}\n")
+        app.logger.info(f"Unable to read certificate request status for \"{new_k8s_csr_name}\"\n")
+        app.logger.debug(f"Exception:\n{exception}\n")
 
     new_k8s_csr_approval_conditions = client.V1beta1CertificateSigningRequestCondition(
         last_update_time=datetime.datetime.now(datetime.timezone.utc),
@@ -511,7 +561,8 @@ def get_tls_cert_from_request(namespace, secret_name, k8s_csr_name, certificates
 
         except ApiException as exception:
 
-                app.logger.info(f"Problem reading certificate request \"{k8s_csr_name}\": {exception}\n")
+                app.logger.info(f"Problem reading certificate request \"{k8s_csr_name}\"\n")
+                app.logger.debug(f"Exception:\n{exception}\n")
 
         tls_cert_b64 = k8s_csr.status.certificate
         conditions = k8s_csr.status.conditions or []
@@ -545,6 +596,8 @@ def get_tls_cert_from_request(namespace, secret_name, k8s_csr_name, certificates
 def build_tls_pair(namespace, secret_name, service_name, certificates_api):
 
     """Function to generate signed tls certificate for admission webhook"""
+
+
 
     # Generate private key to use for CSR
     tls_key = rsa.generate_private_key(
@@ -596,11 +649,16 @@ def cert_expired(namespace, cert_data):
 ################################################################################
 ################################################################################
 
-def cert_should_update(namespace, cert_data):
+def cert_should_update(namespace, cert_data, tls_byoc):
 
     """Function to check if tls certificate should be updated"""
 
-    if cert_data == "":
+    if cert_data["cert.pem"] == "" or cert_data["key.pem"] == "":
+
+        if tls_byoc:
+
+            app.logger.info(f"The \"Bring Your Own Cert\" annotation was used but one or more of the tls cert/key values are blank")
+            sys.exit()
 
         return True
 
@@ -624,20 +682,25 @@ def read_tls_pair(namespace, secret_name, tls_pair, core_api):
 
     """Function to read cert/key from k8s secret"""
 
+    secret_exists = False
+
     # Try and read secret
     try:
         
         secret = core_api.read_namespaced_secret(secret_name, namespace)
+        secret_exists = True
 
     except ApiException as exception:
 
-        if exception.status != str(404):
+        if exception.status != 404:
 
-            app.logger.info(f"Unable to read secret \"{secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
+            app.logger.info(f"Unable to read secret \"{secret_name}\" in the \"{namespace}\" namespace\n")
+            app.logger.debug(f"Exception:\n{exception}\n")
 
         else:
 
-            app.logger.info(f"Did not find secret \"{secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
+            app.logger.info(f"Did not find secret \"{secret_name}\" in the \"{namespace}\" namespace\n")
+            app.logger.debug(f"Exception:\n{exception}\n")
         
         tls_pair = ""
         return tls_pair
@@ -652,39 +715,25 @@ def read_tls_pair(namespace, secret_name, tls_pair, core_api):
         "key": tls_key_pem,
     }
 
-    app.logger.info("Existing TLS cert and key found")
 
-    return tls_pair
+    return tls_pair, secret_exists
 
 ################################################################################
 ################################################################################
 ################################################################################
 
-def write_tls_pair(namespace, secret_name, tls_pair, core_api):
+def write_tls_pair(namespace, secret_name, secret_exists, tls_pair, tls_byoc, core_api):
 
     """Function to write k8s secret for admission webhook to k8s secret and/or local files"""
 
-    app.logger.info("Checking for existing secret")
-
-    existing_secret = ""
-
-    # Try and read secret
-    try:
-        
-        existing_secret = core_api.read_namespaced_secret(secret_name, namespace)
-
-    except ApiException as exception:
-
-        app.logger.info(f"Unable to read secret \"{secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
-
     # If the secret isn't found, create it
-    if existing_secret:
+    if secret_exists:
 
-        app.logger.info(f"Found existing secret \"{secret_name}\" in namespace \"{namespace}\"")
+        app.logger.info(f"Using existing secret \"{secret_name}\" in namespace \"{namespace}\"")
 
     else:
 
-        app.logger.info(f"Existing secret \"{secret_name}\" not found in namespace \"{namespace}\"")
+        app.logger.info(f"Creating secret \"{secret_name}\" in namespace \"{namespace}\"")
 
         secret_metadata = client.V1ObjectMeta(
             name=secret_name,
@@ -717,7 +766,7 @@ def write_tls_pair(namespace, secret_name, tls_pair, core_api):
         
         try:
             
-            new_secret = core_api.read_namespaced_secret(secret_name, namespace)
+            core_api.read_namespaced_secret(secret_name, namespace)
 
         except ApiException as exception:
 
@@ -725,36 +774,43 @@ def write_tls_pair(namespace, secret_name, tls_pair, core_api):
             sys.exit()
 
         app.logger.info(f"Created secret \"{secret_name}\" in namespace \"{namespace}\"")
+    
+    # If this is a BYOC pair, then skip the patch
+    if not tls_byoc:
 
-    secret = client.V1Secret()
+        #app.logger.info("Secret data is blank")
 
-    if secret.data == "":
-
-        app.logger.info("Secret data is blank")
+        secret = client.V1Secret()
 
         secret.data = {
-            "cert.pem": tls_pair["cert"],
-            "key.pem": tls_pair["key"]
+            "cert.pem": base64.b64encode(tls_pair["cert"]).decode('utf-8').rstrip(),
+            "key.pem": base64.b64encode(tls_pair["key"]).decode('utf-8').rstrip(),
         }
 
-        core_api.patch_namespaced_secret(secret_name, namespace, secret)
+        try:
 
-        new_secret = core_api.read_namespaced_secret(secret_name, namespace)
+            core_api.patch_namespaced_secret(secret_name, namespace, secret)
 
-        if not new_secret:
+        except ApiException as exception:
 
-            app.logger.info(f"Error updating secret \"{secret_name}\" in namespace \"{namespace}\"")
+            app.logger.info(f"Unable to update secret \"{secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
+            sys.exit()
 
-        else:
+        app.logger.info(f"Patched new cert/key into existing secret")
 
-            app.logger.info(f"Updated secret \"{secret_name}\" in namespace \"{namespace}\"")
+        try:
+
+            tls_pair, secret_exists = read_tls_pair(namespace, magtape_tls_pair_secret_name, tls_pair, core_api)
+
+        except ApiException as exception:
+
+            app.logger.info(f"Unable to read updated secret \"{secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
+            sys.exit()
+
+        app.logger.info(f"Updated secret \"{secret_name}\" in namespace \"{namespace}\"")
 
     # Write cert and key to files for Flask app
-
     app.logger.info("Writing cert and key locally")
-
-    #os.mkdir(magtape_tls_path)
-
     app.logger.debug(f"TLS Pair: {tls_pair}")
 
     with open(f"{magtape_tls_path}/cert.pem", 'wb') as cert_file:
@@ -819,22 +875,146 @@ def init_tls_pair(namespace):
         elif exception.status == 404:
 
             app.logger.info(f"Did not find secret \"{magtape_tls_pair_secret_name}\" in the \"{namespace}\" namespace")
+            app.logger.debug(f"Exception:\n{exception}\n")
             
             cert_data = ""
 
+    tls_byoc = check_for_byoc(namespace, secret, core_api)
+
     # Read existing secret
-    tls_pair = read_tls_pair(namespace, magtape_tls_pair_secret_name, tls_pair, core_api)
+    tls_pair, secret_exists = read_tls_pair(namespace, magtape_tls_pair_secret_name, tls_pair, core_api)
+
+    if secret_exists:
+
+        app.logger.info("Existing TLS cert and key found")
 
     # Check if cert should be updated
-    if cert_should_update(namespace, cert_data):
+    if cert_should_update(namespace, cert_data, tls_byoc):
 
-        app.logger.info(f"Generating new cert/key pair for TLS")
+        if tls_byoc:
 
-        # Generate TLS Pair
-        tls_pair = build_tls_pair(namespace, magtape_tls_pair_secret_name, magtape_service_name, certificates_api)
+            app.logger.info(f"WARN - Certificate used for Admission Webhook is past threshhold for normal rotation. Not rotating because this cert isn't managed by the K8s CA")
+
+        else:
+
+            app.logger.info(f"Generating new cert/key pair for TLS")
+
+            # Generate TLS Pair
+            tls_pair = build_tls_pair(namespace, magtape_tls_pair_secret_name, magtape_service_name, certificates_api)
+            # We set this to Falso so new secret is written
 
     # Handle cert creation or update
-    write_tls_pair(namespace, magtape_tls_secret, tls_pair, core_api)
+    write_tls_pair(namespace, magtape_tls_secret, secret_exists, tls_pair, tls_byoc, core_api)
+
+################################################################################
+################################################################################
+################################################################################
+
+def get_rootca(namespace):
+
+    """Function to get root ca used for securing admission webhook"""
+
+################################################################################
+################################################################################
+################################################################################
+
+def verify_vwc_cert_bundle(namespace):
+
+    """Function to create or update the k8s validating webhook configuration"""
+
+################################################################################
+################################################################################
+################################################################################
+
+def read_vwc(admission_api):
+
+    """Function to read k8s validating webhook configuration"""
+
+    try:
+            
+        vwc = admission_api.read_validating_webhook_configuration(magtape_vwc_name)
+
+    except ApiException as exception:
+
+        if exception.status != 404:
+
+            app.logger.info(f"Unable to read VWC \"{magtape_vwc_name}\": {exception}\n")
+            sys.exit()
+
+        elif exception.status == 400:
+
+            app.logger.info(f"Did not find existing VWC \"{magtape_vwc_name}\"")
+            app.logger.debug(f"Exception:\n{exception}\n")
+            
+            vwc = ""
+            return vwc
+
+    app.logger.info(f"Existing VWC \"{magtape_vwc_name}\" found")
+
+    return vwc
+
+################################################################################
+################################################################################
+################################################################################
+
+def write_vwc(namespace, ca_secret_name, admission_api):
+
+    """Function to create or update the k8s validating webhook configuration"""
+
+    verified = verify_vwc_cert_bundle(magtape_vwc_name, admission_api)
+
+################################################################################
+################################################################################
+################################################################################
+
+def init_vwc(namespace):
+
+    """Function to handle the k8s validating webhook configuration"""
+
+    """
+    - check for existing VWC
+        - If it exists
+            - read CA
+                - if self-signed CA read from magtape-tls-ca secret
+                - else read from in-cluster kubeconfig
+            - Compare Found CA to CA in existing VWC
+                - if different
+                    - patch VWC
+                - else
+                    - do nothing
+        If it doesn't exist
+            - Create it
+                if "self-signed-ca" is true
+                    - read CA
+                        - if self-signed CA read from magtape-tls-ca secret
+                        - else read from in-cluster kubeconfig
+                    - Build VWC
+                    - Write VWC
+            
+    """
+
+    try:
+
+        config.load_incluster_config()
+
+    except Exception as exception:
+
+        app.logger.info(f"Exception loading incluster configuration: {exception}")
+
+        try:
+            app.logger.info("Loading local kubeconfig")
+            config.load_kube_config()
+
+        except Exception as exception:
+
+            app.logger.info(f"Exception loading local kubeconfig: {exception}")
+            sys.exit()
+
+    configuration = client.Configuration()
+    admission_api = client.AdmissionregistrationV1beta1Api(client.ApiClient(configuration))
+
+    vwc = read_vwc(admission_api)
+    write_vwc(namespace, magtape_tls_rootca_secret_name, admission_api)
 
 ################################################################################
 ################################################################################

@@ -59,14 +59,14 @@ spec:
           - name: script
             mountPath: /app
           - name: magtape-tls
-            mountPath: /ssl
+            mountPath: /tls
       - name: opa
         image: openpolicyagent/opa:0.16.1
         args:
           - "run"
           - "--server"
-          - "--tls-cert-file=/ssl/cert.pem"
-          - "--tls-private-key-file=/ssl/key.pem"
+          - "--tls-cert-file=/tls/cert.pem"
+          - "--tls-private-key-file=/tls/key.pem"
           - "--addr=0.0.0.0:443"
           - "--addr=http://127.0.0.1:8181"
         readinessProbe:
@@ -92,7 +92,7 @@ spec:
             memory: 128Mi
         volumeMounts:
           - name: magtape-tls
-            mountPath: /ssl
+            mountPath: /tls
       - name: kube-mgmt
         image: openpolicyagent/kube-mgmt:0.10
         args:
@@ -115,7 +115,7 @@ spec:
                 path: magtape.py
         - name: magtape-tls
           emptyDir: {}
-        #- name: certs
+        - name: certs
         #  secret:
         #    secretName: magtape-tls
       terminationGracePeriodSeconds: 5

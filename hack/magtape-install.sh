@@ -65,7 +65,7 @@ build_manifests() {
   # Takes one argument that should be either "apply" or "delete"
   local action="${1}"
 
-  kubectl -n "${WEBHOOK_NAMESPACE}" apply -f "${DEPLOY_DIR}"
+  kubectl -n "${WEBHOOK_NAMESPACE}" "${action}" -f "${DEPLOY_DIR}"
 
   #kubectl -n "${WEBHOOK_NAMESPACE}" apply -f "${DEPLOY_DIR}" --dry-run  -o yaml | \
   #sed -e "s/==CA_BUNDLE==/${CA_BUNDLE}/g" |\
@@ -115,7 +115,7 @@ magtape_install() {
   done
 
   echo "Waiting for configMaps to register with OPA"
-  sleep 20
+  sleep 40
 
   kubectl get cm -n ${WEBHOOK_NAMESPACE} -l app=opa -o jsonpath="{range .items[*]}{.metadata.name}{\"\t\t\"}{.metadata.annotations.openpolicyagent\.org/policy-status}{\"\n\"}"
 
