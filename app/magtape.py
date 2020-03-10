@@ -67,6 +67,7 @@ magtape_tls_path = "/tls"
 magtape_tls_key = ""
 magtape_tls_cert = ""
 magtape_vwc_name = "magtape-vwc"
+magtape_vwc_webhook_name = "magtape.webhook.k8s.t-mobile.com"
 
 # Set Slack related variables
 slack_enabled = os.environ['MAGTAPE_SLACK_ENABLED']
@@ -626,8 +627,6 @@ def build_tls_pair(namespace, secret_name, service_name, certificates_api):
 
     return tls_pair
 
-    
-
 ################################################################################
 ################################################################################
 ################################################################################
@@ -722,7 +721,7 @@ def read_tls_pair(namespace, secret_name, tls_pair, core_api):
 ################################################################################
 ################################################################################
 
-def write_tls_pair(namespace, secret_name, secret_exists, tls_pair, tls_byoc, core_api):
+def write_tls_pair(namespace, secret_name, secret_exists, secret_should_update, tls_pair, tls_byoc, core_api):
 
     """Function to write k8s secret for admission webhook to k8s secret and/or local files"""
 
@@ -776,7 +775,7 @@ def write_tls_pair(namespace, secret_name, secret_exists, tls_pair, tls_byoc, co
         app.logger.info(f"Created secret \"{secret_name}\" in namespace \"{namespace}\"")
     
     # If this is a BYOC pair, then skip the patch
-    if not tls_byoc:
+    if not tls_byoc and secret_should_update:
 
         #app.logger.info("Secret data is blank")
 
@@ -889,7 +888,9 @@ def init_tls_pair(namespace):
         app.logger.info("Existing TLS cert and key found")
 
     # Check if cert should be updated
-    if cert_should_update(namespace, cert_data, tls_byoc):
+    secret_should_update = cert_should_update(namespace, cert_data, tls_byoc)
+    
+    if secret_should_update:
 
         if tls_byoc:
 
@@ -901,26 +902,38 @@ def init_tls_pair(namespace):
 
             # Generate TLS Pair
             tls_pair = build_tls_pair(namespace, magtape_tls_pair_secret_name, magtape_service_name, certificates_api)
-            # We set this to Falso so new secret is written
+            # We set this to False so the new secret is written
 
     # Handle cert creation or update
-    write_tls_pair(namespace, magtape_tls_secret, secret_exists, tls_pair, tls_byoc, core_api)
+    write_tls_pair(namespace, magtape_tls_secret, secret_exists, secret_should_update, tls_pair, tls_byoc, core_api)
 
 ################################################################################
 ################################################################################
 ################################################################################
 
-def get_rootca(namespace):
+def get_rootca(namespace, tls_byoc):
 
     """Function to get root ca used for securing admission webhook"""
 
+    if tls_byoc:
+
+        # Read from secret
+        root_ca = ""
+
+    else:
+
+        # Read from in-cluster kubeconfig
+        root_ca = ""
+
+    return root_ca
+
 ################################################################################
 ################################################################################
 ################################################################################
 
-def verify_vwc_cert_bundle(namespace):
+def verify_vwc_cert_bundle(namespace, vwc, ):
 
-    """Function to create or update the k8s validating webhook configuration"""
+    """Function to verify the CA Cert bundle in the VWC"""
 
 ################################################################################
 ################################################################################
@@ -957,11 +970,89 @@ def read_vwc(admission_api):
 ################################################################################
 ################################################################################
 
-def write_vwc(namespace, ca_secret_name, admission_api):
+def write_vwc(namespace, ca_secret_name, vwc, admission_api, core_api):
 
     """Function to create or update the k8s validating webhook configuration"""
 
-    verified = verify_vwc_cert_bundle(magtape_vwc_name, admission_api)
+    #verified = verify_vwc_cert_bundle(magtape_vwc_name, admission_api)
+
+    tls_byoc = check_for_byoc(namespace, magtape_tls_pair_secret_name, core_api)
+
+    if vwc != "":
+
+        ca_bundle = vwc.webhooks[0].clientconfig
+
+        print(ca_bundle)
+
+    else:
+
+        root_ca = get_rootca(namespace, tls_byoc)
+
+        vwc_meta = client.V1ObjectMeta(
+
+            name=magtape_vwc_name,
+            labels={"app": "magtape"}
+
+        )
+
+        vwc_webhook_service = client.AdmissionregistrationV1beta1ServiceReference(
+
+            name=magtape_vwc_webhook_name,
+            namespace=namespace,
+            path="/"
+
+        )
+
+        vwc_webhook_config = client.AdmissionregistrationV1beta1WebhookClientConfig(
+
+            ca_bundle=root_ca,
+            service=vwc_webhook_service
+
+        )
+
+        vwc_rules = client.V1beta1RuleWithOperations(
+
+            operations=[
+                "CREATE",
+                "UPDATE",
+            ],
+            api_groups=[
+                "*"
+            ],
+            api_versions=[
+                "*"
+            ],
+            resources=[
+                "*"
+            ],
+
+        )
+
+        vwc_label_selector = client.V1LabelSelector(
+
+            match_labels={"k8s.t-mobile.com/magtape": "enabled"}
+
+        )
+
+        vwc_webhook = client.V1beta1ValidatingWebhook(
+
+            client_config=vwc_webhook_config,
+            failure_policy="Fail",
+            rules=vwc_rules,
+            namespace_selector=vwc_label_selector,
+
+        )
+
+        vwc_webhooks = client.V1beta1ValidatingWebhookConfiguration(
+
+            vwc_webhook,
+
+        )
+
+        vwc = client.V1beta1ValidatingWebhookConfiguration(
+            metadata=vwc_meta,
+            webhooks=vwc_webhooks,
+        )
 
 ################################################################################
 ################################################################################
@@ -1011,10 +1102,11 @@ def init_vwc(namespace):
             sys.exit()
 
     configuration = client.Configuration()
+    core_api = client.CoreV1Api(client.ApiClient(configuration))
     admission_api = client.AdmissionregistrationV1beta1Api(client.ApiClient(configuration))
 
     vwc = read_vwc(admission_api)
-    write_vwc(namespace, magtape_tls_rootca_secret_name, admission_api)
+    write_vwc(namespace, magtape_tls_rootca_secret_name, vwc, admission_api, core_api)
 
 ################################################################################
 ################################################################################
