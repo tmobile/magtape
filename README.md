@@ -12,6 +12,7 @@ MagTape is NOT meant to be a replacement or competitor to OPA, but rather an exa
 MagTape examines kubernetes objects against a set of defined policies (best practice configurations/security concepts) and can deny/alert on objects that fail policy checks. The webhook is written in `Python` using the `Flask` framework.
 
 - [Prereqs](#prereqs)
+- [Quickstart](#quickstart)
 - [Policies](#policies)
 - [Deny Level](#deny-level)
 - [Health Check](#health-check)
@@ -19,7 +20,7 @@ MagTape examines kubernetes objects against a set of defined policies (best prac
 - [K8s Events](#k8s-events)
 - [Slack Alerts](#slack-alerts)
 - [Metrics](#metrics)
-- [Deploy](#deploy)
+- [Advances Install](docs/install.md)
 - [Testing](#testing)
 - [Troubleshooting](#troubleshooting)
 
@@ -38,6 +39,60 @@ admissionregistration.k8s.io/v1beta1
 ```
 
 In addition, the `MutatingAdmissionWebhook` and `ValidatingAdmissionWebhook` admission controllers should be added and listed in the correct order in the admission-control flag of kube-apiserver.
+
+#### Permissions
+
+MagTape requires cluster-admin permissions to deploy to Kubernetes since it requires access to create/read/update/delete cluster scoped resources (ValidatingWebhookConfigurations, Events, etc.)
+
+### Quickstart
+
+You can use the following command to install MagTape and the example policies from this repo with sane defaults. This won't have all features turned on as they require more configuration up front. Please see the [Advanced Install](#advanced-install) section for more details.
+
+```
+$ kubectl apply -f https://github.com/tmobile/magtape/blob/master/deploy/install.yaml
+```
+
+#### This will do the following
+
+- Create the `magtape-system` namespace
+- Create cluster and namespace scoped roles/rolebindings
+- Deploy the MagTape workload and related configs
+- Deploy the example policies from this repo
+
+#### Once this is complete you can do the following to test
+
+Create and label a test namespace
+
+```shell
+$ kubectl create ns test1
+$ kubectl label ns test1 k8s.t-mobile.com/magtape=enabled
+```
+
+Deploy some test workloads
+
+```shell
+# These examples assume you're in the root directory of this repo
+# Example with no failures
+
+$ kubectl apply -f ./testing/deployments/test-deploy01.yaml
+
+# Example with deny
+
+$ kubectl apply -f ./testing/deployments/test-deploy02.yaml
+
+# Example with failures, but no deny
+
+$ kubectl apply -f ./testing/deployments/test-deploy03.yaml
+```
+
+### Cleanup
+
+Remove all MagTape deployed resources
+
+```shell
+# Assumes you're in the root directory of this repo
+make clean
+```
 
 ### Policies
 
@@ -90,7 +145,11 @@ MagTape has a rudimentary healthcheck endpoint configured at `/healthz`. The end
 
 ## Image
 
-MagTape uses the [python3-magtape](https://github.com/tmobile/python3-magtape) image. Please reference the Image repo for more information on the image structure and contents.
+MagTape uses a few images for operation. Please reference the image repos for more information on the image structure and contents
+
+- [magtape and magtape-init](https://github.com/tmobile/magtape-image)
+- [opa](https://github.com/open-policy-agent/opa)
+- [kube-mgmt](https://github.com/open-policy-agent/kube-mgmt)
 
 ## K8s Events
 
@@ -157,54 +216,6 @@ Prometheus formatted metrics are exposed on the `/metrics` endpoint. Metrics tra
 - Breakdown by policy
 
  Grafana dashboards showing CLuster, Namespace, and Policy scoped metrics are available in the [metrics](./metrics/grafana) directory. An example Prometheus ServiceMonitor resource is located [here](./metrics/prometheus).
-
-## Deploy
-
-### Configuration Options
-
-NOTE: The following environment variable are defined in the `magtape-env-cm.yaml` manifest and can be used to customize MagTape's behavior.
-
-| Variable                    | Description                                                                                         | Values                        |
-|---                          |---                                                                                                  |---                            |
-| `FLASK_ENV`                 | The operation environment for Flask                                                                 | `production` or `development` |
-| `MAGTAPE_DENY_LEVEL`           | Controls the level of denial for checks. Please see section above on Deny Level                     | `LOW`, `MED`, or `HIGH`    |
-| `MAGTAPE_LOG_LEVEL`            | The log level to use                                                                                | `INFO` or `DEBUG`          |
-| `MAGTAPE_CLUSTER_NAME`         | The name of the Kubernetes Cluster where the webhook is deployed                                    | `test-cluster`               |
-| `MAGTAPE_K8S_EVENTS_ENABLED`   | Controls whether or not Kubernetes events are generated within the target namespace for policy failures | `TRUE` or `FALSE`      |
-| `MAGTAPE_SLACK_ENABLED`        | Controls whether or not the webhook sends Slack notifications                                        | `TRUE` or `FALSE`          |
-| `MAGTAPE_SLACK_PASSIVE`        | Controls whether or not Slack alerts are sent for checks that fail, but aren't denied due to the DENY_LEVEL setting | `TRUE` or `FALSE` |
-| `MAGTAPE_SLACK_WEBHOOK_URL_BASE`    | **OPTIONAL** - Overrides the base domain (`hooks.slack.com`) for the Slack Incoming Webhook URL. Used for airgapped environments where a forwarding/proxying service may be needed | `slack-proxy.example.com` |
-| `MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT`  | The URL for the Slack Incoming Webhook. | `https://hooks.slack.com/services/XXXXXXXX/XXXXXXXX/XXXXXXXXXXXXXXXXXX` |
-| `MAGTAPE_SLACK_ANNOTATION`     | Annotation key on Kubernetes namespace to detect customer Slack Incoming Webhook URL                | `magtape/slack-webhook-url`|
-| `MAGTAPE_SLACK_USER`           | The user the Slack alerts should be sent as                                                         | `mtbot`                     |
-| `MAGTAPE_SLACK_ICON`           | The emoji to use for the user icon in the alert                                                     | `:magtape:`                 |
-| `OPA_BASE_URL`              | The base URL used to contact the OPA API                                                            | `http://localhost:8181`      |
-| `OPA_K8S_PATH`              | The common path to reference all Kubernetes based OPA policies                                      | `/v0/data/magtape`  |
-
-### Installation
-
-MagTape is setup to use [kustomize](https://kustomize.io) to handle config substitution and generating the YAML manifests to deploy to Kubernetes.
-
-The kustomize layout uses overlays to allow for per environment (Development, Production, etc.) and per cluster substitutions.
-
-| DIRECTORY                                 | DESCRIPTION               |
-|---                                        |---                        |
-| `./deploy/base`                           | The base YAML manifests   |
-| `./deploy/overlays/std`                   | Standard substitutions for all deployments   |
-| `./deploy/overlays/<env>`                 | Environment specific substitutions   |
-| `./deploy/overlays/<cluster>`             | Cluster specific substitutions   |
-
-Once the proper edits have been made you can generate the YAML manifests:
-
-```shell
-$ kustomize build ./deploy/overlays/std | kubectl -n <namespace> apply -f -
-```
-
-NOTE: An SSL Cert and Key need to be generated for the Webhook. A helper script to assist with this is included [here](./deploy/scripts/ssl-cert-gen.sh). This script uses the Kubernetes `CertificateSigningRequest` API to a generate a certificate signed by the Kubernetes CA. The ValidatingWebhookConfiguration also needs to be patched with the Kubernetes CA Bundle in order to trust the webhook cert. [This script](./deploy/scripts/patch-ca-bundle.sh) can be used to patch the VWC.
-
-#### Script
-
-The [magtape-install.sh](./deploy/scripts/magtape-install.sh) script can be used to quickly get MagTape installed or you can use kustomize directly to incorporate the install into your existing CI/CD workflows.
 
 ## Testing
 

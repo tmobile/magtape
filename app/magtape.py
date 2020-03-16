@@ -59,15 +59,7 @@ app.logger.setLevel(magtape_log_level)
 cluster = os.environ['MAGTAPE_CLUSTER_NAME']
 magtape_namespace_name = os.environ['MAGTAPE_NAMESPACE_NAME']
 magtape_pod_name = os.environ['MAGTAPE_POD_NAME']
-magtape_tls_pair_secret_name = "magtape-tls"
-magtape_tls_rootca_secret_name = "magtape-tls-ca"
-magtape_byoc_annotation = "magtape-byoc"
-magtape_service_name = "magtape-svc"
 magtape_tls_path = "/tls"
-magtape_tls_key = ""
-magtape_tls_cert = ""
-magtape_vwc_name = "magtape-vwc"
-magtape_vwc_webhook_name = "magtape.webhook.k8s.t-mobile.com"
 
 # Set Slack related variables
 slack_enabled = os.environ['MAGTAPE_SLACK_ENABLED']

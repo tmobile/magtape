@@ -786,28 +786,6 @@ def init_vwc(namespace, magtape_tls_byoc):
 
     """Function to handle the k8s validating webhook configuration"""
 
-    """
-    - check for existing VWC
-        - If it exists
-            - read CA
-                - if self-signed CA read from magtape-tls-ca secret
-                - else read from in-cluster kubeconfig
-            - Compare Found CA to CA in existing VWC
-                - if different
-                    - patch VWC
-                - else
-                    - do nothing
-        If it doesn't exist
-            - Create it
-                if "self-signed-ca" is true
-                    - read CA
-                        - if self-signed CA read from magtape-tls-ca secret
-                        - else read from in-cluster kubeconfig
-                    - Build VWC
-                    - Write VWC
-            
-    """
-
     try:
 
         config.load_incluster_config()
