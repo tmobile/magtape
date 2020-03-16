@@ -61,7 +61,7 @@ No validation is done currently to ensure the specified CA actually signed the c
 
 MagTape makes use of the Kubernetes VWC (Validating Webhook Configuration) feature. This means it requires a `ValidatingWebhookConfiguration` resource to be deployed. The MagTape init process takes care of creating the VWC resource for you. MagTape uses a template defined within a configmap resource for the VWC creation.  
 
-You can adjust the VWC configuration in [this file](deploy/manifests/magtape-vwc.yaml) and use it to create a new template.
+You can adjust the VWC configuration in [this file](/deploy/manifests/magtape-vwc.yaml) and use it to create a new template.
 
 ```shell
 $ kubectl create cm magtape-vwc-template -n magtape-system --from-file=magtape-vwc=deploy/manifests/magtape-vwc.yaml
