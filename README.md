@@ -26,10 +26,10 @@ MagTape examines kubernetes objects against a set of defined policies (best prac
 
 ### Prereqs
 
-Kubernetes 1.9.0 or above with the `admissionregistration.k8s.io/v1beta1` API enabled. Verify that by the following command:
+Kubernetes 1.9.0 or above with the `admissionregistration.k8s.io` API enabled. Verify that by the following command:
 
 ```shell
-$ kubectl api-versions | grep admissionregistration.k8s.io/v1beta1
+$ kubectl api-versions | grep admissionregistration.k8s.io
 ```
 
 The result should be:
