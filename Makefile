@@ -42,8 +42,7 @@ echo:
 .PHONY: ns-create-magtape
 ns-create-magtape:
 
-	@kubectl create ns $(WEBHOOK_NAMESPACE); \
-  	kubectl label ns $(WEBHOOK_NAMESPACE) openpolicyagent.org/policy=rego --overwrite
+	@kubectl create ns $(WEBHOOK_NAMESPACE);
 
 # Create Namespace for testing
 .PHONY: ns-create-test
@@ -64,6 +63,7 @@ ns-delete-test:
 
 	kubectl delete ns $(TEST_NAMESPACE)
 
+# DEPRECATED - Moved to init application. Will be removed in the future.
 .PHONY: cert-gen
 cert-gen:
 
@@ -74,7 +74,8 @@ cert-gen:
 
 .PHONY: demo
 demo:
-	hack/magtape-install.sh install 
+
+	kubectl apply -f "${DEPLOY_DIR}/install.yaml" 
 
 .PHONY: install
 install: demo
@@ -82,7 +83,8 @@ install: demo
 .PHONY: uninstall
 uninstall:
 
-	hack/magtape-install.sh delete
+	kubectl delete -f "${DEPLOY_DIR}/install.yaml"
+	kubectl delete validatingwebhookconfiguration magtape-webhook
 
 .PHONY: clean
 clean: uninstall
@@ -104,7 +106,12 @@ test: unit
 test-all: test test-functional
 
 .PHONY: coverage
-covergae: echo
+coverage: echo
 
 .PHONY: release
 release: echo
+
+.PHONY: build-install-manifest
+build-install-manifest:
+
+	hack/build-single-manifest.sh

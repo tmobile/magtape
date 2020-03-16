@@ -2,10 +2,11 @@
 **/*.crt
 **/*.key
 **/*.pem
-**/*.tmp
+**/*.tmp*
 **/*-patched.yaml
 **/.vscode
 **/.DS_Store
 **/.coverage
 **/__pycache__
+**/scratch
 deploy/overlays/test

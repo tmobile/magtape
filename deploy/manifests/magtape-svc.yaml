@@ -1,9 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
+  name: magtape-svc
   labels:
     app: magtape
-  name: magtape-svc
+  namespace: magtape-system
 spec:
   ports:
   - name: https

@@ -6,9 +6,12 @@ metadata:
     app: magtape
 rules:
 - apiGroups:
+  - admissionregistration.k8s.io
   - certificates.k8s.io
   - events.k8s.io
+  - ""
   resources:
+    - validatingwebhookconfigurations
     - certificatesigningrequests
     - certificatesigningrequests/approval
     - certificatesigningrequests/status

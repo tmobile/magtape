@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: magtape
+  namespace: magtape-system
   labels:
     app: magtape
 spec:
@@ -15,6 +16,26 @@ spec:
         app: magtape
     spec:
       serviceAccountName: magtape-sa
+      initContainers:
+        - name: magtape-init
+          image: jmsearcy/python3-tkev-init:1.0
+          command: [/app/magtape-init.py]
+          imagePullPolicy: Always
+          env:
+          - name: MAGTAPE_NAMESPACE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          envFrom:
+            - configMapRef:
+                name: magtape-env
+          volumeMounts:
+          - name: magtape-init
+            mountPath: /app
+          - name: magtape-tls
+            mountPath: /tls
+          - name: magtape-vwc
+            mountPath: /vwc
       containers:
       - name: magtape
         image: jmsearcy/python3-tkev:1.4
@@ -54,9 +75,9 @@ spec:
               fieldPath: metadata.namespace
         envFrom:
         - configMapRef:
-            name: magtape-env-cm
+            name: magtape-env
         volumeMounts:
-          - name: script
+          - name: magtape-app
             mountPath: /app
           - name: magtape-tls
             mountPath: /tls
@@ -106,16 +127,26 @@ spec:
             cpu: 50m
             memory: 128Mi
       volumes:
-        - name: script
+        - name: magtape-app
           configMap:
-            name: magtape-cm
+            name: magtape-app
             defaultMode: 0755
             items:
-              - key: script
-                path: magtape.py
+            - key: magtape-app
+              path: magtape.py
+        - name: magtape-init
+          configMap:
+            name: magtape-init
+            defaultMode: 0755
+            items:
+            - key: magtape-init
+              path: magtape-init.py
+        - name: magtape-vwc
+          configMap:
+              name: magtape-vwc-template
+              items:
+              - key: magtape-vwc
+                path: magtape-vwc.yaml
         - name: magtape-tls
           emptyDir: {}
-        - name: certs
-        #  secret:
-        #    secretName: magtape-tls
       terminationGracePeriodSeconds: 5

@@ -2,7 +2,8 @@
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: configmap-modifier
+  name: magtape-ops
+  namespace: magtape-system
 rules:
 - apiGroups:
   - ""
@@ -31,10 +32,11 @@ rules:
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: opa-configmap-modifier
+  name: magtape-ops-rb
+  namespace: magtape-system
 roleRef:
   kind: Role
-  name: configmap-modifier
+  name: magtape-ops
   apiGroup: rbac.authorization.k8s.io
 subjects:
 - kind: ServiceAccount
