@@ -49,7 +49,7 @@ By default MagTape will handle creation and rotation of the required TLS cert/ke
 
 ### Specify a different secret name
 
-Reference the `MAGTAPE_TLS_SECRET` option in the [configuration options](#congiguration-options) section.
+Reference the `MAGTAPE_TLS_SECRET` option in the [configuration options](#configuration-options) section.
 
 ### Root CA
 
