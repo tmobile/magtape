@@ -391,14 +391,13 @@ data:
     \   return root_ca\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
     verify_vwc_cert_bundle(namespace, vwc):\n\n    \"\"\"Function to verify the CA
     Cert bundle in the VWC\"\"\"\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
-    compare_vwc_fields(new, existing):\n\n    \"\"\"Function to compare existing and
-    template generated validating webhook configurations\"\"\"\n\n    logging.debug(f\"Input
-    is of type \\\"{type(new)}\\\"\")\n\n    if isinstance(new, dict):\n\n        for
-    key in sorted(new):\n\n            if key in existing:\n\n                logging.debug(f\"Field
-    from VWC Template has a value of \\\"{new[key]}\\\"\")\n                logging.debug(f\"Field
-    from existing VWC has a value of \\\"{existing[key]}\\\"\")\n\n                same
-    = compare_vwc_fields(new[key], existing[key])\n\n                if not same:\n\n
-    \                   return False\n\n            else:\n\n                logging.info(f\"Changes
+    compare_vwc_fields(new, existing):\n\n    \"\"\"Function to compare VWC fields\"\"\"\n\n
+    \   logging.debug(f\"Input is of type \\\"{type(new)}\\\"\")\n\n    if isinstance(new,
+    dict):\n\n        for key in sorted(new):\n\n            if key in existing:\n\n
+    \               logging.debug(f\"Field from VWC Template has a value of \\\"{new[key]}\\\"\")\n
+    \               logging.debug(f\"Field from existing VWC has a value of \\\"{existing[key]}\\\"\")\n\n
+    \               same = compare_vwc_fields(new[key], existing[key])\n\n                if
+    not same:\n\n                    return False\n\n            else:\n\n                logging.info(f\"Changes
     detected in template. VWC Should update\")\n                logging.debug(f\"Changes:
     \\n{new}\\n\")\n\n                return False\n\n    elif isinstance(new, list):\n\n
     \       for index in range(len(new)):\n\n            if index <= len(existing)
@@ -410,36 +409,48 @@ data:
     detected in template. VWC Should update\")\n                logging.debug(f\"Changes:
     \\n{new}\\n\")\n\n                return False\n\n    else:\n\n        if existing
     != new:\n\n            logging.debug(f\"Field from VWC Template has a value of
-    \\\"{new[index]}\\\"\")\n            logging.debug(f\"Field from existing VWC
-    has a value of \\\"{existing[index]}\\\"\")\n\n            logging.info(f\"Changes
-    detected in template. VWC Should update\")\n            logging.debug(f\"Changes:
-    \\n{new}\\n\")\n\n            return False\n\n    return True\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    \\\"{new}\\\"\")\n            logging.debug(f\"Field from existing VWC has a value
+    of \\\"{existing}\\\"\")\n\n            logging.info(f\"Changes detected in template.
+    VWC Should update\")\n            logging.debug(f\"Changes: \\n{new}\\n\")\n\n
+    \           return False\n\n    return True\n\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    find_webhook_index(vwc_template):\n\n    \"\"\"Function to check if the MagTape
+    webhook exists in the VWC template and return its index\"\"\"\n\n    for index,
+    webhook in enumerate(vwc_template[\"webhooks\"]):\n\n        if isinstance(webhook,
+    dict):\n\n            if webhook[\"name\"] == magtape_vwc_webhook_name:\n\n                logging.debug(f\"MagTape
+    webhook index in VWC template: {index}\")\n\n                webhook_exists =
+    True\n                webhook_index = index\n\n                return webhook_exists,
+    webhook_index\n                \n    webhook_exists = False\n    webhook_index
+    = \"\"\n\n    return webhook_exists, webhook_index\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
     vwc_should_update(namespace, configuration, magtape_tls_byoc, core_api, admission_api):\n\n
-    \   \"\"\"Function to determine if an validating webhook configuration should
-    be updated\"\"\"\n\n    # Read VWC template from local file (mounded from configmap)\n
-    \   try:\n\n        with open(magtape_vwc_template_file) as vwc_file:\n        \n
-    \           vwc_template = yaml.safe_load(vwc_file)\n\n            logging.debug(f\"VWC
-    Template from File: \\n{vwc_template}\\n\")\n        \n    except IOError as exception:\n\n
-    \       logging.info(f\"Error opening VWC template file \\\"{magtape_vwc_template_file}\\\":
-    \\n{exception}\\n\")\n        sys.exit()\n\n    # Get Root CA\n    root_ca = get_rootca(namespace,
-    configuration, magtape_tls_byoc, core_api)\n\n    # Set CA Bundle in VWC template\n
-    \   # This does assume that there's only one webhook, or that the MagTape webhook
-    is\n    # listed first in the template\n    vwc_template[\"webhooks\"][0][\"clientConfig\"][\"caBundle\"]
-    = root_ca\n\n    # Need to read VWC again without converting field names to \"pythonic\"
-    names. \n    # This is to facilitate easier comparisons against the VWC template\n
-    \   # Thanks Alex!\n    # Would be nice to use \"_preload_content=False\" with
-    existing object instance\n    # to prevent an additional API call\n    existing_vwc_raw
-    = admission_api.read_validating_webhook_configuration(vwc_template[\"metadata\"][\"name\"],
+    \   \"\"\"Function to determine if an VWC should be updated\"\"\"\n\n    # Read
+    VWC template from local file (mounded from configmap)\n    try:\n\n        with
+    open(magtape_vwc_template_file) as vwc_file:\n        \n            vwc_template
+    = yaml.safe_load(vwc_file)\n\n            logging.debug(f\"VWC Template from File:
+    \\n{vwc_template}\\n\")\n        \n    except IOError as exception:\n\n        logging.info(f\"Error
+    opening VWC template file \\\"{magtape_vwc_template_file}\\\": \\n{exception}\\n\")\n
+    \       sys.exit()\n\n    # Get Root CA\n    root_ca = get_rootca(namespace, configuration,
+    magtape_tls_byoc, core_api)\n\n    # Set CA Bundle in VWC template\n    # This
+    does assume that there's a webhook in the template that matches \n    # the expected
+    name\n\n    webhook_exists, webhook_index = find_webhook_index(vwc_template)\n\n
+    \   if webhook_exists:\n\n        logging.info(f\"Found MagTape webhook defined
+    in the VWC template\")\n\n        vwc_template[\"webhooks\"][webhook_index][\"clientConfig\"][\"caBundle\"]
+    = root_ca\n\n    else:\n\n        logging.warning(f\"Did not find MagTape webhook
+    defined in the VWC Template\")\n        sys.exit(1)\n\n    # Need to read VWC
+    again without converting field names to \"pythonic\" names. \n    # This is to
+    facilitate easier comparisons against the VWC template\n    # Thanks Alex!\n    #
+    Would be nice to use \"_preload_content=False\" with existing object instance\n
+    \   # to prevent an additional API call\n    existing_vwc_raw = admission_api.read_validating_webhook_configuration(vwc_template[\"metadata\"][\"name\"],
     _preload_content=False)\n    existing_vwc = json.loads(existing_vwc_raw.data)\n\n
     \   logging.debug(f\"VWC Template with CA Bundle: \\n{vwc_template}\\n\")\n    logging.debug(f\"Existing
     VWC: \\n{existing_vwc}\\n\")\n\n    logging.info(\"Comparing existing VWC to template\")\n
     \   vwcs_are_equal = compare_vwc_fields(vwc_template, existing_vwc)\n\n    # If
     existing VWC and Template match, no need to update\n    if vwcs_are_equal:\n\n
-    \       new_vwc = \"\"\n\n        return False, new_vwc\n    # If they don't match,
-    we need to update the VWC\n    else:\n\n        new_vwc = vwc_template\n\n        return
-    True, new_vwc\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
-    read_vwc(admission_api):\n\n    \"\"\"Function to read k8s validating webhook
-    configuration\"\"\"\n\n    try:\n            \n        vwc = admission_api.read_validating_webhook_configuration(magtape_vwc_name)\n\n
+    \       logging.info(f\"Existing VWC matches template\")\n\n        new_vwc =
+    \"\"\n\n        return False, new_vwc\n    # If they don't match, we need to update
+    the VWC\n    else:\n\n        logging.info(f\"Changes were detected to VWC template\")\n\n
+    \       new_vwc = vwc_template\n\n        return True, new_vwc\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    read_vwc(admission_api):\n\n    \"\"\"Function to read k8s VWC\"\"\"\n\n    try:\n
+    \           \n        vwc = admission_api.read_validating_webhook_configuration(magtape_vwc_name)\n\n
     \   except ApiException as exception:\n\n        if exception.status != 404:\n\n
     \           logging.info(f\"Unable to read VWC \\\"{magtape_vwc_name}\\\": {exception}\\n\")\n
     \           sys.exit()\n\n        elif exception.status == 404:\n\n            logging.info(f\"Did
