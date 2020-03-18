@@ -47,9 +47,9 @@ MagTape requires cluster-admin permissions to deploy to Kubernetes since it requ
 
 ### Quickstart
 
-You can use the following command to install MagTape and the example policies from this repo with sane defaults. This won't have all features turned on as they require more configuration up front. Please see the [Advanced Install](#advanced-install) section for more details.
+You can use the following command to install MagTape and the example policies from this repo with sane defaults. This won't have all features turned on as they require more configuration up front. Please see the [Advanced Install](docs/install.md) section for more details.
 
-**NOTE:** The quickstart installation is not meant for production use. Please read through the [Advanced Install](#advanced-install) and [Cautions](#cautions) sections, and as always, use your best judgement when configuring MagTape for production scenarios.
+**NOTE:** The quickstart installation is not meant for production use. Please read through the [Advanced Install](docs/install.md) and [Cautions](#cautions) sections, and as always, use your best judgement when configuring MagTape for production scenarios.
 
 ```
 $ kubectl apply -f https://github.com/tmobile/magtape/blob/master/deploy/install.yaml
