@@ -295,7 +295,7 @@ If there are cluster-wide issues you can disable MagTape completely by removing 
 
 ### Certificate Trust
 
-Make sure you've patched the ValidatingWebhookConfiguration with the Kubernetes CA bundle. If this is not done the required trust between the K8s API and Webhook will not exist and the Webhook won't work correctly. More info is [here](#installation)
+The ValidatingWebhookConfiguration needs to have a CA Bundle that includes the CA that signed the TLS cert used to secure the MagTape webhook. If this is not done the required trust between the K8s API and webhook will not exist and the webhook won't function correctly. More info is available [here](docs/install.md#root-ca)
 
 ### Access MagTape API from local machine
 
