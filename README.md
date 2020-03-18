@@ -287,7 +287,7 @@ Info on testing resources can be found in the [testing](./testing) directory
 
 ### Break Glass Scenarios
 
-MagTape can be enabled and disabled on a per namespace basis by utilizing the `k8s.t-mobile.com/magtape` label. In emergency situations the label can be removed from a namespace to disable policy assessment for workloads in that namespace.
+MagTape can be enabled and disabled on a per namespace basis by utilizing the `k8s.t-mobile.com/magtape` label on namespace resources. In emergency situations the label can be removed from a namespace to disable policy assessment for workloads in that namespace.
 
 If there are cluster-wide issues you can disable MagTape completely by removing the `magtape-webhook` Validating Webhook Configuration and deleting the MagTape deployment.
 
