@@ -401,14 +401,17 @@ data:
     \                   return False\n\n            else:\n\n                logging.info(f\"Changes
     detected in template. VWC Should update\")\n                logging.debug(f\"Changes:
     \\n{new}\\n\")\n\n                return False\n\n    elif isinstance(new, list):\n\n
-    \       for index in range(len(new)):\n\n            if index in existing:\n\n
-    \               logging.debug(f\"Field from VWC Template has a value of \\\"{new[index]}\\\"\")\n
-    \               logging.debug(f\"Field from existing VWC has a value of \\\"{existing[index]}\\\"\")\n
-    \               \n                same = compare_vwc_fields(new[index], existing[index])\n\n
-    \               if not same:\n\n                    return False\n\n            else:\n\n
-    \               logging.info(f\"Changes detected in template. VWC Should update\")\n
-    \               logging.debug(f\"Changes: \\n{new}\\n\")\n\n                return
-    False\n\n    else:\n\n        if existing != new:\n\n            logging.info(f\"Changes
+    \       for index in range(len(new)):\n\n            if index <= len(existing)
+    - 1:\n\n                logging.debug(f\"Field from VWC Template has a value of
+    \\\"{new[index]}\\\"\")\n                logging.debug(f\"Field from existing
+    VWC has a value of \\\"{existing[index]}\\\"\")\n                \n                same
+    = compare_vwc_fields(new[index], existing[index])\n\n                if not same:\n\n
+    \                   return False\n\n            else:\n\n                logging.info(f\"Changes
+    detected in template. VWC Should update\")\n                logging.debug(f\"Changes:
+    \\n{new}\\n\")\n\n                return False\n\n    else:\n\n        if existing
+    != new:\n\n            logging.debug(f\"Field from VWC Template has a value of
+    \\\"{new[index]}\\\"\")\n            logging.debug(f\"Field from existing VWC
+    has a value of \\\"{existing[index]}\\\"\")\n\n            logging.info(f\"Changes
     detected in template. VWC Should update\")\n            logging.debug(f\"Changes:
     \\n{new}\\n\")\n\n            return False\n\n    return True\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
     vwc_should_update(namespace, configuration, magtape_tls_byoc, core_api, admission_api):\n\n

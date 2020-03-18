@@ -720,7 +720,7 @@ def compare_vwc_fields(new, existing):
 
         for index in range(len(new)):
 
-            if index in existing:
+            if index <= len(existing) - 1:
 
                 logging.debug(f"Field from VWC Template has a value of \"{new[index]}\"")
                 logging.debug(f"Field from existing VWC has a value of \"{existing[index]}\"")
@@ -741,6 +741,9 @@ def compare_vwc_fields(new, existing):
     else:
 
         if existing != new:
+
+            logging.debug(f"Field from VWC Template has a value of \"{new[index]}\"")
+            logging.debug(f"Field from existing VWC has a value of \"{existing[index]}\"")
 
             logging.info(f"Changes detected in template. VWC Should update")
             logging.debug(f"Changes: \n{new}\n")
