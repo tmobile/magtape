@@ -22,6 +22,7 @@ MagTape examines kubernetes objects against a set of defined policies (best prac
 - [Metrics](#metrics)
 - [Advances Install](docs/install.md)
 - [Testing](#testing)
+- [Cautions](#cautions)
 - [Troubleshooting](#troubleshooting)
 
 ### Prereqs
@@ -47,6 +48,8 @@ MagTape requires cluster-admin permissions to deploy to Kubernetes since it requ
 ### Quickstart
 
 You can use the following command to install MagTape and the example policies from this repo with sane defaults. This won't have all features turned on as they require more configuration up front. Please see the [Advanced Install](#advanced-install) section for more details.
+
+**NOTE:** The quickstart installation is not meant for production use. Please read through the [Advanced Install](#advanced-install) and [Cautions](#cautions) sections, and as always, use your best judgement when configuring MagTape for production scenarios.
 
 ```
 $ kubectl apply -f https://github.com/tmobile/magtape/blob/master/deploy/install.yaml
@@ -82,7 +85,7 @@ $ kubectl apply -f ./testing/deployments/test-deploy01.yaml -n test1
 $ kubectl apply -f ./testing/deployments/test-deploy02.yaml -n test1
 
 # Example with failures, but no deny
-# While this rrequest won't be denied, a K8s Event will be generated
+# While this request won't be denied, a K8s Event will be generated
 # and can be viewed with "kubectl get events -n test1"
 
 $ kubectl apply -f ./testing/deployments/test-deploy03.yaml -n test1
@@ -101,7 +104,8 @@ Remove all MagTape deployed resources
 
 ```shell
 # Assumes you're in the root directory of this repo
-make clean
+$ kubectl delete -f deploy/install.yaml
+$ kubectl delete validatingwebhookconfiguration magtape-webhook
 ```
 
 ### Policies
@@ -273,6 +277,19 @@ Prometheus formatted metrics are exposed on the `/metrics` endpoint. Metrics tra
 ### Test Samples Available
 
 Info on testing resources can be found in the [testing](./testing) directory
+
+## Cautions
+
+### Production Considerations
+
+- By Default the MagTape Validating Webhook Configuration is set to fail "closed". Meaning if the webhook is unreachable or doesn't return an expected response, requests to the Kubernetes API will be blocked. Please adjust the configuration if this is not something that fits your business model.
+- MagTape supports operation with multiple replicas that can increase availability and performance for critical clusters.
+
+### Break Glass Scenarios
+
+MagTape can be enabled and disabled on a per namespace basis by utilizing the `k8s.t-mobile.com/magtape` label. In emergency situations the label can be removed from a namespace to disable policy assessment for workloads in that namespace.
+
+If there are cluster-wide issues you can disable MagTape completely by removing the `magtape-webhook` Validating Webhook Configuration and deleting the MagTape deployment.
 
 ## Troubleshooting
 
