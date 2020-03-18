@@ -29,6 +29,7 @@ from kubernetes.client.rest import ApiException
 from logging.handlers import MemoryHandler
 import base64
 import datetime
+import json
 import logging
 import os
 import sys
@@ -50,14 +51,6 @@ magtape_vwc_template_file = f"{magtape_vwc_template_path}/magtape-vwc.yaml"
 magtape_vwc_webhook_name = "magtape.webhook.k8s.t-mobile.com"
 magtape_tls_byoc = False
 
-# Setup logging
-magtape_log_level = os.environ['MAGTAPE_LOG_LEVEL']
-logger = logging.getLogger()
-logger.setLevel(magtape_log_level)
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(magtape_log_level)
-logger.addHandler(handler)
-
 ###############################################################################$
 ################################################################################
 ################################################################################
@@ -71,7 +64,7 @@ def check_for_byoc(namespace, secret, core_api):
 
     if secret_annotations and magtape_byoc_annotation in secret_annotations:
 
-        logger.info(f"Detected the \"Bring Your Own Cert\" annotation for secret \"{secret_name}\"")
+        logging.info(f"Detected the \"Bring Your Own Cert\" annotation for secret \"{secret_name}\"")
 
         try:
 
@@ -81,12 +74,12 @@ def check_for_byoc(namespace, secret, core_api):
 
             if exception.status != 404:
 
-                logger.info(f"An error occurred while trying to read secret \"{magtape_tls_rootca_secret_name}\" in the \"{namespace}\" namespace:\n{exception}\n")
+                logging.info(f"An error occurred while trying to read secret \"{magtape_tls_rootca_secret_name}\" in the \"{namespace}\" namespace:\n{exception}\n")
                 sys.exit()
 
             else:
 
-                logger.info(f"\"Bring Your Own Cert\" annotation specified, but secret \"{magtape_tls_rootca_secret_name}\" was not found in the \"{namespace}\" namespace:\n{exception}\n")
+                logging.info(f"\"Bring Your Own Cert\" annotation specified, but secret \"{magtape_tls_rootca_secret_name}\" was not found in the \"{namespace}\" namespace:\n{exception}\n")
                 sys.exit()   
 
         if "rootca.pem" in secret.data and secret.data["rootca.pem"] != "":         
@@ -95,7 +88,7 @@ def check_for_byoc(namespace, secret, core_api):
 
         else:
 
-            logger.info(f"No key found or value is blank for \"rootca.pem\" in \"{secret.metadata.name}\" secret")
+            logging.info(f"No key found or value is blank for \"rootca.pem\" in \"{secret.metadata.name}\" secret")
             sys.exit()
 
     else:
@@ -164,7 +157,7 @@ def build_k8s_csr(namespace, service_name, key):
         spec=k8s_csr_spec,
     )
 
-    logger.debug(f"CSR: {k8s_csr}\n")
+    logging.debug(f"CSR: {k8s_csr}\n")
 
     return k8s_csr
 
@@ -187,13 +180,13 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
 
         if exception.status != 404:
 
-            logger.info(f"Problem reading existing certificate requests: {exception}\n")
+            logging.info(f"Problem reading existing certificate requests: {exception}\n")
             sys.exit()
 
         elif exception.status == 404:
 
-            logger.info(f"Did not find existing certificate requests")
-            logger.debug(f"Exception:\n{exception}\n")
+            logging.info(f"Did not find existing certificate requests")
+            logging.debug(f"Exception:\n{exception}\n")
             
     else:  
 
@@ -205,30 +198,30 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
 
             if exception.status != 404:
 
-                logger.info(f"Unable to delete existing certificate request \"{new_k8s_csr_name}\": {exception}\n")
+                logging.info(f"Unable to delete existing certificate request \"{new_k8s_csr_name}\": {exception}\n")
                 sys.exit()
             
             elif exception.status == 404:
 
-                logger.info(f"Existing certificate request \"{new_k8s_csr_name}\" not found")
-                logger.debug(f"Exception:\n{exception}\n")
+                logging.info(f"Existing certificate request \"{new_k8s_csr_name}\" not found")
+                logging.debug(f"Exception:\n{exception}\n")
         else:
 
-            logger.info(f"Existing certificate request deleted")
+            logging.info(f"Existing certificate request deleted")
 
     # Create K8s CSR resource
     try:
 
-        logger.debug(k8s_csr)
+        logging.debug(k8s_csr)
         certificates_api.create_certificate_signing_request(k8s_csr)
 
     except ApiException as exception:
 
-        logger.info(f"Unable to create certificate request \"{new_k8s_csr_name}\"\n")
-        logger.debug(f"Exception:\n{exception}\n")
+        logging.info(f"Unable to create certificate request \"{new_k8s_csr_name}\"\n")
+        logging.debug(f"Exception:\n{exception}\n")
         sys.exit()
 
-    logger.info(f"Certificate signing request \"{new_k8s_csr_name}\" has been created")
+    logging.info(f"Certificate signing request \"{new_k8s_csr_name}\" has been created")
 
     # Read newly created K8s CSR resource
     try:
@@ -237,8 +230,8 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
 
     except ApiException as exception:
 
-        logger.info(f"Unable to read certificate request status for \"{new_k8s_csr_name}\"\n")
-        logger.debug(f"Exception:\n{exception}\n")
+        logging.info(f"Unable to read certificate request status for \"{new_k8s_csr_name}\"\n")
+        logging.debug(f"Exception:\n{exception}\n")
         sys.exit()
 
     new_k8s_csr_approval_conditions = client.V1beta1CertificateSigningRequestCondition(
@@ -258,11 +251,11 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
 
     except ApiException as exception:
 
-        logger.info(f"Unable to update certificate request status for \"{new_k8s_csr_name}\": {exception}\n")
+        logging.info(f"Unable to update certificate request status for \"{new_k8s_csr_name}\": {exception}\n")
 
     # Retreive new 
 
-    logger.info(f"Certificate signing request \"{new_k8s_csr_name}\" is approved")
+    logging.info(f"Certificate signing request \"{new_k8s_csr_name}\" is approved")
 
     return new_k8s_csr_body
 
@@ -286,12 +279,12 @@ def get_tls_cert_from_request(namespace, secret_name, k8s_csr_name, certificates
 
             k8s_csr = certificates_api.read_certificate_signing_request(k8s_csr_name)
 
-            logger.debug(k8s_csr)
+            logging.debug(k8s_csr)
 
         except ApiException as exception:
 
-                logger.info(f"Problem reading certificate request \"{k8s_csr_name}\"\n")
-                logger.debug(f"Exception:\n{exception}\n")
+                logging.info(f"Problem reading certificate request \"{k8s_csr_name}\"\n")
+                logging.debug(f"Exception:\n{exception}\n")
 
         tls_cert_b64 = k8s_csr.status.certificate
         conditions = k8s_csr.status.conditions or []
@@ -299,22 +292,22 @@ def get_tls_cert_from_request(namespace, secret_name, k8s_csr_name, certificates
 
         if "Approved" in [condition.type for condition in conditions] and tls_cert_b64 != "":
 
-                logger.info("Found approved certificate")
+                logging.info("Found approved certificate")
                 
                 break
 
-        logger.info("Waiting for certificate approval")
+        logging.info("Waiting for certificate approval")
         
 
     else:
 
-        logger.info(f"Timed out reading certificate request \"{k8s_csr_name}\"\n")
+        logging.info(f"Timed out reading certificate request \"{k8s_csr_name}\"\n")
 
-    logger.debug(f"Cert RAW: {k8s_csr}")
+    logging.debug(f"Cert RAW: {k8s_csr}")
 
     tls_cert = base64.b64decode(k8s_csr.status.certificate)
 
-    logger.debug(f"Cert PEM: {tls_cert}")
+    logging.debug(f"Cert PEM: {tls_cert}")
 
     return tls_cert
 
@@ -351,7 +344,7 @@ def build_tls_pair(namespace, secret_name, service_name, certificates_api):
         "key": tls_key_pem,
     }
 
-    logger.debug(tls_pair)
+    logging.debug(tls_pair)
 
     return tls_pair
 
@@ -368,7 +361,7 @@ def cert_expired(namespace, cert_data):
     tls_cert = x509.load_pem_x509_certificate(tls_cert_decoded, default_backend())
     expire_days = tls_cert.not_valid_after - current_datetime
 
-    logger.info(f"Days until Cert Expiration: {expire_days.days}")
+    logging.info(f"Days until Cert Expiration: {expire_days.days}")
 
     return expire_days.days
 
@@ -389,7 +382,7 @@ def cert_should_update(namespace, cert_data, magtape_tls_byoc):
 
             if magtape_tls_byoc:
 
-                logger.info(f"The \"Bring Your Own Cert\" annotation was used but one or more of the tls cert/key values are blank")
+                logging.info(f"The \"Bring Your Own Cert\" annotation was used but one or more of the tls cert/key values are blank")
                 sys.exit()
 
             return True
@@ -432,20 +425,20 @@ def read_tls_pair(namespace, secret_name, tls_pair, core_api):
 
         if exception.status != 404:
 
-            logger.info(f"Unable to read secret \"{secret_name}\" in the \"{namespace}\" namespace\n")
-            logger.debug(f"Exception:\n{exception}\n")
+            logging.info(f"Unable to read secret \"{secret_name}\" in the \"{namespace}\" namespace\n")
+            logging.debug(f"Exception:\n{exception}\n")
             sys.exit()
 
         else:
 
-            logger.info(f"Did not find secret \"{secret_name}\" in the \"{namespace}\" namespace")
-            logger.debug(f"Exception:\n{exception}\n")
+            logging.info(f"Did not find secret \"{secret_name}\" in the \"{namespace}\" namespace")
+            logging.debug(f"Exception:\n{exception}\n")
 
             return cert_data, tls_pair, secret_exists, False
 
     secret_exists = True
 
-    logger.debug(f"Secret data:\n {secret.data['cert.pem']}\n")
+    logging.debug(f"Secret data:\n {secret.data['cert.pem']}\n")
 
     tls_cert_pem = base64.b64decode(secret.data["cert.pem"])
     tls_key_pem = base64.b64decode(secret.data["key.pem"])
@@ -472,11 +465,11 @@ def write_tls_pair(namespace, secret_name, secret_exists, secret_should_update, 
     # If the secret isn't found, create it
     if secret_exists:
 
-        logger.info(f"Using existing secret \"{secret_name}\" in namespace \"{namespace}\"")
+        logging.info(f"Using existing secret \"{secret_name}\" in namespace \"{namespace}\"")
 
     else:
 
-        logger.info(f"Creating secret \"{secret_name}\" in namespace \"{namespace}\"")
+        logging.info(f"Creating secret \"{secret_name}\" in namespace \"{namespace}\"")
 
         secret_metadata = client.V1ObjectMeta(
             name=secret_name,
@@ -496,7 +489,7 @@ def write_tls_pair(namespace, secret_name, secret_exists, secret_should_update, 
 
         )
 
-        logger.debug(f"New secret: \n{secret}\n")
+        logging.debug(f"New secret: \n{secret}\n")
 
         try:
             
@@ -504,7 +497,7 @@ def write_tls_pair(namespace, secret_name, secret_exists, secret_should_update, 
 
         except ApiException as exception:
 
-            logger.info(f"Unable to create secret \"{secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
+            logging.info(f"Unable to create secret \"{secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
             sys.exit()
         
         try:
@@ -513,13 +506,13 @@ def write_tls_pair(namespace, secret_name, secret_exists, secret_should_update, 
 
         except ApiException as exception:
 
-            logger.info(f"Unable to read new secret \"{secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
+            logging.info(f"Unable to read new secret \"{secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
             sys.exit()
     
     # If this is a BYOC pair, then skip the patch
     if not secret_exists and magtape_tls_byoc and secret_should_update:
 
-        #logger.info("Secret data is blank")
+        #logging.info("Secret data is blank")
 
         secret = client.V1Secret()
 
@@ -534,27 +527,27 @@ def write_tls_pair(namespace, secret_name, secret_exists, secret_should_update, 
 
         except ApiException as exception:
 
-            logger.info(f"Unable to update secret \"{secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
+            logging.info(f"Unable to update secret \"{secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
             sys.exit()
 
-        logger.info(f"Patched new cert/key into existing secret")
+        logging.info(f"Patched new cert/key into existing secret")
 
         try:
 
             cert_data, tls_pair, secret_exists, magtape_tls_byoc = read_tls_pair(namespace, magtape_tls_pair_secret_name, tls_pair, core_api)
 
-            logger.debug(f"Cert Data: \n{cert_data}\n")
+            logging.debug(f"Cert Data: \n{cert_data}\n")
 
         except ApiException as exception:
 
-            logger.info(f"Unable to read updated secret \"{secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
+            logging.info(f"Unable to read updated secret \"{secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
             sys.exit()
 
-        logger.info(f"Updated secret \"{secret_name}\" in namespace \"{namespace}\"")
+        logging.info(f"Updated secret \"{secret_name}\" in namespace \"{namespace}\"")
 
     # Write cert and key to files for Flask app
-    logger.info("Writing cert and key locally")
-    logger.debug(f"TLS Pair: {tls_pair}")
+    logging.info("Writing cert and key locally")
+    logging.debug(f"TLS Pair: {tls_pair}")
 
     with open(f"{magtape_tls_path}/cert.pem", 'wb') as cert_file:
         cert_file.write(tls_pair["cert"])
@@ -572,14 +565,14 @@ def init_tls_pair(namespace):
 
     tls_pair = ""
     
-    logger.info("Starting TLS init process")
+    logging.info("Starting TLS init process")
 
     # Check if custom secret was specified in ENV vars
     magtape_tls_secret = os.getenv("MAGTAPE_TLS_SECRET", magtape_tls_pair_secret_name)
 
     if magtape_tls_secret != magtape_tls_pair_secret_name:
 
-        logger.debug("Magtape TLS Secret specified")
+        logging.debug("Magtape TLS Secret specified")
 
     try:
 
@@ -587,15 +580,15 @@ def init_tls_pair(namespace):
 
     except Exception as exception:
 
-        logger.info(f"Exception loading incluster configuration: {exception}")
+        logging.info(f"Exception loading incluster configuration: {exception}")
 
         try:
-            logger.info("Loading local kubeconfig")
+            logging.info("Loading local kubeconfig")
             config.load_kube_config()
 
         except Exception as exception:
 
-            logger.info(f"Exception loading local kubeconfig: {exception}")
+            logging.info(f"Exception loading local kubeconfig: {exception}")
             sys.exit()
 
     configuration = client.Configuration()
@@ -607,7 +600,7 @@ def init_tls_pair(namespace):
 
     if secret_exists:
 
-        logger.info("Existing TLS cert and key found")
+        logging.info("Existing TLS cert and key found")
 
     # Check if cert should be updated
     secret_should_update = cert_should_update(namespace, cert_data, magtape_tls_byoc)
@@ -616,11 +609,11 @@ def init_tls_pair(namespace):
 
         if magtape_tls_byoc:
 
-            logger.info(f"WARN - Certificate used for Admission Webhook is past threshhold for normal rotation. Not rotating because this cert isn't managed by the K8s CA")
+            logging.info(f"WARN - Certificate used for Admission Webhook is past threshhold for normal rotation. Not rotating because this cert isn't managed by the K8s CA")
 
         else:
 
-            logger.info(f"Generating new cert/key pair for TLS")
+            logging.info(f"Generating new cert/key pair for TLS")
 
             # Generate TLS Pair
             tls_pair = build_tls_pair(namespace, magtape_tls_pair_secret_name, magtape_service_name, certificates_api)
@@ -648,14 +641,14 @@ def get_rootca(namespace, configuration, magtape_tls_byoc, core_api):
 
             if exception.status != 404:
 
-                logger.info(f"Unable to read secret \"{magtape_tls_rootca_secret_name}\" in the \"{namespace}\" namespace\n")
-                logger.debug(f"Exception:\n{exception}\n")
+                logging.info(f"Unable to read secret \"{magtape_tls_rootca_secret_name}\" in the \"{namespace}\" namespace\n")
+                logging.debug(f"Exception:\n{exception}\n")
                 sys.exit()
 
             else:
 
-                logger.info(f"Did not find secret \"{magtape_tls_rootca_secret_name}\" in the \"{namespace}\" namespace")
-                logger.debug(f"Exception:\n{exception}\n")
+                logging.info(f"Did not find secret \"{magtape_tls_rootca_secret_name}\" in the \"{namespace}\" namespace")
+                logging.debug(f"Exception:\n{exception}\n")
                 sys.exit()
 
         root_ca = secret.data["rootca.pem"]
@@ -674,10 +667,10 @@ def get_rootca(namespace, configuration, magtape_tls_byoc, core_api):
 
         except EnvironmentError:
 
-            logger.info("Error reading Root CA from in-cluster kubeconfig\n")
+            logging.info("Error reading Root CA from in-cluster kubeconfig\n")
             sys.exit()
 
-        logger.debug(f"Raw CA data from in-cluster kubeconfig: \n{root_ca_raw}\n")
+        logging.debug(f"Raw CA data from in-cluster kubeconfig: \n{root_ca_raw}\n")
 
         root_ca = base64.b64encode(root_ca_raw.encode('utf-8')).decode('utf-8').rstrip()
 
@@ -687,9 +680,131 @@ def get_rootca(namespace, configuration, magtape_tls_byoc, core_api):
 ################################################################################
 ################################################################################
 
-def verify_vwc_cert_bundle(namespace, vwc, ):
+def verify_vwc_cert_bundle(namespace, vwc):
 
     """Function to verify the CA Cert bundle in the VWC"""
+
+################################################################################
+################################################################################
+################################################################################
+
+def compare_vwc_fields(new, existing):
+
+    """Function to compare existing and template generated validating webhook configurations"""
+
+    logging.debug(f"Input is of type \"{type(new)}\"")
+
+    if isinstance(new, dict):
+
+        for key in sorted(new):
+
+            if key in existing:
+
+                logging.debug(f"Field from VWC Template has a value of \"{new[key]}\"")
+                logging.debug(f"Field from existing VWC has a value of \"{existing[key]}\"")
+
+                same = compare_vwc_fields(new[key], existing[key])
+
+                if not same:
+
+                    return False
+
+            else:
+
+                logging.info(f"Changes detected in template. VWC Should update")
+                logging.debug(f"Changes: \n{new}\n")
+
+                return False
+
+    elif isinstance(new, list):
+
+        for index in range(len(new)):
+
+            if index in existing:
+
+                logging.debug(f"Field from VWC Template has a value of \"{new[index]}\"")
+                logging.debug(f"Field from existing VWC has a value of \"{existing[index]}\"")
+                
+                same = compare_vwc_fields(new[index], existing[index])
+
+                if not same:
+
+                    return False
+
+            else:
+
+                logging.info(f"Changes detected in template. VWC Should update")
+                logging.debug(f"Changes: \n{new}\n")
+
+                return False
+
+    else:
+
+        if existing != new:
+
+            logging.info(f"Changes detected in template. VWC Should update")
+            logging.debug(f"Changes: \n{new}\n")
+
+            return False
+
+    return True
+
+################################################################################
+################################################################################
+################################################################################
+
+def vwc_should_update(namespace, configuration, magtape_tls_byoc, core_api, admission_api):
+
+    """Function to determine if an validating webhook configuration should be updated"""
+
+    # Read VWC template from local file (mounded from configmap)
+    try:
+
+        with open(magtape_vwc_template_file) as vwc_file:
+        
+            vwc_template = yaml.safe_load(vwc_file)
+
+            logging.debug(f"VWC Template from File: \n{vwc_template}\n")
+        
+    except IOError as exception:
+
+        logging.info(f"Error opening VWC template file \"{magtape_vwc_template_file}\": \n{exception}\n")
+        sys.exit()
+
+    # Get Root CA
+    root_ca = get_rootca(namespace, configuration, magtape_tls_byoc, core_api)
+
+    # Set CA Bundle in VWC template
+    # This does assume that there's only one webhook, or that the MagTape webhook is
+    # listed first in the template
+    vwc_template["webhooks"][0]["clientConfig"]["caBundle"] = root_ca
+
+    # Need to read VWC again without converting field names to "pythonic" names. 
+    # This is to facilitate easier comparisons against the VWC template
+    # Thanks Alex!
+    # Would be nice to use "_preload_content=False" with existing object instance
+    # to prevent an additional API call
+    existing_vwc_raw = admission_api.read_validating_webhook_configuration(vwc_template["metadata"]["name"], _preload_content=False)
+    existing_vwc = json.loads(existing_vwc_raw.data)
+
+    logging.debug(f"VWC Template with CA Bundle: \n{vwc_template}\n")
+    logging.debug(f"Existing VWC: \n{existing_vwc}\n")
+
+    logging.info("Comparing existing VWC to template")
+    vwcs_are_equal = compare_vwc_fields(vwc_template, existing_vwc)
+
+    # If existing VWC and Template match, no need to update
+    if vwcs_are_equal:
+
+        new_vwc = ""
+
+        return False, new_vwc
+    # If they don't match, we need to update the VWC
+    else:
+
+        new_vwc = vwc_template
+
+        return True, new_vwc
 
 ################################################################################
 ################################################################################
@@ -707,18 +822,18 @@ def read_vwc(admission_api):
 
         if exception.status != 404:
 
-            logger.info(f"Unable to read VWC \"{magtape_vwc_name}\": {exception}\n")
+            logging.info(f"Unable to read VWC \"{magtape_vwc_name}\": {exception}\n")
             sys.exit()
 
         elif exception.status == 404:
 
-            logger.info(f"Did not find existing VWC \"{magtape_vwc_name}\"")
-            logger.debug(f"Exception:\n{exception}\n")
+            logging.info(f"Did not find existing VWC \"{magtape_vwc_name}\"")
+            logging.debug(f"Exception:\n{exception}\n")
             
             vwc = ""
             return vwc
 
-    logger.info(f"Existing VWC \"{magtape_vwc_name}\" found")
+    logging.info(f"Existing VWC \"{magtape_vwc_name}\" found")
 
     return vwc
 
@@ -736,10 +851,10 @@ def delete_vwc(namespace, admission_api):
 
     except ApiException as exception:
 
-        logger.info(f"Unable to delete VWC \"{magtape_vwc_name}\": {exception}\n")
+        logging.info(f"Unable to delete VWC \"{magtape_vwc_name}\": {exception}\n")
         sys.exit()
 
-    logger.info("Deleted existing VWC")
+    logging.info("Deleted existing VWC")
 
 ################################################################################
 ################################################################################
@@ -749,34 +864,46 @@ def write_vwc(namespace, ca_secret_name, vwc, configuration, admission_api, core
 
     """Function to create or update the k8s validating webhook configuration"""
 
+    # TO-DO (phenixblue): Need to work out how to validate TLS cert is signed by CA
     #verified = verify_vwc_cert_bundle(magtape_vwc_name, admission_api)
 
+    # Figure out if there's an existing VWC that needs to be updated, or
+    # if a new VWC should be created
+    #
+    # This check helps allow MagTape to scale out to multiple replicas without 
+    # each replica stomping on the VWC
     if vwc != "":
 
-        delete_vwc(namespace, admission_api)
+        should_update, vwc = vwc_should_update(namespace, configuration, magtape_tls_byoc, core_api, admission_api)
 
-    root_ca = get_rootca(namespace, configuration, magtape_tls_byoc, core_api)
+        if should_update:
 
-    with open(magtape_vwc_template_file) as vwc_file:
-    
-        vwc_template = yaml.safe_load(vwc_file)
+            logging.info(f"Patching VWC \"{magtape_vwc_name}\"")
 
-        logger.debug(f"VWC Template from File: \n{vwc_template}\n")
+            try:
 
-    vwc_template["webhooks"][0]["clientConfig"]["caBundle"] = root_ca
+                admission_api.patch_validating_webhook_configuration(magtape_vwc_name, vwc)  
 
-    logger.debug(f"VWC Template after substitution: \n{vwc_template}\n")
+            except ApiException as exception:
 
-    logger.info(f"Creating VWC \"{magtape_vwc_name}\"")
+                logging.info(f"Unable to patch VWC \"{magtape_vwc_name}\": {exception}\n")
+                sys.exit()
 
-    try:
+    else:
 
-        admission_api.create_validating_webhook_configuration(vwc_template)  
+        # TO-DO (phenixblue): Need to remove for cleanup., No longer needed.
+        #delete_vwc(namespace, admission_api)
 
-    except ApiException as exception:
+        logging.info(f"Creating VWC \"{magtape_vwc_name}\"")
 
-        logger.info(f"Unable to create VWC \"{magtape_vwc_name}\": {exception}\n")
-        sys.exit()
+        try:
+
+            admission_api.create_validating_webhook_configuration(vwc)  
+
+        except ApiException as exception:
+
+            logging.info(f"Unable to create VWC \"{magtape_vwc_name}\": {exception}\n")
+            sys.exit()
 
 ################################################################################
 ################################################################################
@@ -792,15 +919,15 @@ def init_vwc(namespace, magtape_tls_byoc):
 
     except Exception as exception:
 
-        logger.info(f"Exception loading incluster configuration: {exception}")
+        logging.info(f"Exception loading incluster configuration: {exception}")
 
         try:
-            logger.info("Loading local kubeconfig")
+            logging.info("Loading local kubeconfig")
             config.load_kube_config()
 
         except Exception as exception:
 
-            logger.info(f"Exception loading local kubeconfig: {exception}")
+            logging.info(f"Exception loading local kubeconfig: {exception}")
             sys.exit()
 
     configuration = client.Configuration()
@@ -816,7 +943,19 @@ def init_vwc(namespace, magtape_tls_byoc):
 
 def main():
 
-    logger.info("MagTape Init")
+    # Setup logging
+    """
+    magtape_log_level = os.environ['MAGTAPE_LOG_LEVEL']
+    logger = logging.getLogger()
+    logger.setLevel(magtape_log_level)
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(magtape_log_level)
+    logger.addHandler(handler)
+    """
+
+    logging.basicConfig(level=os.getenv("MAGTAPE_LOG_LEVEL", "INFO"), stream=sys.stdout, format='[%(asctime)s] %(levelname)s: %(message)s')
+
+    logging.info("MagTape Init")
     init_tls_pair(magtape_namespace_name)
     init_vwc(magtape_namespace_name, magtape_tls_byoc)
 

@@ -18,12 +18,6 @@
 # its contributors may be used to endorse or promote products derived from this
 # software without specific prior written permission.
 
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes
-from cryptography.x509.oid import NameOID
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
 from flask import Flask, request, jsonify
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
@@ -100,7 +94,7 @@ def webhook():
     request_spec = copy.deepcopy(request_info)
 
     # Call Main Webhook function
-    admissionReview = main(request_spec)
+    admissionReview = magtape(request_spec)
 
     # Return JSON formatted response object
     return jsonify(admissionReview)
@@ -128,7 +122,7 @@ def healthz():
 ################################################################################
 ################################################################################
 
-def main(request_spec):
+def magtape(request_spec):
 
     """main function"""
 
@@ -619,10 +613,16 @@ def send_slack_alert(response_message,slack_webhook_url, slack_user, slack_icon,
 ################################################################################
 ################################################################################
 
-if __name__ == "__main__":
+def main():
 
     app.logger.info("MagTape Startup")
-
-    #init_tls_pair(magtape_namespace_name)
     
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True, ssl_context=(f"{magtape_tls_path}/cert.pem", f"{magtape_tls_path}/key.pem"))
+
+################################################################################
+################################################################################
+################################################################################
+
+if __name__ == "__main__":
+
+    main()

@@ -46,15 +46,15 @@ spec:
         livenessProbe:
           httpGet:
             scheme: HTTPS
-            path: /healthz
             port: 5000
+            path: /healthz
           initialDelaySeconds: 5
           periodSeconds: 10
         readinessProbe:
           httpGet:
             scheme: HTTPS
-            path: /healthz
             port: 5000
+            path: /healthz
           initialDelaySeconds: 5
           periodSeconds: 10
         resources:
@@ -92,16 +92,16 @@ spec:
           - "--addr=http://127.0.0.1:8181"
         readinessProbe:
           httpGet:
-            path: /health
             scheme: HTTPS
             port: 443
+            path: /health
           initialDelaySeconds: 5
           periodSeconds: 10
         livenessProbe:
           httpGet:
-            path: /health
             scheme: HTTPS
             port: 443
+            path: /health
           initialDelaySeconds: 5
           periodSeconds: 10
         resources:

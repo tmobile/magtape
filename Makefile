@@ -18,10 +18,8 @@
 
 REPO_ROOT := $(CURDIR)
 APP_NAME ?= "magtape.py"
-APP_DIR ?= "$(CURDIR)/app"
-DEPLOY_DIR ?= "$(CURDIR)/deploy"
-POLICY_DIR ?= "$(CURDIR)/policies"
-CLUSTER_NAME ?= "cluster1"
+DEPLOY_DIR ?= $(CURDIR)/deploy
+POLICY_DIR ?= $(CURDIR)/policies
 WEBHOOK_NAMESPACE ?= "magtape-system"
 TEST_NAMESPACE ?= "test1"
 
@@ -75,7 +73,7 @@ cert-gen:
 .PHONY: demo
 demo:
 
-	kubectl apply -f "${DEPLOY_DIR}/install.yaml" 
+	kubectl apply -f $(DEPLOY_DIR)/install.yaml
 
 .PHONY: install
 install: demo
@@ -83,7 +81,7 @@ install: demo
 .PHONY: uninstall
 uninstall:
 
-	kubectl delete -f "${DEPLOY_DIR}/install.yaml"
+	kubectl delete -f $(DEPLOY_DIR)/install.yaml
 	kubectl delete validatingwebhookconfiguration magtape-webhook
 
 .PHONY: clean

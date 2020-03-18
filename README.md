@@ -74,16 +74,26 @@ Deploy some test workloads
 # These examples assume you're in the root directory of this repo
 # Example with no failures
 
-$ kubectl apply -f ./testing/deployments/test-deploy01.yaml
+$ kubectl apply -f ./testing/deployments/test-deploy01.yaml -n test1
 
 # Example with deny
+# You should get immediate feedback that this request was denied.
 
-$ kubectl apply -f ./testing/deployments/test-deploy02.yaml
+$ kubectl apply -f ./testing/deployments/test-deploy02.yaml -n test1
 
 # Example with failures, but no deny
+# While this rrequest won't be denied, a K8s Event will be generated
+# and can be viewed with "kubectl get events -n test1"
 
-$ kubectl apply -f ./testing/deployments/test-deploy03.yaml
+$ kubectl apply -f ./testing/deployments/test-deploy03.yaml -n test1
 ```
+
+#### Beyond the Basics
+
+Now that you've seen the basics of MagTape, try out some of the other features
+
+- [Deny Level](#deny-level)
+- [Slack Alerts](#slack-alerts)
 
 ### Cleanup
 
@@ -96,14 +106,17 @@ make clean
 
 ### Policies
 
-The below policies are included by default. The default policies can be removed or custom policies can be added. Policies use OPA's Rego language with a specific format to define policy metadata and the output message. This special formatting enables the additional functionality of MagTape.
+The below [policy examples](policies) are available within this repo. The can be ignored or custom policies can be added. Policies use OPA's Rego language with a specific format to define policy metadata and the output message. This special formatting is required as it enables the additional functionality of MagTape.
 
 - Liveness Probe (Check ID: MT1001)
 - Readiness Probe (Check ID: MT1002)
 - Resource Limits (Check ID: MT1003)
 - Resource Requests (Check ID: MT1004)
 - Pod Disruption Budget (Check ID: MT1005)
+- Istio Port Name/Number Mismatch (Check ID: MT1006)
 - Privileged Pod Security Context (Check ID: MT2001)
+
+More detailed info about these policies can be found [here](docs/policies.md).
 
 The policy metadata is defined within each policy similar to this:
 
@@ -123,6 +136,23 @@ policy_metadata = {
 - `severity` - Defines the severity level of a specific policy. This correlates with the [DENY_LEVEL](#deny-level) to determine if a policy should result in a deny or not.
 - `errcode` - A unique code that can be used, typically in reference to an FAQ, to look up additional information about the policy, what produces a failure, and how to resolve failures.
 - `targets` - This controls which Kubernetes resources the policy targets. Each target should be the singular of the Kubernetes resource as found in the `Kind` field. Special care should be taken to make sure all target resources maintain similar JSON data paths within the policy logic, or that differences are handled appropriately.
+
+Policies follow normal OPA operations for policy discovery. MagTape provides configuration to OPA to filter which configmaps it targets for discovery. If you're adding your own policies make sure to apply the following labels to the configmap:
+
+```shell
+app=opa
+openpolicyagent.org/policy=rego
+```
+
+#### Example creating a policy configmap with appropriate labels from an existing Rego file
+
+```shell
+# Create a policy from a Rego file
+$ kubectl create cm my-special-policy -n magtape-system --from-file=my-special-policy.rego --dry-run -o yaml | \
+kubectl label --local app=opa openpolicyagent.org/policy=rego -f - --dry-run -o yaml > my-special-policy-cm.yaml
+```
+
+OPA will add/update the `openpolicyagent.org/policy-status` annotation on the policy configmaps to show they've been loaded successfully or if there are any syntax/validation issues.
 
 ### Deny Level
 
