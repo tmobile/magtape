@@ -1,7 +1,8 @@
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: magtape-env-cm
+  name: magtape-env
+  namespace: magtape-system
 data:
   FLASK_ENV: "production"
   PYTHONUNBUFFERED: "TRUE"

@@ -1,7 +1,8 @@
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: opa-default-system-main
+  name: magtape-opa-default-main
+  namespace: magtape-system
 data:
   main: |
     package system

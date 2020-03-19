@@ -1,0 +1,1264 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: magtape-system
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: magtape-write
+  labels:
+    app: magtape
+rules:
+- apiGroups:
+  - admissionregistration.k8s.io
+  - certificates.k8s.io
+  - events.k8s.io
+  - ""
+  resources:
+    - validatingwebhookconfigurations
+    - certificatesigningrequests
+    - certificatesigningrequests/approval
+    - certificatesigningrequests/status
+    - events
+  verbs:
+    - get
+    - list
+    - watch
+    - create
+    - patch
+    - update
+    - delete
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: magtape-read
+  labels:
+    app: magtape
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - pods
+  - services
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  - extensions
+  resources:
+  - deployments
+  - daemonsets
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - get
+  - list
+  - watch
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: magtape-write-crb
+  labels:
+    app: magtape
+roleRef:
+  kind: ClusterRole
+  name: magtape-write
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: magtape-sa
+  namespace: magtape-system
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: magtape-read-crb
+  labels:
+    app: magtape
+roleRef:
+  kind: ClusterRole
+  name: magtape-read
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: magtape-sa
+  namespace: magtape-system
+---
+# Define role for OPA/kube-mgmt to update configmaps with policy status.
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: magtape-ops
+  namespace: magtape-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: magtape-ops-rb
+  namespace: magtape-system
+roleRef:
+  kind: Role
+  name: magtape-ops
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: magtape-sa
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: magtape-sa
+  namespace: magtape-system
+---
+apiVersion: v1
+data:
+  magtape-init: "#!/usr/bin/env python\n\n# Copyright 2020 T-Mobile, USA, Inc.\n#\n#
+    Licensed under the Apache License, Version 2.0 (the \"License\");\n# you may not
+    use this file except in compliance with the License.\n# You may obtain a copy
+    of the License at\n#\n#     http://www.apache.org/licenses/LICENSE-2.0\n#\n# Unless
+    required by applicable law or agreed to in writing, software\n# distributed under
+    the License is distributed on an \"AS IS\" BASIS,\n# WITHOUT WARRANTIES OR CONDITIONS
+    OF ANY KIND, either express or implied.\n# See the License for the specific language
+    governing permissions and\n# limitations under the License.\n#\n# Trademark Disclaimer:
+    Neither the name of T-Mobile, USA, Inc. nor the names of\n# its contributors may
+    be used to endorse or promote products derived from this\n# software without specific
+    prior written permission.\n\nfrom cryptography import x509\nfrom cryptography.hazmat.backends
+    import default_backend\nfrom cryptography.hazmat.primitives import hashes\nfrom
+    cryptography.x509.oid import NameOID\nfrom cryptography.hazmat.primitives import
+    serialization\nfrom cryptography.hazmat.primitives.asymmetric import rsa\nfrom
+    kubernetes import client, config\nfrom kubernetes.client.rest import ApiException\nfrom
+    logging.handlers import MemoryHandler\nimport base64\nimport datetime\nimport
+    json\nimport logging\nimport os\nimport sys\nimport time\nimport yaml\n\n# Set
+    Global variables\nmagtape_namespace_name = os.environ['MAGTAPE_NAMESPACE_NAME']\nmagtape_tls_pair_secret_name
+    = \"magtape-tls\"\nmagtape_tls_rootca_secret_name = \"magtape-tls-ca\"\nmagtape_byoc_annotation
+    = \"magtape-byoc\"\nmagtape_service_name = \"magtape-svc\"\nmagtape_tls_path =
+    \"/tls\"\nmagtape_vwc_template_path = \"/vwc\"\nmagtape_tls_key = \"\"\nmagtape_tls_cert
+    = \"\"\nmagtape_vwc_name = \"magtape-webhook\"\nmagtape_vwc_template_file = f\"{magtape_vwc_template_path}/magtape-vwc.yaml\"\nmagtape_vwc_webhook_name
+    = \"magtape.webhook.k8s.t-mobile.com\"\nmagtape_tls_byoc = False\n\n###############################################################################$\n################################################################################\n################################################################################\n\ndef
+    check_for_byoc(namespace, secret, core_api):\n\n    \"\"\"Function to check for
+    the \"Bring Your Own Cert\" annotation\"\"\"\n\n    secret_name = secret.metadata.name\n
+    \   secret_annotations = secret.metadata.annotations\n\n    if secret_annotations
+    and magtape_byoc_annotation in secret_annotations:\n\n        logging.info(f\"Detected
+    the \\\"Bring Your Own Cert\\\" annotation for secret \\\"{secret_name}\\\"\")\n\n
+    \       try:\n\n            secret = core_api.read_namespaced_secret(magtape_tls_rootca_secret_name,
+    namespace)\n\n        except ApiException as exception:\n\n            if exception.status
+    != 404:\n\n                logging.error(f\"An error occurred while trying to
+    read secret \\\"{magtape_tls_rootca_secret_name}\\\" in the \\\"{namespace}\\\"
+    namespace:\\n{exception}\\n\")\n                sys.exit(1)\n\n            else:\n\n
+    \               logging.error(f\"\\\"Bring Your Own Cert\\\" annotation specified,
+    but secret \\\"{magtape_tls_rootca_secret_name}\\\" was not found in the \\\"{namespace}\\\"
+    namespace:\\n{exception}\\n\")\n                sys.exit(1)   \n\n        if \"rootca.pem\"
+    in secret.data and secret.data[\"rootca.pem\"] != \"\":         \n\n            return
+    True\n\n        else:\n\n            logging.error(f\"No key found or value is
+    blank for \\\"rootca.pem\\\" in \\\"{secret.metadata.name}\\\" secret\")\n            sys.exit(1)\n\n
+    \   else:\n\n        return False\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    build_k8s_csr(namespace, service_name, key):\n\n    \"\"\"Function to generate
+    Kubernetes CSR\"\"\"\n\n    # Store all dns names used for CN/SAN's\n    dns_names
+    = list()\n    # K8s service intra namespace\n    dns_names.insert(0, f\"{service_name}\")\n
+    \   # K8s service inter namespace\n    dns_names.insert(1, f\"{service_name}.{namespace}\")\n
+    \   # K8s service full FQDN and Common Name\n    dns_names.insert(2, f\"{service_name}.{namespace}.svc\")\n\n
+    \   # Setup Certificate Signing Request\n    csr = x509.CertificateSigningRequestBuilder()\n
+    \   csr = csr.subject_name(\n        # Provide Common Name\n        x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,
+    dns_names[2])])\n    )\n\n    csr = csr.add_extension(\n        x509.SubjectAlternativeName([\n
+    \           x509.DNSName(dns_names[0]),\n            x509.DNSName(dns_names[1]),\n
+    \           x509.DNSName(dns_names[2]),\n        ]),\n        critical=False,\n
+    \   )\n\n    # Sign the CSR with our private key.\n    csr = csr.sign(key, hashes.SHA256(),
+    default_backend())\n\n    csr_pem = csr.public_bytes(serialization.Encoding.PEM)\n\n
+    \   # Build Kubernetes CSR\n    k8s_csr_meta = client.V1ObjectMeta(\n        name=dns_names[1]
+    + \".cert-request\",\n        namespace=namespace,\n        labels={\"app\": \"magtape\"}\n
+    \   )\n\n    k8s_csr_spec = client.V1beta1CertificateSigningRequestSpec(\n        groups=[\"system:authenticated\"],\n
+    \       usages=[\n            \"digital signature\", \n            \"key encipherment\",
+    \n            \"server auth\"\n        ],\n        request= base64.b64encode(csr_pem).decode('utf-8').rstrip(),\n
+    \   )\n\n    k8s_csr = client.V1beta1CertificateSigningRequest(\n        api_version=\"certificates.k8s.io/v1beta1\",\n
+    \       kind=\"CertificateSigningRequest\",\n        metadata=k8s_csr_meta,\n
+    \       spec=k8s_csr_spec,\n    )\n\n    logging.debug(f\"CSR: {k8s_csr}\\n\")\n\n
+    \   return k8s_csr\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):\n\n    \"\"\"Function
+    to submit or approve a Kubernetes CSR\"\"\"\n\n    new_k8s_csr_name = k8s_csr.metadata.name\n\n
+    \   # Read existing Kubernetes CSR\n    try:\n\n        certificates_api.read_certificate_signing_request(new_k8s_csr_name)\n\n
+    \   except ApiException as exception:\n\n        if exception.status != 404:\n\n
+    \           logging.error(f\"Problem reading existing certificate requests: {exception}\\n\")\n
+    \           sys.exit(1)\n\n        elif exception.status == 404:\n\n            logging.info(f\"Did
+    not find existing certificate requests\")\n            logging.debug(f\"Exception:\\n{exception}\\n\")\n
+    \           \n    else:  \n\n        try:\n\n            certificates_api.delete_certificate_signing_request(new_k8s_csr_name)\n\n
+    \       except ApiException as exception:\n\n            if exception.status !=
+    404:\n\n                logging.error(f\"Unable to delete existing certificate
+    request \\\"{new_k8s_csr_name}\\\": {exception}\\n\")\n                sys.exit(1)\n
+    \           \n            elif exception.status == 404:\n\n                logging.info(f\"Existing
+    certificate request \\\"{new_k8s_csr_name}\\\" not found\")\n                logging.debug(f\"Exception:\\n{exception}\\n\")\n
+    \       else:\n\n            logging.info(f\"Existing certificate request deleted\")\n\n
+    \   # Create K8s CSR resource\n    try:\n\n        logging.debug(k8s_csr)\n        certificates_api.create_certificate_signing_request(k8s_csr)\n\n
+    \   except ApiException as exception:\n\n        logging.error(f\"Unable to create
+    certificate request \\\"{new_k8s_csr_name}\\\"\\n\")\n        logging.debug(f\"Exception:\\n{exception}\\n\")\n
+    \       sys.exit(1)\n\n    logging.info(f\"Certificate signing request \\\"{new_k8s_csr_name}\\\"
+    has been created\")\n\n    # Read newly created K8s CSR resource\n    try:\n        \n
+    \       new_k8s_csr_body = certificates_api.read_certificate_signing_request_status(new_k8s_csr_name)\n\n
+    \   except ApiException as exception:\n\n        logging.error(f\"Unable to read
+    certificate request status for \\\"{new_k8s_csr_name}\\\"\\n\")\n        logging.debug(f\"Exception:\\n{exception}\\n\")\n
+    \       sys.exit(1)\n\n    new_k8s_csr_approval_conditions = client.V1beta1CertificateSigningRequestCondition(\n
+    \       last_update_time=datetime.datetime.now(datetime.timezone.utc),\n        message='This
+    certificate was approved by MagTape',\n        reason='MT-Approve',\n        type='Approved'\n
+    \   ) \n\n    # Update the CSR status\n    new_k8s_csr_body.status.conditions
+    = [new_k8s_csr_approval_conditions]\n\n    # Patch the k8s CSR resource\n    try:\n\n
+    \       certificates_api.replace_certificate_signing_request_approval(new_k8s_csr_name,
+    new_k8s_csr_body)\n\n    except ApiException as exception:\n\n        logging.info(f\"Unable
+    to update certificate request status for \\\"{new_k8s_csr_name}\\\": {exception}\\n\")\n\n
+    \   # Retreive new \n\n    logging.info(f\"Certificate signing request \\\"{new_k8s_csr_name}\\\"
+    is approved\")\n\n    return new_k8s_csr_body\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    get_tls_cert_from_request(namespace, secret_name, k8s_csr_name, certificates_api):\n\n
+    \   \"\"\"Function to retrieve tls certificate from approved Kubernetes CSR\"\"\"\n\n
+    \   start_time = datetime.datetime.now()\n\n    while (datetime.datetime.now()
+    - start_time).seconds < 5:\n\n        # Read existing Kubernetes CSR\n        try:\n\n
+    \           # Give a few seconds for the csr to be approved\n            time.sleep(5)\n\n
+    \           k8s_csr = certificates_api.read_certificate_signing_request(k8s_csr_name)\n\n
+    \           logging.debug(k8s_csr)\n\n        except ApiException as exception:\n\n
+    \               logging.info(f\"Problem reading certificate request \\\"{k8s_csr_name}\\\"\\n\")\n
+    \               logging.debug(f\"Exception:\\n{exception}\\n\")\n\n        tls_cert_b64
+    = k8s_csr.status.certificate\n        conditions = k8s_csr.status.conditions or
+    []\n        \n\n        if \"Approved\" in [condition.type for condition in conditions]
+    and tls_cert_b64 != \"\":\n\n                logging.info(\"Found approved certificate\")\n
+    \               \n                break\n\n        logging.info(\"Waiting for
+    certificate approval\")\n        \n\n    else:\n\n        logging.info(f\"Timed
+    out reading certificate request \\\"{k8s_csr_name}\\\"\\n\")\n\n    logging.debug(f\"Cert
+    RAW: {k8s_csr}\")\n\n    tls_cert = base64.b64decode(k8s_csr.status.certificate)\n\n
+    \   logging.debug(f\"Cert PEM: {tls_cert}\")\n\n    return tls_cert\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    build_tls_pair(namespace, secret_name, service_name, certificates_api):\n\n    \"\"\"Function
+    to generate signed tls certificate for admission webhook\"\"\"\n\n\n\n    # Generate
+    private key to use for CSR\n    tls_key = rsa.generate_private_key(\n        public_exponent=65537,\n
+    \       key_size=2048,\n        backend=default_backend()\n    )\n\n    tls_key_pem
+    = tls_key.private_bytes(\n        encoding=serialization.Encoding.PEM,\n        format=serialization.PrivateFormat.TraditionalOpenSSL,\n
+    \       encryption_algorithm=serialization.NoEncryption(),\n    )\n\n    # Build
+    K8s CSR\n    k8s_csr = build_k8s_csr(namespace, service_name, tls_key)\n    k8s_csr
+    = submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr)\n    tls_cert_pem
+    = get_tls_cert_from_request(namespace, magtape_tls_pair_secret_name, k8s_csr.metadata.name,
+    certificates_api)\n\n    tls_pair = {\n        \"cert\": tls_cert_pem,\n        \"key\":
+    tls_key_pem,\n    }\n\n    logging.debug(tls_pair)\n\n    return tls_pair\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    cert_expired(namespace, cert_data):\n\n    \"\"\"Function to check tls certificate
+    return number of days until expiration\"\"\"\n\n    current_datetime = datetime.datetime.now()\n
+    \   tls_cert_decoded = base64.b64decode(cert_data[\"cert.pem\"])\n    tls_cert
+    = x509.load_pem_x509_certificate(tls_cert_decoded, default_backend())\n    expire_days
+    = tls_cert.not_valid_after - current_datetime\n\n    logging.info(f\"Days until
+    Cert Expiration: {expire_days.days}\")\n\n    return expire_days.days\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    cert_should_update(namespace, cert_data, magtape_tls_byoc):\n\n    \"\"\"Function
+    to check if tls certificate should be updated\"\"\"\n\n    tls_cert_key = \"cert.pem\"\n
+    \   tls_key_key = \"key.pem\"\n\n    if tls_cert_key in cert_data and tls_key_key
+    in cert_data:\n\n        if cert_data[tls_cert_key] == \"\" or cert_data[tls_key_key]
+    == \"\":\n\n            if magtape_tls_byoc:\n\n                logging.error(f\"The
+    \\\"Bring Your Own Cert\\\" annotation was used but one or more of the tls cert/key
+    values are blank\")\n                sys.exit(1)\n\n            return True\n\n
+    \   \n\n        days = cert_expired(namespace, cert_data)\n\n        # Determine
+    and report on cert expiry based on number of days from current date.\n        #
+    Cert should be valid for a year, but we update sooner to be safe\n        if days
+    <= 180:\n\n            return True\n\n        else:\n\n            return False\n\n
+    \   else:\n\n        return True\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    read_tls_pair(namespace, secret_name, tls_pair, core_api):\n\n    \"\"\"Function
+    to read cert/key from k8s secret\"\"\"\n\n    cert_data = dict()\n    secret_exists
+    = False\n\n    # Try and read secret\n    try:\n        \n        secret = core_api.read_namespaced_secret(secret_name,
+    namespace)\n\n    except ApiException as exception:\n\n        if exception.status
+    != 404:\n\n            logging.error(f\"Unable to read secret \\\"{secret_name}\\\"
+    in the \\\"{namespace}\\\" namespace\\n\")\n            logging.debug(f\"Exception:\\n{exception}\\n\")\n
+    \           sys.exit(1)\n\n        else:\n\n            logging.info(f\"Did not
+    find secret \\\"{secret_name}\\\" in the \\\"{namespace}\\\" namespace\")\n            logging.debug(f\"Exception:\\n{exception}\\n\")\n\n
+    \           return cert_data, tls_pair, secret_exists, False\n\n    secret_exists
+    = True\n\n    logging.debug(f\"Secret data:\\n {secret.data['cert.pem']}\\n\")\n\n
+    \   tls_cert_pem = base64.b64decode(secret.data[\"cert.pem\"])\n    tls_key_pem
+    = base64.b64decode(secret.data[\"key.pem\"])\n\n    tls_pair = {\n        \"cert\":
+    tls_cert_pem,\n        \"key\": tls_key_pem,\n    }\n\n    cert_data = secret.data\n
+    \   magtape_tls_byoc = check_for_byoc(namespace, secret, core_api)\n\n\n    return
+    cert_data, tls_pair, secret_exists, magtape_tls_byoc\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    write_tls_pair(namespace, secret_name, secret_exists, secret_should_update, tls_pair,
+    magtape_tls_byoc, core_api):\n\n    \"\"\"Function to write k8s secret for admission
+    webhook to k8s secret and/or local files\"\"\"\n\n    # If the secret isn't found,
+    create it\n    if secret_exists:\n\n        logging.info(f\"Using existing secret
+    \\\"{secret_name}\\\" in namespace \\\"{namespace}\\\"\")\n\n    else:\n\n        logging.info(f\"Creating
+    secret \\\"{secret_name}\\\" in namespace \\\"{namespace}\\\"\")\n\n        secret_metadata
+    = client.V1ObjectMeta(\n            name=secret_name,\n            namespace=namespace,\n
+    \           labels={\"app\": \"magtape\"}\n        )\n\n        secret_data =
+    {\n            \"cert.pem\":  base64.b64encode(tls_pair[\"cert\"]).decode('utf-8').rstrip(),\n
+    \           \"key.pem\":  base64.b64encode(tls_pair[\"key\"]).decode('utf-8').rstrip(),\n
+    \       }\n\n        secret = client.V1Secret(\n            metadata=secret_metadata,\n
+    \           data=secret_data,\n            type=\"tls\"\n\n        )\n\n        logging.debug(f\"New
+    secret: \\n{secret}\\n\")\n\n        try:\n            \n            core_api.create_namespaced_secret(namespace,
+    secret)\n\n        except ApiException as exception:\n\n            logging.error(f\"Unable
+    to create secret \\\"{secret_name}\\\" in the \\\"{namespace}\\\" namespace: {exception}\\n\")\n
+    \           sys.exit(1)\n        \n        try:\n            \n            core_api.read_namespaced_secret(secret_name,
+    namespace)\n\n        except ApiException as exception:\n\n            logging.error(f\"Unable
+    to read new secret \\\"{secret_name}\\\" in the \\\"{namespace}\\\" namespace:
+    {exception}\\n\")\n            sys.exit(1)\n    \n    # If this is a BYOC pair,
+    then skip the patch\n    if not secret_exists and magtape_tls_byoc and secret_should_update:\n\n
+    \       #logging.info(\"Secret data is blank\")\n\n        secret = client.V1Secret()\n\n
+    \       secret.data = {\n            \"cert.pem\": base64.b64encode(tls_pair[\"cert\"]).decode('utf-8').rstrip(),\n
+    \           \"key.pem\": base64.b64encode(tls_pair[\"key\"]).decode('utf-8').rstrip(),\n
+    \       }\n\n        try:\n\n            core_api.patch_namespaced_secret(secret_name,
+    namespace, secret)\n\n        except ApiException as exception:\n\n            logging.error(f\"Unable
+    to update secret \\\"{secret_name}\\\" in the \\\"{namespace}\\\" namespace: {exception}\\n\")\n
+    \           sys.exit(1)\n\n        logging.info(f\"Patched new cert/key into existing
+    secret\")\n\n        try:\n\n            cert_data, tls_pair, secret_exists, magtape_tls_byoc
+    = read_tls_pair(namespace, magtape_tls_pair_secret_name, tls_pair, core_api)\n\n
+    \           logging.debug(f\"Cert Data: \\n{cert_data}\\n\")\n\n        except
+    ApiException as exception:\n\n            logging.error(f\"Unable to read updated
+    secret \\\"{secret_name}\\\" in the \\\"{namespace}\\\" namespace: {exception}\\n\")\n
+    \           sys.exit(1)\n\n        logging.info(f\"Updated secret \\\"{secret_name}\\\"
+    in namespace \\\"{namespace}\\\"\")\n\n    # Write cert and key to files for Flask
+    app\n    logging.info(\"Writing cert and key locally\")\n    logging.debug(f\"TLS
+    Pair: {tls_pair}\")\n\n    with open(f\"{magtape_tls_path}/cert.pem\", 'wb') as
+    cert_file:\n        cert_file.write(tls_pair[\"cert\"])\n\n    with open(f\"{magtape_tls_path}/key.pem\",
+    'wb') as key_file:\n        key_file.write(tls_pair[\"key\"])\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    init_tls_pair(namespace):\n\n    \"\"\"Function to load or create tls for admission
+    webhook\"\"\"\n\n    tls_pair = \"\"\n    \n    logging.info(\"Starting TLS init
+    process\")\n\n    # Check if custom secret was specified in ENV vars\n    magtape_tls_secret
+    = os.getenv(\"MAGTAPE_TLS_SECRET\", magtape_tls_pair_secret_name)\n\n    if magtape_tls_secret
+    != magtape_tls_pair_secret_name:\n\n        logging.debug(\"Magtape TLS Secret
+    specified\")\n\n    try:\n\n        config.load_incluster_config()\n\n    except
+    Exception as exception:\n\n        logging.info(f\"Exception loading incluster
+    configuration: {exception}\")\n\n        try:\n            logging.info(\"Loading
+    local kubeconfig\")\n            config.load_kube_config()\n\n        except Exception
+    as exception:\n\n            logging.error(f\"Exception loading local kubeconfig:
+    {exception}\")\n            sys.exit(1)\n\n    configuration = client.Configuration()\n
+    \   core_api = client.CoreV1Api(client.ApiClient(configuration))\n    certificates_api
+    = client.CertificatesV1beta1Api(client.ApiClient(configuration))\n\n    # Read
+    existing secret\n    cert_data, tls_pair, secret_exists, magtape_tls_byoc = read_tls_pair(namespace,
+    magtape_tls_pair_secret_name, tls_pair, core_api)\n\n    if secret_exists:\n\n
+    \       logging.info(\"Existing TLS cert and key found\")\n\n    # Check if cert
+    should be updated\n    secret_should_update = cert_should_update(namespace, cert_data,
+    magtape_tls_byoc)\n    \n    if secret_should_update:\n\n        if magtape_tls_byoc:\n\n
+    \           logging.info(f\"WARN - Certificate used for Admission Webhook is past
+    threshhold for normal rotation. Not rotating because this cert isn't managed by
+    the K8s CA\")\n\n        else:\n\n            logging.info(f\"Generating new cert/key
+    pair for TLS\")\n\n            # Generate TLS Pair\n            tls_pair = build_tls_pair(namespace,
+    magtape_tls_pair_secret_name, magtape_service_name, certificates_api)\n            #
+    We set this to False so the new secret is written\n\n    # Handle cert creation
+    or update\n    write_tls_pair(namespace, magtape_tls_secret, secret_exists, secret_should_update,
+    tls_pair, magtape_tls_byoc, core_api)\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    get_rootca(namespace, configuration, magtape_tls_byoc, core_api):\n\n    \"\"\"Function
+    to get root ca used for securing admission webhook\"\"\"\n\n    if magtape_tls_byoc:\n\n
+    \       # Read from secret\n        try:\n        \n            secret = core_api.read_namespaced_secret(magtape_tls_rootca_secret_name,
+    namespace)\n\n        except ApiException as exception:\n\n            if exception.status
+    != 404:\n\n                logging.error(f\"Unable to read secret \\\"{magtape_tls_rootca_secret_name}\\\"
+    in the \\\"{namespace}\\\" namespace\\n\")\n                logging.debug(f\"Exception:\\n{exception}\\n\")\n
+    \               sys.exit(1)\n\n            else:\n\n                logging.error(f\"Did
+    not find secret \\\"{magtape_tls_rootca_secret_name}\\\" in the \\\"{namespace}\\\"
+    namespace\")\n                logging.debug(f\"Exception:\\n{exception}\\n\")\n
+    \               sys.exit(1)\n\n        root_ca = secret.data[\"rootca.pem\"]\n\n
+    \   else:\n\n        # Find Cluster CA file from in-cluster kubeconfig\n        root_ca_file_path
+    = configuration.ssl_ca_cert\n\n        # Read cert from file\n        try: \n
+    \           \n            with open(root_ca_file_path, 'r') as root_ca_file:\n\n
+    \               root_ca_raw = root_ca_file.read()\n\n        except EnvironmentError:\n\n
+    \           logging.error(\"Error reading Root CA from in-cluster kubeconfig\\n\")\n
+    \           sys.exit(1)\n\n        logging.debug(f\"Raw CA data from in-cluster
+    kubeconfig: \\n{root_ca_raw}\\n\")\n\n        root_ca = base64.b64encode(root_ca_raw.encode('utf-8')).decode('utf-8').rstrip()\n\n
+    \   return root_ca\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    verify_vwc_cert_bundle(namespace, vwc):\n\n    \"\"\"Function to verify the CA
+    Cert bundle in the VWC\"\"\"\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    compare_vwc_fields(new, existing):\n\n    \"\"\"Function to compare VWC fields\"\"\"\n\n
+    \   logging.debug(f\"Input is of type \\\"{type(new)}\\\"\")\n\n    if isinstance(new,
+    dict):\n\n        for key in sorted(new):\n\n            if key in existing:\n\n
+    \               logging.debug(f\"Field from VWC Template has a value of \\\"{new[key]}\\\"\")\n
+    \               logging.debug(f\"Field from existing VWC has a value of \\\"{existing[key]}\\\"\")\n\n
+    \               same = compare_vwc_fields(new[key], existing[key])\n\n                if
+    not same:\n\n                    return False\n\n            else:\n\n                logging.info(f\"Changes
+    detected in template. VWC Should update\")\n                logging.debug(f\"Changes:
+    \\n{new}\\n\")\n\n                return False\n\n    elif isinstance(new, list):\n\n
+    \       for index in range(len(new)):\n\n            if index <= len(existing)
+    - 1:\n\n                logging.debug(f\"Field from VWC Template has a value of
+    \\\"{new[index]}\\\"\")\n                logging.debug(f\"Field from existing
+    VWC has a value of \\\"{existing[index]}\\\"\")\n                \n                same
+    = compare_vwc_fields(new[index], existing[index])\n\n                if not same:\n\n
+    \                   return False\n\n            else:\n\n                logging.info(f\"Changes
+    detected in template. VWC Should update\")\n                logging.debug(f\"Changes:
+    \\n{new}\\n\")\n\n                return False\n\n    else:\n\n        if existing
+    != new:\n\n            logging.debug(f\"Field from VWC Template has a value of
+    \\\"{new}\\\"\")\n            logging.debug(f\"Field from existing VWC has a value
+    of \\\"{existing}\\\"\")\n\n            logging.info(f\"Changes detected in template.
+    VWC Should update\")\n            logging.debug(f\"Changes: \\n{new}\\n\")\n\n
+    \           return False\n\n    return True\n\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    find_webhook_index(vwc_template):\n\n    \"\"\"Function to check if the MagTape
+    webhook exists in the VWC template and return its index\"\"\"\n\n    for index,
+    webhook in enumerate(vwc_template[\"webhooks\"]):\n\n        if isinstance(webhook,
+    dict):\n\n            if webhook[\"name\"] == magtape_vwc_webhook_name:\n\n                logging.debug(f\"MagTape
+    webhook index in VWC template: {index}\")\n\n                webhook_exists =
+    True\n                webhook_index = index\n\n                return webhook_exists,
+    webhook_index\n                \n    webhook_exists = False\n    webhook_index
+    = \"\"\n\n    return webhook_exists, webhook_index\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    vwc_should_update(namespace, configuration, magtape_tls_byoc, core_api, admission_api):\n\n
+    \   \"\"\"Function to determine if an VWC should be updated\"\"\"\n\n    # Read
+    VWC template from local file (mounded from configmap)\n    try:\n\n        with
+    open(magtape_vwc_template_file) as vwc_file:\n        \n            vwc_template
+    = yaml.safe_load(vwc_file)\n\n            logging.debug(f\"VWC Template from File:
+    \\n{vwc_template}\\n\")\n        \n    except IOError as exception:\n\n        logging.error(f\"Error
+    opening VWC template file \\\"{magtape_vwc_template_file}\\\": \\n{exception}\\n\")\n
+    \       sys.exit(1)\n\n    # Get Root CA\n    root_ca = get_rootca(namespace,
+    configuration, magtape_tls_byoc, core_api)\n\n    # Set CA Bundle in VWC template\n
+    \   # This does assume that there's a webhook in the template that matches \n
+    \   # the expected name\n\n    webhook_exists, webhook_index = find_webhook_index(vwc_template)\n\n
+    \   if webhook_exists:\n\n        logging.info(f\"Found MagTape webhook defined
+    in the VWC template\")\n\n        vwc_template[\"webhooks\"][webhook_index][\"clientConfig\"][\"caBundle\"]
+    = root_ca\n\n    else:\n\n        logging.error(f\"Did not find MagTape webhook
+    defined in the VWC Template\")\n        sys.exit(1)\n\n    # Need to read VWC
+    again without converting field names to \"pythonic\" names. \n    # This is to
+    facilitate easier comparisons against the VWC template\n    # Thanks Alex!\n    #
+    Would be nice to use \"_preload_content=False\" with existing object instance\n
+    \   # to prevent an additional API call\n    existing_vwc_raw = admission_api.read_validating_webhook_configuration(vwc_template[\"metadata\"][\"name\"],
+    _preload_content=False)\n    existing_vwc = json.loads(existing_vwc_raw.data)\n\n
+    \   logging.debug(f\"VWC Template with CA Bundle: \\n{vwc_template}\\n\")\n    logging.debug(f\"Existing
+    VWC: \\n{existing_vwc}\\n\")\n\n    logging.info(\"Comparing existing VWC to template\")\n
+    \   vwcs_are_equal = compare_vwc_fields(vwc_template, existing_vwc)\n\n    # If
+    existing VWC and Template match, no need to update\n    if vwcs_are_equal:\n\n
+    \       logging.info(f\"Existing VWC matches template\")\n\n        new_vwc =
+    \"\"\n\n        return False, new_vwc\n    # If they don't match, we need to update
+    the VWC\n    else:\n\n        logging.info(f\"Changes were detected to VWC template\")\n\n
+    \       new_vwc = vwc_template\n\n        return True, new_vwc\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    read_vwc(admission_api):\n\n    \"\"\"Function to read k8s VWC\"\"\"\n\n    try:\n
+    \           \n        vwc = admission_api.read_validating_webhook_configuration(magtape_vwc_name)\n\n
+    \   except ApiException as exception:\n\n        if exception.status != 404:\n\n
+    \           logging.error(f\"Unable to read VWC \\\"{magtape_vwc_name}\\\": {exception}\\n\")\n
+    \           sys.exit(1)\n\n        elif exception.status == 404:\n\n            logging.info(f\"Did
+    not find existing VWC \\\"{magtape_vwc_name}\\\"\")\n            logging.debug(f\"Exception:\\n{exception}\\n\")\n
+    \           \n            vwc = \"\"\n            return vwc\n\n    logging.info(f\"Existing
+    VWC \\\"{magtape_vwc_name}\\\" found\")\n\n    return vwc\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    delete_vwc(namespace, admission_api):\n\n    \"\"\"Function to read k8s validating
+    webhook configuration\"\"\"\n\n    try:\n\n        admission_api.delete_validating_webhook_configuration(magtape_vwc_name)
+    \ \n\n    except ApiException as exception:\n\n        logging.error(f\"Unable
+    to delete VWC \\\"{magtape_vwc_name}\\\": {exception}\\n\")\n        sys.exit(1)\n\n
+    \   logging.info(\"Deleted existing VWC\")\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    write_vwc(namespace, ca_secret_name, vwc, configuration, admission_api, core_api):\n\n
+    \   \"\"\"Function to create or update the k8s validating webhook configuration\"\"\"\n\n
+    \   # TO-DO (phenixblue): Need to work out how to validate TLS cert is signed
+    by CA\n    #verified = verify_vwc_cert_bundle(magtape_vwc_name, admission_api)\n\n
+    \   # Figure out if there's an existing VWC that needs to be updated, or\n    #
+    if a new VWC should be created\n    #\n    # This check helps allow MagTape to
+    scale out to multiple replicas without \n    # each replica stomping on the VWC\n
+    \   if vwc != \"\":\n\n        should_update, vwc = vwc_should_update(namespace,
+    configuration, magtape_tls_byoc, core_api, admission_api)\n\n        if should_update:\n\n
+    \           logging.info(f\"Patching VWC \\\"{magtape_vwc_name}\\\"\")\n\n            try:\n\n
+    \               admission_api.patch_validating_webhook_configuration(magtape_vwc_name,
+    vwc)  \n\n            except ApiException as exception:\n\n                logging.error(f\"Unable
+    to patch VWC \\\"{magtape_vwc_name}\\\": {exception}\\n\")\n                sys.exit(1)\n\n
+    \   else:\n\n        # TO-DO (phenixblue): Need to remove for cleanup., No longer
+    needed.\n        #delete_vwc(namespace, admission_api)\n\n        logging.info(f\"Creating
+    VWC \\\"{magtape_vwc_name}\\\"\")\n\n        try:\n\n            admission_api.create_validating_webhook_configuration(vwc)
+    \ \n\n        except ApiException as exception:\n\n            logging.error(f\"Unable
+    to create VWC \\\"{magtape_vwc_name}\\\": {exception}\\n\")\n            sys.exit(1)\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    init_vwc(namespace, magtape_tls_byoc):\n\n    \"\"\"Function to handle the k8s
+    validating webhook configuration\"\"\"\n\n    try:\n\n        config.load_incluster_config()\n\n
+    \   except Exception as exception:\n\n        logging.info(f\"Exception loading
+    incluster configuration: {exception}\")\n\n        try:\n            logging.info(\"Loading
+    local kubeconfig\")\n            config.load_kube_config()\n\n        except Exception
+    as exception:\n\n            logging.error(f\"Exception loading local kubeconfig:
+    {exception}\")\n            sys.exit(1)\n\n    configuration = client.Configuration()\n
+    \   core_api = client.CoreV1Api(client.ApiClient(configuration))\n    admission_api
+    = client.AdmissionregistrationV1beta1Api(client.ApiClient(configuration))\n\n
+    \   vwc = read_vwc(admission_api)\n    write_vwc(namespace, magtape_tls_rootca_secret_name,
+    vwc, configuration, admission_api, core_api)\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    main():\n\n    # Setup logging\n    logging.basicConfig(level=os.getenv(\"MAGTAPE_LOG_LEVEL\",
+    \"INFO\"), stream=sys.stdout, format='[%(asctime)s] %(levelname)s: %(message)s')\n\n
+    \   logging.info(\"MagTape Init\")\n    init_tls_pair(magtape_namespace_name)\n
+    \   init_vwc(magtape_namespace_name, magtape_tls_byoc)\n\n################################################################################\n################################################################################\n################################################################################\n\nif
+    __name__ == \"__main__\":\n\n    main()\n\n    \n    "
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: magtape-init
+  namespace: magtape-system
+
+---
+apiVersion: v1
+data:
+  magtape-app: "#!/usr/bin/env python\n\n# Copyright 2020 T-Mobile, USA, Inc.\n#\n#
+    Licensed under the Apache License, Version 2.0 (the \"License\");\n# you may not
+    use this file except in compliance with the License.\n# You may obtain a copy
+    of the License at\n#\n#     http://www.apache.org/licenses/LICENSE-2.0\n#\n# Unless
+    required by applicable law or agreed to in writing, software\n# distributed under
+    the License is distributed on an \"AS IS\" BASIS,\n# WITHOUT WARRANTIES OR CONDITIONS
+    OF ANY KIND, either express or implied.\n# See the License for the specific language
+    governing permissions and\n# limitations under the License.\n#\n# Trademark Disclaimer:
+    Neither the name of T-Mobile, USA, Inc. nor the names of\n# its contributors may
+    be used to endorse or promote products derived from this\n# software without specific
+    prior written permission.\n\nfrom flask import Flask, request, jsonify\nfrom kubernetes
+    import client, config\nfrom kubernetes.client.rest import ApiException\nfrom logging.handlers
+    import MemoryHandler\nfrom prometheus_client import Counter\nfrom prometheus_flask_exporter
+    import PrometheusMetrics\nimport base64\nimport copy\nimport datetime\nimport
+    json\nimport logging\nimport os\nimport re\nimport requests\nimport sys\nimport
+    time\n\napp = Flask(__name__)\n\n# Setup Prometheus Metrics for Flask app\nmetrics
+    = PrometheusMetrics(app, defaults_prefix=\"magtape\")\n\n# Static information
+    as metric\nmetrics.info('app_info', 'Application info', version='0.6')\n\n# Set
+    logging config\nlog = logging.getLogger(\"werkzeug\")\nlog.disabled = True\nmagtape_log_level
+    = os.environ['MAGTAPE_LOG_LEVEL']\napp.logger.setLevel(magtape_log_level)\n\n#
+    Set Global variables\ncluster = os.environ['MAGTAPE_CLUSTER_NAME']\nmagtape_namespace_name
+    = os.environ['MAGTAPE_NAMESPACE_NAME']\nmagtape_pod_name = os.environ['MAGTAPE_POD_NAME']\nmagtape_tls_path
+    = \"/tls\"\n\n# Set Slack related variables\nslack_enabled = os.environ['MAGTAPE_SLACK_ENABLED']\nslack_passive
+    = os.environ['MAGTAPE_SLACK_PASSIVE']\nslack_webhook_url_default = os.environ['MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT']\nslack_webhook_annotation
+    = os.environ['MAGTAPE_SLACK_ANNOTATION']\nslack_user = os.environ['MAGTAPE_SLACK_USER']\nslack_icon
+    = os.environ['MAGTAPE_SLACK_ICON']\n\n# Set K8s Events specific variables\nk8s_events_enabled
+    = os.environ['MAGTAPE_K8S_EVENTS_ENABLED']\n\n# Set OPA Info\nopa_base_url = os.environ['OPA_BASE_URL']\nopa_k8s_path
+    = os.environ['OPA_K8S_PATH']\nopa_url = opa_base_url + opa_k8s_path\n\n# Set Deny
+    Level\nmagtape_deny_level = os.environ['MAGTAPE_DENY_LEVEL']\n\n# Set Custom Prometheus
+    Counters\n# Request Metrics represent requests to the MagTape API\nmagtape_metrics_requests
+    = Counter(\"magtape_requests\", \"Request Metrics for MagTape\", [\"count_type\",
+    \"ns\", \"alert_sent\"])\n# Policy metrics represent individual policy evaluations\nmagtape_metrics_policies
+    = Counter(\"magtape_policy\", \"Policy Metrics for MagTape\", [\"count_type\",
+    \"policy\", \"ns\"])\n\n################################################################################\n################################################################################\n################################################################################\n\n@app.route('/',
+    methods=['POST'])\n\ndef webhook():\n\n    \"\"\"Function to call main logic and
+    return k8s admission response\"\"\"\n\n    request_info = request.json\n    request_spec
+    = copy.deepcopy(request_info)\n\n    # Call Main Webhook function\n    admissionReview
+    = magtape(request_spec)\n\n    # Return JSON formatted response object\n    return
+    jsonify(admissionReview)\n\n################################################################################\n################################################################################\n################################################################################\n\n@app.route('/healthz',
+    methods=['GET'])\n\ndef healthz():\n\n    \"\"\"Function to return health info
+    for app\"\"\"\n\n    health_response = {\n        \"pod_name\": magtape_pod_name,\n
+    \       \"date_time\": str(datetime.datetime.now()),\n        \"health\": \"ok\"\n
+    \   }\n\n    # Return JSON formatted response object\n    return jsonify(health_response)\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    magtape(request_spec):\n\n    \"\"\"main function\"\"\"\n\n    # Zero out specific
+    info per call\n    allowed = True\n    skip_alert = False\n    response_message
+    = \"\"\n    alert_should_send = False\n    alert_targets = []\n    customer_alert_sent
+    = False\n\n    # Set Object specific info from request\n    uid = request_spec['request']['uid']\n
+    \   workload = request_spec['request']['object']['metadata']['name']\n    workload_type
+    = request_spec['request']['kind']['kind']\n    namespace = request_spec['request']['namespace']\n
+    \   request_user = request_spec['request']['userInfo']['username']\n\n    app.logger.info(\"##################################################################\")\n
+    \   app.logger.info(f\"Deny Level: {magtape_deny_level}\")\n    app.logger.info(f\"Processing
+    {workload_type}: {namespace}/{workload}\")\n    app.logger.info(f\"Request User:
+    {request_user}\")\n    app.logger.debug(f\"Request Object: \\n{json.dumps(request_spec,
+    indent=2, sort_keys=True)}\")\n\n    if \"ownerReferences\" in request_spec['request']['object']['metadata']
+    and request_spec['request']['object']['metadata']['ownerReferences'][0]['kind']
+    == \"ReplicaSet\":\n        \n        # Set Owner Info\n        k8s_object_owner_kind
+    = request_spec['request']['object']['metadata']['ownerReferences'][0]['kind']\n
+    \       k8s_object_owner_name = request_spec['request']['object']['metadata']['ownerReferences'][0]['name']\n
+    \       \n        # Set Skip for Alert\n        skip_alert = True\n\n    else:\n\n
+    \       # Run MagTape Specific checks on requests objects\n        response_message
+    = build_response_message(request_spec, response_message, namespace)\n\n        #
+    Output policy decision\n        for policy_response in response_message.split(\",
+    \"):\n\n            if policy_response:\n\n                app.logger.info(policy_response)\n\n
+    \           else:\n\n                app.logger.info(\"[PASS] All checks\")\n\n
+    \   app.logger.debug(f\"Skip Alert: {skip_alert}\")\n\n    # Set allowed value
+    based on DENY_LEVEL and response_message content\n    if magtape_deny_level ==
+    \"OFF\":\n\n        app.logger.debug(\"Deny level detected: OFF\")\n\n        allowed
+    = True\n\n    elif magtape_deny_level == \"LOW\":\n\n        DENY_LIST = [\"[FAIL]
+    HIGH\"]\n\n        app.logger.debug(\"Deny level detected: LOW\")\n\n        if
+    any(denyword in response_message for denyword in DENY_LIST):\n\n            app.logger.debug(\"Sev
+    Fail level: HIGH\")\n\n            allowed = False\n            alert_should_send
+    = True\n\n    elif magtape_deny_level == \"MED\":\n\n        DENY_LIST = [\"[FAIL]
+    HIGH\", \"[FAIL] MED\"]\n\n        app.logger.debug(\"Deny level detected: MED\")\n\n
+    \       if any(denyword in response_message for denyword in DENY_LIST):\n\n            app.logger.debug(\"Sev
+    Fail level: HIGH/MED\")\n\n            allowed = False\n            alert_should_send
+    = True\n\n    elif magtape_deny_level == \"HIGH\":\n\n        DENY_LIST = [\"[FAIL]
+    HIGH\", \"[FAIL] MED\", \"[FAIL] LOW\"]\n\n        app.logger.debug(\"Deny level
+    detected: HIGH\")\n\n        if any(denyword in response_message for denyword
+    in DENY_LIST):\n\n            app.logger.debug(\"Sev Fail level: HIGH/MED/LOW\")\n\n
+    \           allowed = False\n            alert_should_send = True\n\n    else:\n\n
+    \       app.logger.debug(\"Deny level detected: NONE\")\n\n        allowed = False\n
+    \       alert_should_send = True\n\n    # Set optional message if allowed = false\n
+    \   if allowed:\n\n        admission_response = {\n        \"allowed\": allowed\n
+    \       }\n\n    else:\n\n        admission_response = {\n            \"uid\":
+    uid,\n            \"allowed\": allowed,\n            \"status\": {\n                \"message\":
+    response_message\n            }\n        }\n    \n    # Create K8s Event for target
+    namespace if enabled\n    if k8s_events_enabled == \"TRUE\":\n\n        app.logger.info(\"K8s
+    Event are enabled\")\n\n        if \"FAIL\" in response_message or alert_should_send:\n\n
+    \           send_k8s_event(magtape_pod_name, namespace, workload_type, workload,
+    response_message)\n\n    else:\n\n        app.logger.info(\"K8s Events are NOT
+    enabled\")\n\n    # Send Slack message when failure is detected if enabled    \n
+    \   if slack_enabled == \"TRUE\":\n\n        app.logger.info(\"Slack alerts are
+    enabled\")\n\n        if skip_alert:\n\n            app.logger.info(f\"Skipping
+    alert for child object of previously validated parent \\\"{k8s_object_owner_kind}/{k8s_object_owner_name}\\\"\")\n\n
+    \       elif \"FAIL\" in response_message and slack_passive == \"TRUE\" or alert_should_send:\n\n
+    \           # Add default Webhook URL to alert Targets\n            alert_targets.append(slack_webhook_url_default)\n\n
+    \           # Check Request namespace for custom Slack Webhook\n            get_namespace_annotation(namespace,
+    slack_webhook_annotation, alert_targets)\n\n            # Set boolean to show
+    whether a customer alert was sent\n            if len(alert_targets) > 1:\n\n
+    \               customer_alert_sent = True\n\n            # Send alerts to all
+    target Slack Webhooks\n            for slack_target in alert_targets:\n\n                send_slack_alert(response_message,
+    slack_target, slack_user, slack_icon, cluster, namespace, workload, workload_type,
+    request_user, customer_alert_sent, magtape_deny_level, allowed)\n\n            #
+    Increment Prometheus Counters\n            if allowed:\n\n                magtape_metrics_requests.labels(count_type
+    = \"allowed\", ns = namespace, alert_sent = \"true\").inc()\n                magtape_metrics_requests.labels(count_type
+    = \"total\", ns = namespace, alert_sent = \"true\").inc()\n\n            else:\n\n
+    \               magtape_metrics_requests.labels(count_type = \"denied\", ns =
+    namespace, alert_sent = \"true\").inc()\n                magtape_metrics_requests.labels(count_type
+    = \"total\", ns = namespace, alert_sent = \"true\").inc()\n\n    else:\n\n        app.logger.info(f\"Slack
+    alerts are NOT enabled\")\n\n        # Increment Prometheus Counters\n        if
+    allowed:\n\n            magtape_metrics_requests.labels(count_type = \"allowed\",
+    ns = namespace, alert_sent = \"false\").inc()\n            magtape_metrics_requests.labels(count_type
+    = \"total\", ns = namespace, alert_sent = \"false\").inc()\n\n        else:\n\n
+    \           magtape_metrics_requests.labels(count_type = \"denied\", ns = namespace,
+    alert_sent = \"false\").inc()\n            magtape_metrics_requests.labels(count_type
+    = \"total\", ns = namespace, alert_sent = \"false\").inc()\n\n    # Build Admission
+    Response\n    admissionReview = {\n        \"response\": admission_response\n
+    \   }\n    \n    app.logger.info(\"Sending Response to K8s API Server\")\n    app.logger.debug(f\"Admission
+    Review: \\n{json.dumps(admissionReview, indent=2, sort_keys=True)}\")\n\n    return
+    admissionReview\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    build_response_message(object_spec, response_message, namespace):\n\n    \"\"\"Function
+    to build the response message used to inform users of policy decisions\"\"\"\n\n
+    \   try:\n    \n        opa_response = requests.post(\n\n            opa_url,
+    json=object_spec,\n            headers = {'Content-Type': 'application/json'},\n
+    \           timeout = 5\n\n        )\n\n    except requests.exceptions.RequestException
+    as exception:\n\n        app.logger.info(f\"Call to OPA was unsuccessful\")\n
+    \       \n        print(f\"Exception:\\n{exception}\")\n        \n        response_message
+    = \"[FAIL] HIGH - Call to OPA was unsuccessful. Please contact your cluster administrator\"\n\n
+    \       return response_message\n\n    if opa_response and opa_response.status_code
+    == 200:\n\n        app.logger.info(\"Call to OPA was successful\")\n        app.logger.debug(f\"Opa
+    Response Headers: {opa_response.headers}\")\n        app.logger.debug(f\"OPA Response
+    Text:\\n{opa_response.text}\")\n\n    else:\n\n        app.logger.info(f\"Request
+    to OPA returned an error {opa_response.status_code}, the response is:\\n{opa_response.text}\")\n\n
+    \       response_message = \"[FAIL] HIGH - Call to OPA was unsuccessful. Please
+    contact your cluster administrator\"\n\n        return response_message\n\n    #
+    Load OPA request results as JSON\n    opa_response_json = json.loads(opa_response.text)['decisions']\n\n
+    \   app.logger.debug(f\"OPA JSON:\\n{opa_response_json}\")\n\n    # Build response
+    message from \"msg\" component of each object in the OPA response\n    messages
+    = []\n\n    # Note this entire statement can likely be broken down into a simpler
+    chained \n    # generator/list comprehension statement.....I tried, but couldn't
+    get it to work\n    # Something similar to:\n    # opa_response_msg = \", \".join(reason['msg']
+    for reason in decision['reasons'] for decision in opa_response_json)\n    for
+    decision in opa_response_json:\n\n        for reason in decision['reasons']:\n\n
+    \           messages.append(reason['msg'])\n\n    # Sort messages for consistent
+    output\n    messages.sort()\n\n    opa_response_msg = \", \".join(messages)\n\n
+    \   # Cleanup artifacts from OPA response before sending to K8s API\n    response_message
+    = re.sub(r\"^\\[\\'|\\'\\]$|\\'(\\, )\\'\", r\"\\1\", opa_response_msg)\n\n    app.logger.debug(f\"response_message:\\n{response_message}\")\n\n
+    \   # Increment Prometheus counter for each policy object in the OPA response\n
+    \   for policy_obj in opa_response_json:\n\n        policy_name = re.sub(\"policy-\",
+    \"\", policy_obj['policy']).replace(\"_\", \"-\")\n\n        app.logger.debug(f\"Policy
+    Object: {policy_obj}\")\n        app.logger.debug(f\"Policy Name: {policy_name}\")\n\n
+    \       if policy_obj['reasons']:\n        \n            for reason in policy_obj['reasons']:\n\n
+    \                   app.logger.debug(f\"Policy Failed\")\n\n                    #
+    Increment Prometheus Counters\n                    magtape_metrics_policies.labels(count_type
+    = \"total\", policy = policy_name, ns = namespace).inc()\n                    magtape_metrics_policies.labels(count_type
+    = \"fail\", policy = policy_name, ns = namespace).inc()\n\n        else:\n\n            app.logger.debug(f\"Policy
+    Passed\")\n\n            # Increment Prometheus Counters\n            magtape_metrics_policies.labels(count_type
+    = \"total\", policy = policy_name, ns = namespace).inc()\n            magtape_metrics_policies.labels(count_type
+    = \"pass\", policy = policy_name, ns = namespace).inc()\n\n    return response_message\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    get_namespace_annotation(request_namespace, slack_webhook_annotation, alert_targets):\n\n
+    \   \"\"\"Function to check for customer defined Slack Incoming Webhook URL in
+    namespace annotation\"\"\"\n\n    config.load_incluster_config()\n\n    v1 = client.CoreV1Api()\n\n
+    \   try:\n        \n        request_ns_annotations = v1.read_namespace(request_namespace).metadata.annotations\n\n
+    \       app.logger.debug(f\"Request Namespace Annotations: {request_ns_annotations}\")\n\n
+    \   except ApiException as exception:\n\n        app.logger.info(f\"Unable to
+    query K8s namespace for Slack Webhook URL annotation: {exception}\\n\")\n\n    if
+    request_ns_annotations and slack_webhook_annotation in request_ns_annotations:\n\n
+    \       slack_webhook_url_customer = request_ns_annotations[slack_webhook_annotation]\n\n
+    \       if slack_webhook_url_customer:\n\n            app.logger.info(f\"Slack
+    Webhook Annotation Detected for namespace \\\"{request_namespace}\\\"\")\n            app.logger.debug(f\"Slack
+    Webhook Annotation Value: {slack_webhook_url_customer}\")\n\n            alert_targets.append(slack_webhook_url_customer)\n
+    \           \n        else:\n\n            app.logger.info(f\"No Slack Incoming
+    Webhook URL Annotation Detected, using default\")\n            app.logger.debug(f\"Default
+    Slack Webhook URL: {slack_webhook_url_default}\")\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    send_k8s_event(magtape_pod_name, namespace, workload_type, workload, response_message):\n\n
+    \   \"\"\"Function to create a k8s event in the target namespace upon policy failure\"\"\"\n\n
+    \   # Load k8s client config\n    config.load_incluster_config()\n\n    # Create
+    an instance of the API class\n    api_instance = client.CoreV1Api()\n    k8s_event_time
+    = datetime.datetime.now(datetime.timezone.utc)\n\n    # Build involved object
+    for k8s event\n    k8s_involved_object = client.V1ObjectReference(\n        name=workload,
+    \n        kind=workload_type, \n        namespace=namespace\n    )\n\n    # Build
+    metadata for k8s event\n    k8s_event_metadata = client.V1ObjectMeta(\n        generate_name=\"magtape-policy-failure.\",\n
+    \       namespace=namespace,\n        labels={\"magtape-event\": \"policy-failure\"}\n
+    \   )\n\n    # Build body for k8s event\n    k8s_event_body = client.V1Event(\n
+    \       action=\"MagTape Policy Failure\",\n        event_time=k8s_event_time,\n
+    \       first_timestamp=k8s_event_time,\n        involved_object=k8s_involved_object,\n
+    \       last_timestamp=k8s_event_time,\n        message=response_message,\n        metadata=k8s_event_metadata,\n
+    \       reason=\"MagTapePolicyFailure\",\n        type=\"Warning\",\n        reporting_component=\"magtape\",\n
+    \       reporting_instance=magtape_pod_name\n    )\n\n    try: \n\n        api_response
+    = api_instance.create_namespaced_event(namespace, k8s_event_body)\n\n    except
+    ApiException as exception:\n\n        app.logger.info(f\"Exception when creating
+    a namespace event: {exception}\\n\")\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    slack_url_sub(slack_webhook_url):\n\n    \"\"\"Function to override the base domain
+    for the Slack Incoming Webhook URL\"\"\"\n\n    if \"SLACK_WEBHOOK_URL_BASE\"
+    in os.environ:\n\n        slack_webhook_url_base = os.environ['SLACK_WEBHOOK_URL_BASE']\n\n
+    \       slack_webhook_url = re.sub(r'(^https://)([a-z0-9\\.]+)(.*)$', r\"\\1\"
+    + slack_webhook_url_base + r\"\\3\", slack_webhook_url)\n\n        app.logger.info(\"Slack
+    Webhook URL override detected\")\n        app.logger.debug(f\"Slack Webhook URL
+    after substitution: {slack_webhook_url}\")\n\n    return slack_webhook_url\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    send_slack_alert(response_message,slack_webhook_url, slack_user, slack_icon, cluster,
+    namespace, workload, workload_type, request_user, customer_alert_sent, magtape_deny_level,
+    allowed):\n\n    \"\"\"Function to format and send Slack alert for policy failures\"\"\"\n\n
+    \   # Set Slack alert header and color appropriately for active/passive alerts\n
+    \   alert_header = \"MagTape | Policy Denial Detected\"\n    alert_color = \"danger\"\n\n
+    \   if allowed:\n\n        alert_header = \"MagTape | Policy Failures Detected\"\n
+    \       alert_color = \"warning\"\n\n    # Override Slack Webhook URL base domain
+    if applicable\n    slack_webhook_url = slack_url_sub(slack_webhook_url)\n    \n
+    \   slack_alert_data = {\n      \"username\": f\"{slack_user}\",\n      \"icon_emoji\":
+    f\"{slack_icon}\",\n      \"attachments\": [{\n            \"fallback\": f\"MagTape
+    detected failures for {workload_type} \\\"{workload}\\\" in namespace \\\"{namespace}\\\"
+    on cluster \\\"{cluster}\\\"\",\n            \"color\": f\"{alert_color}\",\n
+    \           \"pretext\": f\"{alert_header}\",\n            \"text\": response_message.replace(\",\",
+    \"\\n\"),\n            \"fields\": [\n                {\n                    \"title\":
+    \"Cluster\",\n                    \"value\": f\"{cluster}\",\n                    \"short\":
+    \"true\"\n                },\n\t\t\t\t{\n                    \"title\": \"Namespace\",\n
+    \                   \"value\": f\"{namespace}\",\n                    \"short\":
+    \"true\"\n                },\n                {\n                    \"title\":
+    \"MagTape Deny Level\",\n                    \"value\": f\"{magtape_deny_level}\",\n
+    \                   \"short\": \"true\"\n                },\n\t\t\t\t{\n                    \"title\":
+    \"Workload\",\n                    \"value\": f\"{workload_type.lower()}/{workload}\",\n
+    \                   \"short\": \"false\"\n                },\n                {\n
+    \                   \"title\": \"User\",\n                    \"value\": f\"{request_user}\",\n
+    \                   \"short\": \"false\"\n                },\n                {\n
+    \                   \"title\": \"Customer Alert\",\n                    \"value\":
+    f\"{customer_alert_sent}\",\n                    \"short\": \"true\"\n                }\n
+    \           ]\n        }]\n    }\n\n    app.logger.debug(f\"Slack Alert Data:
+    \\n{json.dumps(slack_alert_data, indent=2, sort_keys=True)}\")\n\n    try: \n
+    \       slack_response = requests.post(\n\n            slack_webhook_url,\n            json
+    = slack_alert_data,\n            headers = {'Content-Type': 'application/json'},\n
+    \           timeout = 5\n\n        )\n\n        app.logger.info(f\"Slack Alert
+    was successful ({slack_response.status_code})\")\n        app.logger.debug(f\"Slack
+    API Response: {slack_response}\")\n\n    except requests.exceptions.RequestException
+    as exception:\n\n        app.logger.info(f\"Problem sending Alert to Slack: {exception}\")\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    main():\n\n    app.logger.info(\"MagTape Startup\")\n    \n    app.run(host='0.0.0.0',
+    port=5000, debug=False, threaded=True, ssl_context=(f\"{magtape_tls_path}/cert.pem\",
+    f\"{magtape_tls_path}/key.pem\"))\n\n################################################################################\n################################################################################\n################################################################################\n\nif
+    __name__ == \"__main__\":\n\n    main()\n"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: magtape-app
+  namespace: magtape-system
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: magtape-env
+  namespace: magtape-system
+data:
+  FLASK_ENV: "production"
+  PYTHONUNBUFFERED: "TRUE"
+  MAGTAPE_CLUSTER_NAME: "test-cluster"
+  MAGTAPE_LOG_LEVEL: "INFO"
+  MAGTAPE_DENY_LEVEL: "LOW"
+  MAGTAPE_K8S_EVENTS_ENABLED: "TRUE"
+  MAGTAPE_SLACK_ENABLED: "FALSE"
+  MAGTAPE_SLACK_PASSIVE: "FALSE"
+  MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT: "https://hooks.slack.com/services/XXXXXXXX/XXXXXXXX/XXXXXXXXXXXXXXXXXX"
+  MAGTAPE_SLACK_ANNOTATION: "magtape/slack-webhook-url"
+  MAGTAPE_SLACK_USER: "mtbot"
+  MAGTAPE_SLACK_ICON: ":magtape:"
+  OPA_BASE_URL: "http://127.0.0.1:8181"
+  OPA_K8S_PATH: "/v0/data/magtape"
+---
+apiVersion: v1
+data:
+  magtape-vwc: |
+    apiVersion: admissionregistration.k8s.io/v1beta1
+    kind: ValidatingWebhookConfiguration
+    metadata:
+      name: magtape-webhook
+    webhooks:
+      - name: magtape.webhook.k8s.t-mobile.com
+        clientConfig:
+          service:
+            name: magtape-svc
+            namespace: magtape-system
+            path: "/"
+          caBundle:
+        failurePolicy: Fail
+        rules:
+          - operations:
+              - CREATE
+              - UPDATE
+            apiGroups:
+              - "*"
+            apiVersions:
+              - "*"
+            resources:
+              - "deployments"
+              - "statefulsets"
+              - "daemonsets"
+              - "pods"
+              - "poddisruptionbudgets"
+        namespaceSelector:
+          matchLabels:
+            k8s.t-mobile.com/magtape: "enabled"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: magtape-vwc-template
+  namespace: magtape-system
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: magtape-opa-default-main
+  namespace: magtape-system
+data:
+  main: |
+    package system
+
+    import data.kubernetes.admission
+
+    main = {
+      "apiVersion": "admission.k8s.io/v1beta1",
+      "kind": "AdmissionReview",
+      "response": response,
+    }
+
+    default response = {"allowed": true}
+
+    response = {
+        "allowed": false,
+        "status": {
+            "reason": reason,
+        },
+    } {
+        reason = concat(", ", admission.deny)
+        reason != ""
+    }
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: magtape-opa-entrypoint
+  namespace: magtape-system
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+
+data:
+  magtape.rego: |-
+    package magtape
+
+    # This acts as an entrypoint to call all policies under "kubernetes.admission"
+
+    decisions[{"policy": p, "reasons": reasons}] {
+
+      data.kubernetes.admission[p].matches
+      reasons := data.kubernetes.admission[p].deny
+
+    }
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: magtape-svc
+  labels:
+    app: magtape
+  namespace: magtape-system
+spec:
+  ports:
+  - name: https
+    port: 443
+    targetPort: 5000
+  selector:
+    app: magtape
+  sessionAffinity: None
+  type: ClusterIP
+
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: magtape-pdb
+  namespace: magtape-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: magtape
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: magtape
+  namespace: magtape-system
+  labels:
+    app: magtape
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: magtape
+  template:
+    metadata:
+      labels:
+        app: magtape
+    spec:
+      serviceAccountName: magtape-sa
+      initContainers:
+        - name: magtape-init
+          image: jmsearcy/python3-tkev-init:1.0
+          command: [/app/magtape-init.py]
+          imagePullPolicy: Always
+          env:
+          - name: MAGTAPE_NAMESPACE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          envFrom:
+            - configMapRef:
+                name: magtape-env
+          volumeMounts:
+          - name: magtape-init
+            mountPath: /app
+          - name: magtape-tls
+            mountPath: /tls
+          - name: magtape-vwc
+            mountPath: /vwc
+      containers:
+      - name: magtape
+        image: jmsearcy/python3-tkev:1.4
+        ports:
+        - containerPort: 5000
+        command: [/app/magtape.py]
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            scheme: HTTPS
+            port: 5000
+            path: /healthz
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            scheme: HTTPS
+            port: 5000
+            path: /healthz
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        env:
+        - name: MAGTAPE_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: MAGTAPE_NAMESPACE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        envFrom:
+        - configMapRef:
+            name: magtape-env
+        volumeMounts:
+          - name: magtape-app
+            mountPath: /app
+          - name: magtape-tls
+            mountPath: /tls
+      - name: opa
+        image: openpolicyagent/opa:0.16.1
+        args:
+          - "run"
+          - "--server"
+          - "--tls-cert-file=/tls/cert.pem"
+          - "--tls-private-key-file=/tls/key.pem"
+          - "--addr=0.0.0.0:443"
+          - "--addr=http://127.0.0.1:8181"
+        readinessProbe:
+          httpGet:
+            scheme: HTTPS
+            port: 443
+            path: /health
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            scheme: HTTPS
+            port: 443
+            path: /health
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: "500m"
+            memory: 1Gi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        volumeMounts:
+          - name: magtape-tls
+            mountPath: /tls
+      - name: kube-mgmt
+        image: openpolicyagent/kube-mgmt:0.10
+        args:
+          - "--policies=magtape-system"
+          - "--require-policy-label=true"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+      volumes:
+        - name: magtape-app
+          configMap:
+            name: magtape-app
+            defaultMode: 0755
+            items:
+            - key: magtape-app
+              path: magtape.py
+        - name: magtape-init
+          configMap:
+            name: magtape-init
+            defaultMode: 0755
+            items:
+            - key: magtape-init
+              path: magtape-init.py
+        - name: magtape-vwc
+          configMap:
+              name: magtape-vwc-template
+              items:
+              - key: magtape-vwc
+                path: magtape-vwc.yaml
+        - name: magtape-tls
+          emptyDir: {}
+      terminationGracePeriodSeconds: 5
+---
+
+apiVersion: v1
+data:
+  policy-liveness-probe-check.rego: "package kubernetes.admission.policy_liveness_probe\n\npolicy_metadata
+    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-liveness-probe\",\n
+    \   \"severity\": \"LOW\",\n    \"errcode\": \"MT1001\",\n    \"targets\": {\"Deployment\",
+    \"StatefulSet\", \"DaemonSet\", \"Pod\"},\n\n}\n\nservicetype = input.request.kind.kind\n\nmatches
+    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
+    \   \n}\n\ndeny[info] {\n\n    # Find container spec\n    containers := find_containers(servicetype,
+    policy_metadata)\n\n    # Check for livenessProbe in each container spec\n    container
+    := containers[_]\n    name := container.name\n    not container.livenessProbe\n\n
+    \   # Build message to return\n    msg = sprintf(\"[FAIL] %v - Liveness Probe
+    missing for container \\\"%v\\\" (%v)\", [policy_metadata.severity, name, policy_metadata.errcode])\n\n
+    \   info := {\n        \n    \t\"name\": policy_metadata.name,\n\t\t\"severity\":
+    policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n\t\t\"msg\":
+    msg,\n    }\n}\n\n# find_containers accepts a value (k8s object type) and returns
+    the container spec\nfind_containers(type, metadata) = input.request.object.spec.containers
+    {\n\n    type == \"Pod\"\n\n} else = input.request.object.spec.template.spec.containers
+    {\n\n\tmetadata.targets[type]\n    \n}"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-liveness-probe-check
+  namespace: magtape-system
+---
+
+apiVersion: v1
+data:
+  policy-pdb-check.rego: "package kubernetes.admission.policy_pdb\n\npolicy_metadata
+    = {\n\n\t# Set MagTape Policy Info\n\t\"name\": \"policy-pdb\",\n\t\"severity\":
+    \"HIGH\",\n\t\"errcode\": \"MT1005\",\n\t\"targets\": {\"PodDisruptionBudget\"},\n\n}\n\nservicetype
+    = input.request.kind.kind\n\nmatches {\n\n    # Verify request object type matches
+    targets\n    policy_metadata.targets[servicetype]\n    \n}\n\nlimits = {\n\n\t\"minAvailable\":
+    [0, 66],\n    \"maxUnavailable\": [33, 100],\n\t\n}\n\n# Generates a violation
+    if the input doesn't specify a percentage (e.g., they used an absolute.)\ndeny[info]
+    {\n\n\t# Get limit type\n\tlimits[name]\n\n    # Get limit value\n\tvalue := input.request.object.spec[name]\n\n
+    \ \t# Verify the value is a percentage\n\t[_, false] = get_percentage(value)\n\n
+    \   msg := sprintf(\"[FAIL] %v - Value \\\"%v\\\" for \\\"%v\\\" should be a Percentage,
+    not an Integer (%v)\", [policy_metadata.severity, value, name, policy_metadata.errcode])\n\n\tinfo
+    := {\n\n    \t\"name\": policy_metadata.name,\n\t\t\"severity\": policy_metadata.severity,\n
+    \       \"errcode\": policy_metadata.errcode,\n\t\t\"msg\": msg,\n\n    }\n\n}\n\n#
+    Generates a violation if the input specifes a percentage out-of-range.\ndeny[info]
+    {\n\n    # Get limit range\n\trange := limits[name]\n\n\t# Get the percentage
+    value\n    [percent, true] = get_percentage(input.request.object.spec[name])\n\n
+    \   # Verify the percentage is within range\n\tnot within_range(percent, range)\n\n
+    \   msg := sprintf(\"[FAIL] %v - Value (%v%%) for \\\"%v\\\" not within range
+    %v%%-%v%% (%v)\", [policy_metadata.severity, percent, name, range[0], range[1],
+    policy_metadata.errcode])\n\n\tinfo := {\n\n        \"name\": policy_metadata.name,\n
+    \       \"severity\": policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n
+    \       \"msg\": msg,\n\n    }\n\n}\n\nwithin_range(x, [_min, _max]) {\n\n\tx
+    >= _min\n    x <= _max\n\n}\n\n# get_percentage accepts a value and generates
+    a tuple containing the \n# numeric percentage value and a boolean value indicating
+    whether the\n# input value could be converted to a numeric percentage.\n#\n# Examples:\n#\n#
+    \  get_percentage(50) == [0, false]\n#   get_percentage(\"50\") == [0, false]\n#
+    \  get_percentage(\"50%\") == [50, true]\nget_percentage(value) = [0, false] {\n\n\tnot
+    is_string(value)\n\n} else = [0, false] {\n\n\tnot contains(value, \"%\")\n\n}
+    else = [percent, true] {\n\n\tpercent := to_number(trim(value, \"%\"))\n\n}"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-pdb-check
+  namespace: magtape-system
+---
+
+apiVersion: v1
+data:
+  policy-port-name-mismatch.rego: "package kubernetes.admission.policy_port_name_mismatch\n\npolicy_metadata
+    = {\n    \n    # Set MagTape Policy Info\n    \"name\": \"policy-port-name-mismatch\",\n
+    \   \"severity\": \"HIGH\",\n    \"errcode\": \"MT1006\",\n    \"targets\": {\"Service\"},\n\n}\n\nservicetype
+    = input.request.kind.kind\nsvc_name := input.request.object.metadata.name\n\nmatches
+    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
+    \   \n}\n\ndeny[info] {\n\n    # Find service ports\n    ports := input.request.object.spec.ports\n\n
+    \   # Check all port spec's\n    port := ports[_]\n    port_name := port.name\n
+    \   port_number := port.port\n\n    # Check for mismatch between logical port
+    name and port number in service spec\n    port_name == \"http\"\n    port_number
+    == 443\n\n    msg = sprintf(\"[FAIL] %v - Logical port name \\\"%v\\\" mismatch
+    with port number \\\"%v\\\" for service \\\"%v\\\" (%v)\", [policy_metadata.severity,
+    port_name, port_number, svc_name, policy_metadata.errcode])\n\n    info := {\n\n
+    \       \"name\": policy_metadata.name,\n        \"severity\": policy_metadata.severity,\n
+    \       \"errcode\": policy_metadata.errcode,\n        \"msg\": msg,\n\n    }\n\n}"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-port-name-mismatch
+  namespace: magtape-system
+---
+
+apiVersion: v1
+data:
+  policy-privileged-pod-check.rego: "package kubernetes.admission.policy_privileged_pod\n\npolicy_metadata
+    = {\n    \n    # Set MagTape Policy Info\n    \"name\": \"policy-privileged-pod\",\n
+    \   \"severity\": \"HIGH\",\n    \"errcode\": \"MT2001\",\n    \"targets\": {\"Deployment\",
+    \"StatefulSet\", \"DaemonSet\", \"Pod\"},\n\n}\n\nservicetype = input.request.kind.kind\n\nmatches
+    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
+    \   \n}\n\ndeny[info] {\n\n    # Find container spec\n    containers := find_containers(servicetype,
+    policy_metadata)\n\n    # Check for Privileged SecurityContext in container spec\n
+    \   container := containers[_]\n    name := container.name\n    container.securityContext.privileged\n\n
+    \   msg = sprintf(\"[FAIL] %v - Found privileged Security Context for container
+    \\\"%v\\\" (%v)\", [policy_metadata.severity, name, policy_metadata.errcode])\n\n
+    \   info := {\n\n        \"name\": policy_metadata.name,\n        \"severity\":
+    policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n        \"msg\":
+    msg,\n\n    }\n\n}\n\n# find_containers accepts a value (k8s object type) and
+    returns the container spec\nfind_containers(type, metadata) = input.request.object.spec.containers
+    {\n\n    type == \"Pod\"\n\n} else = input.request.object.spec.template.spec.containers
+    {\n\n\tmetadata.targets[type]\n    \n}"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-privileged-pod-check
+  namespace: magtape-system
+---
+
+apiVersion: v1
+data:
+  policy-readiness-probe-check.rego: "package kubernetes.admission.policy_readiness_probe\n\npolicy_metadata
+    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-readiness-probe\",\n
+    \   \"severity\": \"LOW\",\n    \"errcode\": \"MT1002\",\n    \"targets\": {\"Deployment\",
+    \"StatefulSet\", \"DaemonSet\", \"Pod\"},\n\n}\n\nservicetype = input.request.kind.kind\n\nmatches
+    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
+    \   \n}\n\ndeny[info] {\n\n    # Find container spec\n    containers := find_containers(servicetype,
+    policy_metadata)\n\n    # Check for ReadinessProbe in each container spec\n    container
+    := containers[_]\n    name := container.name\n    not container.readinessProbe\n\n
+    \   # Build message to return\n    msg = sprintf(\"[FAIL] %v - Readiness Probe
+    missing for container \\\"%v\\\" (%v)\", [policy_metadata.severity, name, policy_metadata.errcode])\n\n
+    \   info := {\n\n        \"name\": policy_metadata.name,\n        \"severity\":
+    policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n        \"msg\":
+    msg,\n\n    }\n\n}\n\n# find_containers accepts a value (k8s object type) and
+    returns the container spec\nfind_containers(type, metadata) = input.request.object.spec.containers
+    {\n\n    type == \"Pod\"\n\n} else = input.request.object.spec.template.spec.containers
+    {\n\n\tmetadata.targets[type]\n    \n}"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-readiness-probe-check
+  namespace: magtape-system
+---
+
+apiVersion: v1
+data:
+  policy-resource-limits-check.rego: "package kubernetes.admission.policy_resource_limits\n\npolicy_metadata
+    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-resource-limits\",\n
+    \   \"severity\": \"LOW\",\n    \"errcode\": \"MT1003\",\n    \"targets\": {\"Deployment\",
+    \"StatefulSet\", \"DaemonSet\", \"Pod\"},\n\n}\n\nservicetype = input.request.kind.kind\n\nmatches
+    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
+    \   \n}\n\ndeny[info] {\n\n    # Find container spec\n    containers := find_containers(servicetype,
+    policy_metadata)\n\n    # Check for livenessProbe in container spec\n    container
+    := containers[_]\n    name := container.name\n    resource_type := get_resource_type(container)\n\n
+    \   # Build message to return\n    msg = sprintf(\"[FAIL] %v - Resource limits
+    missing (%v) for container \\\"%v\\\" (%v)\", [policy_metadata.severity, resource_type,
+    name, policy_metadata.errcode])\n\n    info := {\n\n        \"name\": policy_metadata.name,\n
+    \       \"severity\": policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n
+    \       \"msg\": msg,\n\n    }\n\n}\n\n# find_containers accepts a value (k8s
+    object type) and returns the container spec\nfind_containers(type, metadata) =
+    input.request.object.spec.containers {\n\n    type == \"Pod\"\n\n} else = input.request.object.spec.template.spec.containers
+    {\n\n\tmetadata.targets[type]\n    \n}\n\n# get_resource_type accepts a value
+    (containers) and returns the missing resource type based on missing limits\nget_resource_type(container)
+    = \"CPU/MEM\" {\n\n    not container.resources.limits.cpu\n    not container.resources.limits.memory\n
+    \   \n} else = \"CPU\" {\n\t\n    not container.resources.limits.cpu\n    \n}
+    else = \"MEM\" {\n\t\n    not container.resources.limits.memory\n    \n}"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-resource-limits-check
+  namespace: magtape-system
+---
+
+apiVersion: v1
+data:
+  policy-resource-requests-check.rego: "package kubernetes.admission.policy_resource_requests\n\npolicy_metadata
+    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-resource-requests\",\n
+    \   \"severity\": \"LOW\",\n    \"errcode\": \"MT1004\",\n    \"targets\": {\"Deployment\",
+    \"StatefulSet\", \"DaemonSet\", \"Pod\"},\n\n}\n\nservicetype = input.request.kind.kind\n\nmatches
+    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
+    \   \n}\n\ndeny[info] {\n\n    # Find container spec\n    containers := find_containers(servicetype,
+    policy_metadata)\n\n    # Check for livenessProbe in each container spec\n    container
+    := containers[_]\n    name := container.name\n    resource_type := get_resource_type(container)\n\n
+    \   # Build message to return\n    msg := sprintf(\"[FAIL] %v - Resource requests
+    missing (%v) for container \\\"%v\\\" (%v)\", [policy_metadata.severity, resource_type,
+    name, policy_metadata.errcode])\n\n    info := {\n\n        \"name\": policy_metadata.name,\n
+    \       \"severity\": policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n
+    \       \"msg\": msg,\n\n    }\n    \n}\n\n# find_containers accepts a value (k8s
+    object type) and returns the container spec\nfind_containers(type, metadata) =
+    input.request.object.spec.containers {\n\n    type == \"Pod\"\n\n} else = input.request.object.spec.template.spec.containers
+    {\n\n\tmetadata.targets[type]\n    \n}\n\n# get_resource_type accepts a value
+    (containers) and returns the missing resource type based on missing limits\nget_resource_type(container)
+    = \"CPU/MEM\" {\n\n    not container.resources.requests.cpu\n    not container.resources.requests.memory\n
+    \   \n} else = \"CPU\" {\n\t\n    not container.resources.requests.cpu\n    \n}
+    else = \"MEM\" {\n\t\n    not container.resources.requests.memory\n    \n}"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-resource-requests-check
+  namespace: magtape-system
+---
+

@@ -12,6 +12,7 @@ MagTape is NOT meant to be a replacement or competitor to OPA, but rather an exa
 MagTape examines kubernetes objects against a set of defined policies (best practice configurations/security concepts) and can deny/alert on objects that fail policy checks. The webhook is written in `Python` using the `Flask` framework.
 
 - [Prereqs](#prereqs)
+- [Quickstart](#quickstart)
 - [Policies](#policies)
 - [Deny Level](#deny-level)
 - [Health Check](#health-check)
@@ -19,16 +20,17 @@ MagTape examines kubernetes objects against a set of defined policies (best prac
 - [K8s Events](#k8s-events)
 - [Slack Alerts](#slack-alerts)
 - [Metrics](#metrics)
-- [Deploy](#deploy)
+- [Advances Install](docs/install.md)
 - [Testing](#testing)
+- [Cautions](#cautions)
 - [Troubleshooting](#troubleshooting)
 
 ### Prereqs
 
-Kubernetes 1.9.0 or above with the `admissionregistration.k8s.io/v1beta1` API enabled. Verify that by the following command:
+Kubernetes 1.9.0 or above with the `admissionregistration.k8s.io` API enabled. Verify that by the following command:
 
 ```shell
-$ kubectl api-versions | grep admissionregistration.k8s.io/v1beta1
+$ kubectl api-versions | grep admissionregistration.k8s.io
 ```
 
 The result should be:
@@ -39,16 +41,86 @@ admissionregistration.k8s.io/v1beta1
 
 In addition, the `MutatingAdmissionWebhook` and `ValidatingAdmissionWebhook` admission controllers should be added and listed in the correct order in the admission-control flag of kube-apiserver.
 
+#### Permissions
+
+MagTape requires cluster-admin permissions to deploy to Kubernetes since it requires access to create/read/update/delete cluster scoped resources (ValidatingWebhookConfigurations, Events, etc.)
+
+### Quickstart
+
+You can use the following command to install MagTape and the example policies from this repo with sane defaults. This won't have all features turned on as they require more configuration up front. Please see the [Advanced Install](docs/install.md) section for more details.
+
+**NOTE:** The quickstart installation is not meant for production use. Please read through the [Advanced Install](docs/install.md) and [Cautions](#cautions) sections, and as always, use your best judgement when configuring MagTape for production scenarios.
+
+```
+$ kubectl apply -f https://github.com/tmobile/magtape/blob/master/deploy/install.yaml
+```
+
+#### This will do the following
+
+- Create the `magtape-system` namespace
+- Create cluster and namespace scoped roles/rolebindings
+- Deploy the MagTape workload and related configs
+- Deploy the example policies from this repo
+
+#### Once this is complete you can do the following to test
+
+Create and label a test namespace
+
+```shell
+$ kubectl create ns test1
+$ kubectl label ns test1 k8s.t-mobile.com/magtape=enabled
+```
+
+Deploy some test workloads
+
+```shell
+# These examples assume you're in the root directory of this repo
+# Example with no failures
+
+$ kubectl apply -f ./testing/deployments/test-deploy01.yaml -n test1
+
+# Example with deny
+# You should get immediate feedback that this request was denied.
+
+$ kubectl apply -f ./testing/deployments/test-deploy02.yaml -n test1
+
+# Example with failures, but no deny
+# While this request won't be denied, a K8s Event will be generated
+# and can be viewed with "kubectl get events -n test1"
+
+$ kubectl apply -f ./testing/deployments/test-deploy03.yaml -n test1
+```
+
+#### Beyond the Basics
+
+Now that you've seen the basics of MagTape, try out some of the other features
+
+- [Deny Level](#deny-level)
+- [Slack Alerts](#slack-alerts)
+
+### Cleanup
+
+Remove all MagTape deployed resources
+
+```shell
+# Assumes you're in the root directory of this repo
+$ kubectl delete -f deploy/install.yaml
+$ kubectl delete validatingwebhookconfiguration magtape-webhook
+```
+
 ### Policies
 
-The below policies are included by default. The default policies can be removed or custom policies can be added. Policies use OPA's Rego language with a specific format to define policy metadata and the output message. This special formatting enables the additional functionality of MagTape.
+The below [policy examples](policies) are available within this repo. The can be ignored or custom policies can be added. Policies use OPA's Rego language with a specific format to define policy metadata and the output message. This special formatting is required as it enables the additional functionality of MagTape.
 
 - Liveness Probe (Check ID: MT1001)
 - Readiness Probe (Check ID: MT1002)
 - Resource Limits (Check ID: MT1003)
 - Resource Requests (Check ID: MT1004)
 - Pod Disruption Budget (Check ID: MT1005)
+- Istio Port Name/Number Mismatch (Check ID: MT1006)
 - Privileged Pod Security Context (Check ID: MT2001)
+
+More detailed info about these policies can be found [here](docs/policies.md).
 
 The policy metadata is defined within each policy similar to this:
 
@@ -68,6 +140,23 @@ policy_metadata = {
 - `severity` - Defines the severity level of a specific policy. This correlates with the [DENY_LEVEL](#deny-level) to determine if a policy should result in a deny or not.
 - `errcode` - A unique code that can be used, typically in reference to an FAQ, to look up additional information about the policy, what produces a failure, and how to resolve failures.
 - `targets` - This controls which Kubernetes resources the policy targets. Each target should be the singular of the Kubernetes resource as found in the `Kind` field. Special care should be taken to make sure all target resources maintain similar JSON data paths within the policy logic, or that differences are handled appropriately.
+
+Policies follow normal OPA operations for policy discovery. MagTape provides configuration to OPA to filter which configmaps it targets for discovery. If you're adding your own policies make sure to apply the following labels to the configmap:
+
+```shell
+app=opa
+openpolicyagent.org/policy=rego
+```
+
+#### Example creating a policy configmap with appropriate labels from an existing Rego file
+
+```shell
+# Create a policy from a Rego file
+$ kubectl create cm my-special-policy -n magtape-system --from-file=my-special-policy.rego --dry-run -o yaml | \
+kubectl label --local app=opa openpolicyagent.org/policy=rego -f - --dry-run -o yaml > my-special-policy-cm.yaml
+```
+
+OPA will add/update the `openpolicyagent.org/policy-status` annotation on the policy configmaps to show they've been loaded successfully or if there are any syntax/validation issues.
 
 ### Deny Level
 
@@ -90,7 +179,11 @@ MagTape has a rudimentary healthcheck endpoint configured at `/healthz`. The end
 
 ## Image
 
-MagTape uses the [python3-magtape](https://github.com/tmobile/python3-magtape) image. Please reference the Image repo for more information on the image structure and contents.
+MagTape uses a few images for operation. Please reference the image repos for more information on the image structure and contents
+
+- [magtape and magtape-init](https://github.com/tmobile/magtape-image)
+- [opa](https://github.com/open-policy-agent/opa)
+- [kube-mgmt](https://github.com/open-policy-agent/kube-mgmt)
 
 ## K8s Events
 
@@ -158,58 +251,6 @@ Prometheus formatted metrics are exposed on the `/metrics` endpoint. Metrics tra
 
  Grafana dashboards showing CLuster, Namespace, and Policy scoped metrics are available in the [metrics](./metrics/grafana) directory. An example Prometheus ServiceMonitor resource is located [here](./metrics/prometheus).
 
-## Deploy
-
-### Configuration Options
-
-NOTE: The following environment variable are defined in the `magtape-env-cm.yaml` manifest and can be used to customize MagTape's behavior.
-
-| Variable                    | Description                                                                                         | Values                        |
-|---                          |---                                                                                                  |---                            |
-| `FLASK_ENV`                 | The operation environment for Flask                                                                 | `production` or `development` |
-| `MAGTAPE_DENY_LEVEL`           | Controls the level of denial for checks. Please see section above on Deny Level                     | `LOW`, `MED`, or `HIGH`    |
-| `MAGTAPE_LOG_LEVEL`            | The log level to use                                                                                | `INFO` or `DEBUG`          |
-| `MAGTAPE_CLUSTER_NAME`         | The name of the Kubernetes Cluster where the webhook is deployed                                    | `test-cluster`               |
-| `MAGTAPE_K8S_EVENTS_ENABLED`   | Controls whether or not Kubernetes events are generated within the target namespace for policy failures | `TRUE` or `FALSE`      |
-| `MAGTAPE_SLACK_ENABLED`        | Controls whether or not the webhook sends Slack notifications                                        | `TRUE` or `FALSE`          |
-| `MAGTAPE_SLACK_PASSIVE`        | Controls whether or not Slack alerts are sent for checks that fail, but aren't denied due to the DENY_LEVEL setting | `TRUE` or `FALSE` |
-| `MAGTAPE_SLACK_WEBHOOK_URL_BASE`    | **OPTIONAL** - Overrides the base domain (`hooks.slack.com`) for the Slack Incoming Webhook URL. Used for airgapped environments where a forwarding/proxying service may be needed | `slack-proxy.example.com` |
-| `MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT`  | The URL for the Slack Incoming Webhook. | `https://hooks.slack.com/services/XXXXXXXX/XXXXXXXX/XXXXXXXXXXXXXXXXXX` |
-| `MAGTAPE_SLACK_ANNOTATION`     | Annotation key on Kubernetes namespace to detect customer Slack Incoming Webhook URL                | `magtape/slack-webhook-url`|
-| `MAGTAPE_SLACK_USER`           | The user the Slack alerts should be sent as                                                         | `mtbot`                     |
-| `MAGTAPE_SLACK_ICON`           | The emoji to use for the user icon in the alert                                                     | `:magtape:`                 |
-| `OPA_BASE_URL`              | The base URL used to contact the OPA API                                                            | `http://localhost:8181`      |
-| `OPA_K8S_PATH`              | The common path to reference all Kubernetes based OPA policies                                      | `/v0/data/magtape`  |
-
-### Installation
-
-MagTape is setup to use [kustomize](https://kustomize.io) to handle config substitution and generating the YAML manifests to deploy to Kubernetes.
-
-The kustomize layout uses overlays to allow for per environment (Development, Production, etc.) and per cluster substitutions.
-
-| DIRECTORY                                 | DESCRIPTION               |
-|---                                        |---                        |
-| `./deploy/base`                           | The base YAML manifests   |
-| `./deploy/overlays/std`                   | Standard substitutions for all deployments   |
-| `./deploy/overlays/<env>`                 | Environment specific substitutions   |
-| `./deploy/overlays/<cluster>`             | Cluster specific substitutions   |
-
-Once the proper edits have been made you can generate the YAML manifests:
-
-```shell
-$ kustomize build ./deploy/overlays/std | kubectl -n <namespace> apply -f -
-```
-
-NOTE: An SSL Cert and Key need to be generated for the Webhook. A helper script to assist with this is included [here](./deploy/scripts/ssl-cert-gen.sh). This script uses the Kubernetes `CertificateSigningRequest` API to a generate a certificate signed by the Kubernetes CA. The ValidatingWebhookConfiguration also needs to be patched with the Kubernetes CA Bundle in order to trust the webhook cert. [This script](./deploy/scripts/patch-ca-bundle.sh) can be used to patch the VWC.
-
-#### Script
-
-The [magtape-install.sh](./deploy/scripts/magtape-install.sh) script can be used to quickly get MagTape installed or you can use kustomize directly to incorporate the install into your existing CI/CD workflows.
-
-#### Helm
-
-A Helm chart to handle MagTape installation will be coming soon!
-
 ## Testing
 
 - Create namespace for testing and label it appropriately
@@ -237,11 +278,24 @@ A Helm chart to handle MagTape installation will be coming soon!
 
 Info on testing resources can be found in the [testing](./testing) directory
 
+## Cautions
+
+### Production Considerations
+
+- By Default the MagTape Validating Webhook Configuration is set to fail "closed". Meaning if the webhook is unreachable or doesn't return an expected response, requests to the Kubernetes API will be blocked. Please adjust the configuration if this is not something that fits your business model.
+- MagTape supports operation with multiple replicas that can increase availability and performance for critical clusters.
+
+### Break Glass Scenarios
+
+MagTape can be enabled and disabled on a per namespace basis by utilizing the `k8s.t-mobile.com/magtape` label on namespace resources. In emergency situations the label can be removed from a namespace to disable policy assessment for workloads in that namespace.
+
+If there are cluster-wide issues you can disable MagTape completely by removing the `magtape-webhook` Validating Webhook Configuration and deleting the MagTape deployment.
+
 ## Troubleshooting
 
 ### Certificate Trust
 
-Make sure you've patched the ValidatingWebhookConfiguration with the Kubernetes CA bundle. If this is not done the required trust between the K8s API and Webhook will not exist and the Webhook won't work correctly. More info is [here](#installation)
+The ValidatingWebhookConfiguration needs to have a CA Bundle that includes the CA that signed the TLS cert used to secure the MagTape webhook. If this is not done the required trust between the K8s API and webhook will not exist and the webhook won't function correctly. More info is available [here](docs/install.md#root-ca)
 
 ### Access MagTape API from local machine
 

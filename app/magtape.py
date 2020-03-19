@@ -49,11 +49,13 @@ log.disabled = True
 magtape_log_level = os.environ['MAGTAPE_LOG_LEVEL']
 app.logger.setLevel(magtape_log_level)
 
-# Set Global Cluster specific variables
+# Set Global variables
 cluster = os.environ['MAGTAPE_CLUSTER_NAME']
+magtape_namespace_name = os.environ['MAGTAPE_NAMESPACE_NAME']
 magtape_pod_name = os.environ['MAGTAPE_POD_NAME']
+magtape_tls_path = "/tls"
 
-# Set Global Slack related Info
+# Set Slack related variables
 slack_enabled = os.environ['MAGTAPE_SLACK_ENABLED']
 slack_passive = os.environ['MAGTAPE_SLACK_PASSIVE']
 slack_webhook_url_default = os.environ['MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT']
@@ -92,7 +94,7 @@ def webhook():
     request_spec = copy.deepcopy(request_info)
 
     # Call Main Webhook function
-    admissionReview = main(request_spec)
+    admissionReview = magtape(request_spec)
 
     # Return JSON formatted response object
     return jsonify(admissionReview)
@@ -120,7 +122,7 @@ def healthz():
 ################################################################################
 ################################################################################
 
-def main(request_spec):
+def magtape(request_spec):
 
     """main function"""
 
@@ -346,7 +348,7 @@ def build_response_message(object_spec, response_message, namespace):
 
         return response_message
 
-    if opa_response and opa_response.status_code is 200:
+    if opa_response and opa_response.status_code == 200:
 
         app.logger.info("Call to OPA was successful")
         app.logger.debug(f"Opa Response Headers: {opa_response.headers}")
@@ -611,6 +613,16 @@ def send_slack_alert(response_message,slack_webhook_url, slack_user, slack_icon,
 ################################################################################
 ################################################################################
 
-if __name__ == "__main__":
+def main():
+
+    app.logger.info("MagTape Startup")
     
-    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True, ssl_context=('./ssl/cert.pem', './ssl/key.pem'))
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True, ssl_context=(f"{magtape_tls_path}/cert.pem", f"{magtape_tls_path}/key.pem"))
+
+################################################################################
+################################################################################
+################################################################################
+
+if __name__ == "__main__":
+
+    main()

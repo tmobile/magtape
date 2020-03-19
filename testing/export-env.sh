@@ -16,6 +16,7 @@
 # its contributors may be used to endorse or promote products derived from this
 # software without specific prior written permission.
 
+export MAGTAPE_NAMESPACE_NAME="magtape-system"
 export MAGTAPE_POD_NAME="magtape-abc1234"
 export MAGTAPE_CLUSTER_NAME="test-cluster"
 export MAGTAPE_K8S_EVENTS_ENABLED="TRUE"
