@@ -913,7 +913,7 @@ spec:
       serviceAccountName: magtape-sa
       initContainers:
         - name: magtape-init
-          image: jmsearcy/python3-tkev-init:1.0
+          image: jmsearcy/mt-init:dev2
           command: [/app/magtape-init.py]
           imagePullPolicy: Always
           env:
@@ -925,15 +925,13 @@ spec:
             - configMapRef:
                 name: magtape-env
           volumeMounts:
-          - name: magtape-init
-            mountPath: /app
           - name: magtape-tls
             mountPath: /tls
           - name: magtape-vwc
             mountPath: /vwc
       containers:
       - name: magtape
-        image: jmsearcy/python3-tkev:1.4
+        image: jmsearcy/mt:dev2
         ports:
         - containerPort: 5000
         command: [/app/magtape.py]
@@ -972,8 +970,6 @@ spec:
         - configMapRef:
             name: magtape-env
         volumeMounts:
-          - name: magtape-app
-            mountPath: /app
           - name: magtape-tls
             mountPath: /tls
       - name: opa
@@ -1022,20 +1018,6 @@ spec:
             cpu: 50m
             memory: 128Mi
       volumes:
-        - name: magtape-app
-          configMap:
-            name: magtape-app
-            defaultMode: 0755
-            items:
-            - key: magtape-app
-              path: magtape.py
-        - name: magtape-init
-          configMap:
-            name: magtape-init
-            defaultMode: 0755
-            items:
-            - key: magtape-init
-              path: magtape-init.py
         - name: magtape-vwc
           configMap:
               name: magtape-vwc-template
