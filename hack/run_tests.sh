@@ -21,7 +21,7 @@
 source ./testing/export-env.sh
 
 # Run tests and get coverage
-coverage run -m unittest discover -v -s ./app/tests/
+coverage run -m unittest discover -v -s ./app/magtape/tests/
 
 # Generate and output coverage report
-coverage report --include ./app/magtape.py
+coverage report --include ./app/magtape/magtape.py
