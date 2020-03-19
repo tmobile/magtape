@@ -13,4 +13,4 @@ RUN pipenv install --system --deploy
 
 RUN apk del gcc musl-dev python3-dev libffi-dev openssl-dev
 
-CMD ["python", "magtape.py"]
+CMD ["python", "magtape-init.py"]
