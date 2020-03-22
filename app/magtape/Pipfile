@@ -7,7 +7,7 @@ verify_ssl = true
 
 [packages]
 flask = "*"
-kubernetes = "*"
+kubernetes = "~=10.0"
 prometheus-client = "*"
 prometheus-flask-exporter = "*"
 
