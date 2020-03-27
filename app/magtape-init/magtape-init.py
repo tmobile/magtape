@@ -61,6 +61,8 @@ def check_for_byoc(namespace, secret, core_api):
 
     """Function to check for the "Bring Your Own Cert" annotation"""
 
+    logging.info("We made it to check_for_byoc")
+
     secret_name = secret.metadata.name
     secret_annotations = secret.metadata.annotations
 
@@ -104,6 +106,8 @@ def check_for_byoc(namespace, secret, core_api):
 def build_k8s_csr(namespace, service_name, key):
 
     """Function to generate Kubernetes CSR"""
+
+    logging.info("Got to building client-side CSR")
 
     # Store all dns names used for CN/SAN's
     dns_names = list()
@@ -171,6 +175,8 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
 
     """Function to submit or approve a Kubernetes CSR"""
 
+    print("I made it to submit_and_approve_k8s_csr")
+
     # TO-DO (phenixblue): cleanup before release
     logging.info("Got to CSR logic")
 
@@ -179,6 +185,7 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
     # Read existing Kubernetes CSR
     try:
 
+        logging.info("Looking for existing CSR")
         certificates_api.read_certificate_signing_request(new_k8s_csr_name)
 
     except ApiException as exception:
@@ -256,7 +263,7 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
     # Patch the k8s CSR resource
     try:
         # TO-DO (phenixblue): Cleanup before release
-        logging.info("Patch k8s CSR")
+        logging.info(f"Patch k8s CSR: {new_k8s_csr_name}")
         certificates_api.replace_certificate_signing_request_approval(new_k8s_csr_name, new_k8s_csr_body)
 
     except ApiException as exception:
@@ -274,9 +281,6 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
 def get_tls_cert_from_request(namespace, secret_name, k8s_csr_name, certificates_api):
 
     """Function to retrieve tls certificate from approved Kubernetes CSR"""
-
-    # Give a few seconds for the csr to be approved
-    time.sleep(5)
 
     start_time = datetime.datetime.now()
 
@@ -298,7 +302,7 @@ def get_tls_cert_from_request(namespace, secret_name, k8s_csr_name, certificates
         conditions = k8s_csr.status.conditions or []
         
 
-        if "Approved" in [condition.type for condition in conditions] and tls_cert_b64 != "":
+        if "Approved" in [condition.type for condition in conditions] and tls_cert_b64 != None:
 
                 logging.info("Found approved certificate")
                 
@@ -360,12 +364,12 @@ def build_tls_pair(namespace, secret_name, service_name, certificates_api):
 ################################################################################
 ################################################################################
 
-def cert_expired(namespace, cert_data):
+def cert_expired(namespace, tls_secret):
 
     """Function to check tls certificate return number of days until expiration"""
 
     current_datetime = datetime.datetime.now()
-    tls_cert_decoded = base64.b64decode(cert_data["cert.pem"])
+    tls_cert_decoded = base64.b64decode(tls_secret.data["cert.pem"])
     tls_cert = x509.load_pem_x509_certificate(tls_cert_decoded, default_backend())
     expire_days = tls_cert.not_valid_after - current_datetime
 
@@ -377,37 +381,45 @@ def cert_expired(namespace, cert_data):
 ################################################################################
 ################################################################################
 
-def cert_should_update(namespace, cert_data, magtape_tls_byoc):
+def cert_should_update(namespace, secret_exists, tls_secret, magtape_tls_byoc):
 
     """Function to check if tls certificate should be updated"""
 
     tls_cert_key = "cert.pem"
     tls_key_key = "key.pem"
 
-    if tls_cert_key in cert_data and tls_key_key in cert_data:
+    if tls_secret.data != None :
 
-        if cert_data[tls_cert_key] == "" or cert_data[tls_key_key] == "":
+        if tls_cert_key in tls_secret.data and tls_key_key in tls_secret.data:
 
-            if magtape_tls_byoc:
+            if tls_secret.data[tls_cert_key] == "" or tls_secret.data[tls_key_key] == "":
 
-                logging.error(f"The \"Bring Your Own Cert\" annotation was used but one or more of the tls cert/key values are blank")
-                sys.exit(1)
+                if magtape_tls_byoc:
 
-            return True
+                    logging.error(f"The \"Bring Your Own Cert\" annotation was used but one or more of the tls cert/key values are blank")
+                    sys.exit(1)
 
-    
+                return True
 
-        days = cert_expired(namespace, cert_data)
+            days = cert_expired(namespace, tls_secret)
 
-        # Determine and report on cert expiry based on number of days from current date.
-        # Cert should be valid for a year, but we update sooner to be safe
-        if days <= 180:
+            # Determine and report on cert expiry based on number of days from current date.
+            # Cert should be valid for a year, but we update sooner to be safe
+            if days <= 180:
 
-            return True
+                return True
+
+            else:
+
+                return False
 
         else:
 
-            return False
+            return True
+
+    elif secret_exists:
+
+        return False
 
     else:
 
@@ -421,7 +433,7 @@ def read_tls_pair(namespace, secret_name, tls_pair, core_api):
 
     """Function to read cert/key from k8s secret"""
 
-    cert_data = dict()
+    secret = client.V1Secret()
     secret_exists = False
 
     # Try and read secret
@@ -442,9 +454,9 @@ def read_tls_pair(namespace, secret_name, tls_pair, core_api):
             logging.info(f"Did not find secret \"{secret_name}\" in the \"{namespace}\" namespace")
             logging.debug(f"Exception:\n{exception}\n")
 
-            return cert_data, tls_pair, secret_exists, False
+            logging.debug(f"Secret:\n{secret}\n")
 
-    logging.debug(f"Secret data:\n {secret.data['cert.pem']}\n")
+            return secret, tls_pair, secret_exists, False
 
     tls_cert_pem = base64.b64decode(secret.data["cert.pem"])
     tls_key_pem = base64.b64decode(secret.data["key.pem"])
@@ -458,17 +470,17 @@ def read_tls_pair(namespace, secret_name, tls_pair, core_api):
         "key": tls_key_pem,
     }
 
-    cert_data = secret.data
     magtape_tls_byoc = check_for_byoc(namespace, secret, core_api)
 
+    logging.debug(f"Secret:\n{secret}\n")
 
-    return cert_data, tls_pair, secret_exists, magtape_tls_byoc
+    return secret, tls_pair, secret_exists, magtape_tls_byoc
 
 ################################################################################
 ################################################################################
 ################################################################################
 
-def write_tls_pair(namespace, secret_name, secret_exists, secret_should_update, tls_pair, magtape_tls_byoc, core_api):
+def write_tls_pair(namespace, secret_name, secret_exists, secret_should_update, tls_secret, tls_pair, magtape_tls_byoc, core_api):
 
     """Function to write k8s secret for admission webhook to k8s secret and/or local files"""
 
@@ -476,6 +488,23 @@ def write_tls_pair(namespace, secret_name, secret_exists, secret_should_update, 
     if secret_exists:
 
         logging.info(f"Using existing secret \"{secret_name}\" in namespace \"{namespace}\"")
+        logging.info("Waiting for race winning pod to startup")
+
+        start_time = datetime.datetime.now()
+        race_winner_pod = ""
+
+        while race_winner_pod == "" or (datetime.datetime.now() - start_time).seconds < 30:
+
+            logging.info("Still waiting for race winning pod to startup")
+
+            if "magtape/updated-by-pod" in tls_secret.metadata.labels:
+
+                race_winner_pod = tls_secret.metadata.labels["magtape/updated-by-pod"]
+                break
+
+            else:
+
+                time.sleep(5)
 
     else:
 
@@ -484,7 +513,10 @@ def write_tls_pair(namespace, secret_name, secret_exists, secret_should_update, 
         secret_metadata = client.V1ObjectMeta(
             name=secret_name,
             namespace=namespace,
-            labels={"app": "magtape"}
+            labels={
+                "app": "magtape",
+                "magtape/updated-by-pod": magtape_pod_name,
+            }
         )
 
         secret_data = {
@@ -518,11 +550,23 @@ def write_tls_pair(namespace, secret_name, secret_exists, secret_should_update, 
 
             logging.error(f"Unable to read new secret \"{secret_name}\" in the \"{namespace}\" namespace: {exception}\n")
             sys.exit(1)
+
+        logging.info("New secret created")
+        secret_exists = True
     
     # If this is a BYOC pair, then skip the patch
-    if not secret_exists and magtape_tls_byoc and secret_should_update:
+    if not secret_exists and not magtape_tls_byoc and secret_should_update:
+
+        # TO-DO (phenixblue): Cleanup
+        logging.info("Got to point of patching secret")
 
         secret = client.V1Secret()
+
+        secret.metadata.labels = {
+
+            "magtape/updated-by-pod": magtape_pod_name,
+            
+        }
 
         secret.data = {
             "cert.pem": base64.b64encode(tls_pair["cert"]).decode('utf-8').rstrip(),
@@ -542,9 +586,9 @@ def write_tls_pair(namespace, secret_name, secret_exists, secret_should_update, 
 
         try:
 
-            cert_data, tls_pair, secret_exists, magtape_tls_byoc = read_tls_pair(namespace, magtape_tls_pair_secret_name, tls_pair, core_api)
+            tls_secret, tls_pair, secret_exists, magtape_tls_byoc = read_tls_pair(namespace, magtape_tls_pair_secret_name, tls_pair, core_api)
 
-            logging.debug(f"Cert Data: \n{cert_data}\n")
+            logging.debug(f"Cert Data: \n{tls_secret.data}\n")
 
         except ApiException as exception:
 
@@ -553,7 +597,7 @@ def write_tls_pair(namespace, secret_name, secret_exists, secret_should_update, 
 
         logging.info(f"Updated secret \"{secret_name}\" in namespace \"{namespace}\"")
 
-    # Write cert and key to files for Flask app
+    # Write cert and key to files for Flask/OPA containers
     logging.info("Writing cert and key locally")
     logging.debug(f"TLS Pair: {tls_pair}")
 
@@ -576,9 +620,9 @@ def init_tls_pair(namespace):
     logging.info("Starting TLS init process")
 
     # Check if custom secret was specified in ENV vars
-    magtape_tls_secret = os.getenv("MAGTAPE_TLS_SECRET", magtape_tls_pair_secret_name)
+    magtape_tls_secret_name = os.getenv("magtape_tls_secret_name", magtape_tls_pair_secret_name)
 
-    if magtape_tls_secret != magtape_tls_pair_secret_name:
+    if magtape_tls_secret_name != magtape_tls_pair_secret_name:
 
         logging.debug("Magtape TLS Secret specified")
 
@@ -604,16 +648,17 @@ def init_tls_pair(namespace):
     certificates_api = client.CertificatesV1beta1Api(client.ApiClient(configuration))
 
     # Read existing secret
-    cert_data, tls_pair, secret_exists, magtape_tls_byoc = read_tls_pair(namespace, magtape_tls_pair_secret_name, tls_pair, core_api)
+    tls_secret, tls_pair, secret_exists, magtape_tls_byoc = read_tls_pair(namespace, magtape_tls_pair_secret_name, tls_pair, core_api)
 
     if secret_exists:
 
         logging.info("Existing TLS cert and key found")
-        # Sleep for 5 seconds to prevent race condition
-        time.sleep(5)
 
     # Check if cert should be updated
-    secret_should_update = cert_should_update(namespace, cert_data, magtape_tls_byoc)
+    secret_should_update = cert_should_update(namespace, secret_exists, tls_secret, magtape_tls_byoc)
+
+    # TO-DO(phenixblue): CLeanup before shipping
+    logging.info(f"secret_should_update = {secret_should_update}")
     
     if secret_should_update:
 
@@ -629,7 +674,7 @@ def init_tls_pair(namespace):
             tls_pair = build_tls_pair(namespace, magtape_tls_pair_secret_name, magtape_service_name, certificates_api)
 
     # Handle cert creation or update
-    write_tls_pair(namespace, magtape_tls_secret, secret_exists, secret_should_update, tls_pair, magtape_tls_byoc, core_api)
+    write_tls_pair(namespace, magtape_tls_secret_name, secret_exists, secret_should_update, tls_secret, tls_pair, magtape_tls_byoc, core_api)
 
 ################################################################################
 ################################################################################

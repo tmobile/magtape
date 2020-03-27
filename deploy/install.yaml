@@ -179,11 +179,12 @@ data:
     = f\"{magtape_vwc_template_path}/magtape-vwc.yaml\"\nmagtape_vwc_webhook_name
     = \"magtape.webhook.k8s.t-mobile.com\"\nmagtape_tls_byoc = False\n\n###############################################################################$\n################################################################################\n################################################################################\n\ndef
     check_for_byoc(namespace, secret, core_api):\n\n    \"\"\"Function to check for
-    the \"Bring Your Own Cert\" annotation\"\"\"\n\n    secret_name = secret.metadata.name\n
-    \   secret_annotations = secret.metadata.annotations\n\n    if secret_annotations
-    and magtape_byoc_annotation in secret_annotations:\n\n        logging.info(f\"Detected
-    the \\\"Bring Your Own Cert\\\" annotation for secret \\\"{secret_name}\\\"\")\n\n
-    \       try:\n\n            secret = core_api.read_namespaced_secret(magtape_tls_rootca_secret_name,
+    the \"Bring Your Own Cert\" annotation\"\"\"\n\n    logging.info(\"We made it
+    to check_for_byoc\")\n\n    secret_name = secret.metadata.name\n    secret_annotations
+    = secret.metadata.annotations\n\n    if secret_annotations and magtape_byoc_annotation
+    in secret_annotations:\n\n        logging.info(f\"Detected the \\\"Bring Your
+    Own Cert\\\" annotation for secret \\\"{secret_name}\\\"\")\n\n        try:\n\n
+    \           secret = core_api.read_namespaced_secret(magtape_tls_rootca_secret_name,
     namespace)\n\n        except ApiException as exception:\n\n            if exception.status
     != 404:\n\n                logging.error(f\"An error occurred while trying to
     read secret \\\"{magtape_tls_rootca_secret_name}\\\" in the \\\"{namespace}\\\"
@@ -196,9 +197,10 @@ data:
     blank for \\\"rootca.pem\\\" in \\\"{secret.metadata.name}\\\" secret\")\n            sys.exit(1)\n\n
     \   else:\n\n        return False\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
     build_k8s_csr(namespace, service_name, key):\n\n    \"\"\"Function to generate
-    Kubernetes CSR\"\"\"\n\n    # Store all dns names used for CN/SAN's\n    dns_names
-    = list()\n    # K8s service intra namespace\n    dns_names.insert(0, f\"{service_name}\")\n
-    \   # K8s service inter namespace\n    dns_names.insert(1, f\"{service_name}.{namespace}\")\n
+    Kubernetes CSR\"\"\"\n\n    logging.info(\"Got to building client-side CSR\")\n\n
+    \   # Store all dns names used for CN/SAN's\n    dns_names = list()\n    # K8s
+    service intra namespace\n    dns_names.insert(0, f\"{service_name}\")\n    # K8s
+    service inter namespace\n    dns_names.insert(1, f\"{service_name}.{namespace}\")\n
     \   # K8s service full FQDN and Common Name\n    dns_names.insert(2, f\"{service_name}.{namespace}.svc\")\n\n
     \   # Setup Certificate Signing Request\n    csr = x509.CertificateSigningRequestBuilder()\n
     \   csr = csr.subject_name(\n        # Provide Common Name\n        x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,
@@ -217,9 +219,11 @@ data:
     \       spec=k8s_csr_spec,\n    )\n\n    logging.debug(f\"CSR: {k8s_csr}\\n\")\n\n
     \   return k8s_csr\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
     submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):\n\n    \"\"\"Function
-    to submit or approve a Kubernetes CSR\"\"\"\n\n    # TO-DO (phenixblue): cleanup
-    before release\n    logging.info(\"Got to CSR logic\")\n\n    new_k8s_csr_name
-    = k8s_csr.metadata.name\n\n    # Read existing Kubernetes CSR\n    try:\n\n        certificates_api.read_certificate_signing_request(new_k8s_csr_name)\n\n
+    to submit or approve a Kubernetes CSR\"\"\"\n\n    print(\"I made it to submit_and_approve_k8s_csr\")\n\n
+    \   # TO-DO (phenixblue): cleanup before release\n    logging.info(\"Got to CSR
+    logic\")\n\n    new_k8s_csr_name = k8s_csr.metadata.name\n\n    # Read existing
+    Kubernetes CSR\n    try:\n\n        logging.info(\"Looking for existing CSR\")\n
+    \       certificates_api.read_certificate_signing_request(new_k8s_csr_name)\n\n
     \   except ApiException as exception:\n\n        if exception.status != 404:\n\n
     \           logging.error(f\"Problem reading existing certificate requests: {exception}\\n\")\n
     \           sys.exit(1)\n\n        elif exception.status == 404:\n\n            logging.info(f\"Did
@@ -247,25 +251,25 @@ data:
     certificate was approved by MagTape (pod: {magtape_pod_name})\",\n        reason=\"MT-Approve\",\n
     \       type=\"Approved\"\n    ) \n\n    # Update the CSR status\n    new_k8s_csr_body.status.conditions
     = [new_k8s_csr_approval_conditions]\n\n    # Patch the k8s CSR resource\n    try:\n
-    \       # TO-DO (phenixblue): Cleanup before release\n        logging.info(\"Patch
-    k8s CSR\")\n        certificates_api.replace_certificate_signing_request_approval(new_k8s_csr_name,
+    \       # TO-DO (phenixblue): Cleanup before release\n        logging.info(f\"Patch
+    k8s CSR: {new_k8s_csr_name}\")\n        certificates_api.replace_certificate_signing_request_approval(new_k8s_csr_name,
     new_k8s_csr_body)\n\n    except ApiException as exception:\n\n        logging.info(f\"Unable
     to update certificate request status for \\\"{new_k8s_csr_name}\\\": {exception}\\n\")\n\n
     \   logging.info(f\"Certificate signing request \\\"{new_k8s_csr_name}\\\" is
     approved\")\n\n    return new_k8s_csr_body\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
     get_tls_cert_from_request(namespace, secret_name, k8s_csr_name, certificates_api):\n\n
     \   \"\"\"Function to retrieve tls certificate from approved Kubernetes CSR\"\"\"\n\n
-    \   # Give a few seconds for the csr to be approved\n    time.sleep(5)\n\n    start_time
-    = datetime.datetime.now()\n\n    while (datetime.datetime.now() - start_time).seconds
-    < 5:\n\n        # Read existing Kubernetes CSR\n        try:\n\n            k8s_csr
-    = certificates_api.read_certificate_signing_request(k8s_csr_name)\n\n            logging.debug(k8s_csr)\n\n
-    \       except ApiException as exception:\n\n                logging.info(f\"Problem
-    reading certificate request \\\"{k8s_csr_name}\\\"\\n\")\n                logging.debug(f\"Exception:\\n{exception}\\n\")\n\n
-    \       tls_cert_b64 = k8s_csr.status.certificate\n        conditions = k8s_csr.status.conditions
-    or []\n        \n\n        if \"Approved\" in [condition.type for condition in
-    conditions] and tls_cert_b64 != \"\":\n\n                logging.info(\"Found
-    approved certificate\")\n                \n                break\n\n        logging.info(\"Waiting
-    for certificate approval\")\n        \n\n    else:\n\n        logging.info(f\"Timed
+    \   start_time = datetime.datetime.now()\n\n    while (datetime.datetime.now()
+    - start_time).seconds < 5:\n\n        # Read existing Kubernetes CSR\n        try:\n\n
+    \           k8s_csr = certificates_api.read_certificate_signing_request(k8s_csr_name)\n\n
+    \           logging.debug(k8s_csr)\n\n        except ApiException as exception:\n\n
+    \               logging.info(f\"Problem reading certificate request \\\"{k8s_csr_name}\\\"\\n\")\n
+    \               logging.debug(f\"Exception:\\n{exception}\\n\")\n\n        tls_cert_b64
+    = k8s_csr.status.certificate\n        conditions = k8s_csr.status.conditions or
+    []\n        \n\n        if \"Approved\" in [condition.type for condition in conditions]
+    and tls_cert_b64 != None:\n\n                logging.info(\"Found approved certificate\")\n
+    \               \n                break\n\n        logging.info(\"Waiting for
+    certificate approval\")\n        \n\n    else:\n\n        logging.info(f\"Timed
     out reading certificate request \\\"{k8s_csr_name}\\\"\\n\")\n\n    logging.debug(f\"Cert
     RAW: {k8s_csr}\")\n\n    tls_cert = base64.b64decode(k8s_csr.status.certificate)\n\n
     \   logging.debug(f\"Cert PEM: {tls_cert}\")\n\n    return tls_cert\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
@@ -281,104 +285,117 @@ data:
     = get_tls_cert_from_request(namespace, magtape_tls_pair_secret_name, k8s_csr.metadata.name,
     certificates_api)\n\n    tls_pair = {\n        \"cert\": tls_cert_pem,\n        \"key\":
     tls_key_pem,\n    }\n\n    logging.debug(tls_pair)\n\n    return tls_pair\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
-    cert_expired(namespace, cert_data):\n\n    \"\"\"Function to check tls certificate
+    cert_expired(namespace, tls_secret):\n\n    \"\"\"Function to check tls certificate
     return number of days until expiration\"\"\"\n\n    current_datetime = datetime.datetime.now()\n
-    \   tls_cert_decoded = base64.b64decode(cert_data[\"cert.pem\"])\n    tls_cert
+    \   tls_cert_decoded = base64.b64decode(tls_secret.data[\"cert.pem\"])\n    tls_cert
     = x509.load_pem_x509_certificate(tls_cert_decoded, default_backend())\n    expire_days
     = tls_cert.not_valid_after - current_datetime\n\n    logging.info(f\"Days until
     Cert Expiration: {expire_days.days}\")\n\n    return expire_days.days\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
-    cert_should_update(namespace, cert_data, magtape_tls_byoc):\n\n    \"\"\"Function
-    to check if tls certificate should be updated\"\"\"\n\n    tls_cert_key = \"cert.pem\"\n
-    \   tls_key_key = \"key.pem\"\n\n    if tls_cert_key in cert_data and tls_key_key
-    in cert_data:\n\n        if cert_data[tls_cert_key] == \"\" or cert_data[tls_key_key]
-    == \"\":\n\n            if magtape_tls_byoc:\n\n                logging.error(f\"The
+    cert_should_update(namespace, secret_exists, tls_secret, magtape_tls_byoc):\n\n
+    \   \"\"\"Function to check if tls certificate should be updated\"\"\"\n\n    tls_cert_key
+    = \"cert.pem\"\n    tls_key_key = \"key.pem\"\n\n    if tls_secret.data != None
+    :\n\n        if tls_cert_key in tls_secret.data and tls_key_key in tls_secret.data:\n\n
+    \           if tls_secret.data[tls_cert_key] == \"\" or tls_secret.data[tls_key_key]
+    == \"\":\n\n                if magtape_tls_byoc:\n\n                    logging.error(f\"The
     \\\"Bring Your Own Cert\\\" annotation was used but one or more of the tls cert/key
-    values are blank\")\n                sys.exit(1)\n\n            return True\n\n
-    \   \n\n        days = cert_expired(namespace, cert_data)\n\n        # Determine
-    and report on cert expiry based on number of days from current date.\n        #
-    Cert should be valid for a year, but we update sooner to be safe\n        if days
-    <= 180:\n\n            return True\n\n        else:\n\n            return False\n\n
-    \   else:\n\n        return True\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    values are blank\")\n                    sys.exit(1)\n\n                return
+    True\n\n            days = cert_expired(namespace, tls_secret)\n\n            #
+    Determine and report on cert expiry based on number of days from current date.\n
+    \           # Cert should be valid for a year, but we update sooner to be safe\n
+    \           if days <= 180:\n\n                return True\n\n            else:\n\n
+    \               return False\n\n        else:\n\n            return True\n\n    elif
+    secret_exists:\n\n        return False\n\n    else:\n\n        return True\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
     read_tls_pair(namespace, secret_name, tls_pair, core_api):\n\n    \"\"\"Function
-    to read cert/key from k8s secret\"\"\"\n\n    cert_data = dict()\n    secret_exists
+    to read cert/key from k8s secret\"\"\"\n\n    secret = client.V1Secret()\n    secret_exists
     = False\n\n    # Try and read secret\n    try:\n        \n        secret = core_api.read_namespaced_secret(secret_name,
     namespace)\n\n    except ApiException as exception:\n\n        if exception.status
     != 404:\n\n            logging.error(f\"Unable to read secret \\\"{secret_name}\\\"
     in the \\\"{namespace}\\\" namespace\\n\")\n            logging.debug(f\"Exception:\\n{exception}\\n\")\n
     \           sys.exit(1)\n\n        else:\n\n            logging.info(f\"Did not
     find secret \\\"{secret_name}\\\" in the \\\"{namespace}\\\" namespace\")\n            logging.debug(f\"Exception:\\n{exception}\\n\")\n\n
-    \           return cert_data, tls_pair, secret_exists, False\n\n    logging.debug(f\"Secret
-    data:\\n {secret.data['cert.pem']}\\n\")\n\n    tls_cert_pem = base64.b64decode(secret.data[\"cert.pem\"])\n
+    \           logging.debug(f\"Secret:\\n{secret}\\n\")\n\n            return secret,
+    tls_pair, secret_exists, False\n\n    tls_cert_pem = base64.b64decode(secret.data[\"cert.pem\"])\n
     \   tls_key_pem = base64.b64decode(secret.data[\"key.pem\"])\n\n    if tls_cert_pem
     != \"\" or tls_key_pem != \"\":\n\n        secret_exists = True\n\n    tls_pair
     = {\n        \"cert\": tls_cert_pem,\n        \"key\": tls_key_pem,\n    }\n\n
-    \   cert_data = secret.data\n    magtape_tls_byoc = check_for_byoc(namespace,
-    secret, core_api)\n\n\n    return cert_data, tls_pair, secret_exists, magtape_tls_byoc\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
-    write_tls_pair(namespace, secret_name, secret_exists, secret_should_update, tls_pair,
-    magtape_tls_byoc, core_api):\n\n    \"\"\"Function to write k8s secret for admission
-    webhook to k8s secret and/or local files\"\"\"\n\n    # If the secret isn't found,
-    create it\n    if secret_exists:\n\n        logging.info(f\"Using existing secret
-    \\\"{secret_name}\\\" in namespace \\\"{namespace}\\\"\")\n\n    else:\n\n        logging.info(f\"Creating
-    secret \\\"{secret_name}\\\" in namespace \\\"{namespace}\\\"\")\n\n        secret_metadata
-    = client.V1ObjectMeta(\n            name=secret_name,\n            namespace=namespace,\n
-    \           labels={\"app\": \"magtape\"}\n        )\n\n        secret_data =
-    {\n            \"cert.pem\":  base64.b64encode(tls_pair[\"cert\"]).decode('utf-8').rstrip(),\n
-    \           \"key.pem\":  base64.b64encode(tls_pair[\"key\"]).decode('utf-8').rstrip(),\n
-    \       }\n\n        secret = client.V1Secret(\n            metadata=secret_metadata,\n
-    \           data=secret_data,\n            type=\"tls\"\n\n        )\n\n        logging.debug(f\"New
-    secret: \\n{secret}\\n\")\n\n        try:\n            \n            core_api.create_namespaced_secret(namespace,
+    \   magtape_tls_byoc = check_for_byoc(namespace, secret, core_api)\n\n    logging.debug(f\"Secret:\\n{secret}\\n\")\n\n
+    \   return secret, tls_pair, secret_exists, magtape_tls_byoc\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    write_tls_pair(namespace, secret_name, secret_exists, secret_should_update, tls_secret,
+    tls_pair, magtape_tls_byoc, core_api):\n\n    \"\"\"Function to write k8s secret
+    for admission webhook to k8s secret and/or local files\"\"\"\n\n    # If the secret
+    isn't found, create it\n    if secret_exists:\n\n        logging.info(f\"Using
+    existing secret \\\"{secret_name}\\\" in namespace \\\"{namespace}\\\"\")\n        logging.info(\"Waiting
+    for race winning pod to startup\")\n\n        start_time = datetime.datetime.now()\n
+    \       race_winner_pod = \"\"\n\n        while race_winner_pod == \"\" or (datetime.datetime.now()
+    - start_time).seconds < 30:\n\n            logging.info(\"Still waiting for race
+    winning pod to startup\")\n\n            if \"magtape/updated-by-pod\" in tls_secret.metadata.labels:\n\n
+    \               race_winner_pod = tls_secret.metadata.labels[\"magtape/updated-by-pod\"]\n
+    \               break\n\n            else:\n\n                time.sleep(5)\n\n
+    \   else:\n\n        logging.info(f\"Creating secret \\\"{secret_name}\\\" in
+    namespace \\\"{namespace}\\\"\")\n\n        secret_metadata = client.V1ObjectMeta(\n
+    \           name=secret_name,\n            namespace=namespace,\n            labels={\n
+    \               \"app\": \"magtape\",\n                \"magtape/updated-by-pod\":
+    magtape_pod_name,\n            }\n        )\n\n        secret_data = {\n            \"cert.pem\":
+    \ base64.b64encode(tls_pair[\"cert\"]).decode('utf-8').rstrip(),\n            \"key.pem\":
+    \ base64.b64encode(tls_pair[\"key\"]).decode('utf-8').rstrip(),\n        }\n\n
+    \       secret = client.V1Secret(\n            metadata=secret_metadata,\n            data=secret_data,\n
+    \           type=\"tls\"\n\n        )\n\n        logging.debug(f\"New secret:
+    \\n{secret}\\n\")\n\n        try:\n            \n            core_api.create_namespaced_secret(namespace,
     secret)\n\n        except ApiException as exception:\n\n            logging.error(f\"Unable
     to create secret \\\"{secret_name}\\\" in the \\\"{namespace}\\\" namespace: {exception}\\n\")\n
     \           sys.exit(1)\n        \n        try:\n            \n            core_api.read_namespaced_secret(secret_name,
     namespace)\n\n        except ApiException as exception:\n\n            logging.error(f\"Unable
     to read new secret \\\"{secret_name}\\\" in the \\\"{namespace}\\\" namespace:
-    {exception}\\n\")\n            sys.exit(1)\n    \n    # If this is a BYOC pair,
-    then skip the patch\n    if not secret_exists and magtape_tls_byoc and secret_should_update:\n\n
-    \       secret = client.V1Secret()\n\n        secret.data = {\n            \"cert.pem\":
-    base64.b64encode(tls_pair[\"cert\"]).decode('utf-8').rstrip(),\n            \"key.pem\":
-    base64.b64encode(tls_pair[\"key\"]).decode('utf-8').rstrip(),\n        }\n\n        try:\n\n
-    \           core_api.patch_namespaced_secret(secret_name, namespace, secret)\n\n
-    \       except ApiException as exception:\n\n            logging.error(f\"Unable
+    {exception}\\n\")\n            sys.exit(1)\n\n        logging.info(\"New secret
+    created\")\n        secret_exists = True\n    \n    # If this is a BYOC pair,
+    then skip the patch\n    if not secret_exists and not magtape_tls_byoc and secret_should_update:\n\n
+    \       # TO-DO (phenixblue): Cleanup\n        logging.info(\"Got to point of
+    patching secret\")\n\n        secret = client.V1Secret()\n\n        secret.metadata.labels
+    = {\n\n            \"magtape/updated-by-pod\": magtape_pod_name,\n            \n
+    \       }\n\n        secret.data = {\n            \"cert.pem\": base64.b64encode(tls_pair[\"cert\"]).decode('utf-8').rstrip(),\n
+    \           \"key.pem\": base64.b64encode(tls_pair[\"key\"]).decode('utf-8').rstrip(),\n
+    \       }\n\n        try:\n\n            core_api.patch_namespaced_secret(secret_name,
+    namespace, secret)\n\n        except ApiException as exception:\n\n            logging.error(f\"Unable
     to update secret \\\"{secret_name}\\\" in the \\\"{namespace}\\\" namespace: {exception}\\n\")\n
     \           sys.exit(1)\n\n        logging.info(f\"Patched new cert/key into existing
-    secret\")\n\n        try:\n\n            cert_data, tls_pair, secret_exists, magtape_tls_byoc
-    = read_tls_pair(namespace, magtape_tls_pair_secret_name, tls_pair, core_api)\n\n
-    \           logging.debug(f\"Cert Data: \\n{cert_data}\\n\")\n\n        except
-    ApiException as exception:\n\n            logging.error(f\"Unable to read updated
-    secret \\\"{secret_name}\\\" in the \\\"{namespace}\\\" namespace: {exception}\\n\")\n
-    \           sys.exit(1)\n\n        logging.info(f\"Updated secret \\\"{secret_name}\\\"
-    in namespace \\\"{namespace}\\\"\")\n\n    # Write cert and key to files for Flask
-    app\n    logging.info(\"Writing cert and key locally\")\n    logging.debug(f\"TLS
-    Pair: {tls_pair}\")\n\n    with open(f\"{magtape_tls_path}/cert.pem\", 'wb') as
-    cert_file:\n        cert_file.write(tls_pair[\"cert\"])\n\n    with open(f\"{magtape_tls_path}/key.pem\",
+    secret\")\n\n        try:\n\n            tls_secret, tls_pair, secret_exists,
+    magtape_tls_byoc = read_tls_pair(namespace, magtape_tls_pair_secret_name, tls_pair,
+    core_api)\n\n            logging.debug(f\"Cert Data: \\n{tls_secret.data}\\n\")\n\n
+    \       except ApiException as exception:\n\n            logging.error(f\"Unable
+    to read updated secret \\\"{secret_name}\\\" in the \\\"{namespace}\\\" namespace:
+    {exception}\\n\")\n            sys.exit(1)\n\n        logging.info(f\"Updated
+    secret \\\"{secret_name}\\\" in namespace \\\"{namespace}\\\"\")\n\n    # Write
+    cert and key to files for Flask/OPA containers\n    logging.info(\"Writing cert
+    and key locally\")\n    logging.debug(f\"TLS Pair: {tls_pair}\")\n\n    with open(f\"{magtape_tls_path}/cert.pem\",
+    'wb') as cert_file:\n        cert_file.write(tls_pair[\"cert\"])\n\n    with open(f\"{magtape_tls_path}/key.pem\",
     'wb') as key_file:\n        key_file.write(tls_pair[\"key\"])\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
     init_tls_pair(namespace):\n\n    \"\"\"Function to load or create tls for admission
     webhook\"\"\"\n\n    tls_pair = \"\"\n    \n    logging.info(\"Starting TLS init
-    process\")\n\n    # Check if custom secret was specified in ENV vars\n    magtape_tls_secret
-    = os.getenv(\"MAGTAPE_TLS_SECRET\", magtape_tls_pair_secret_name)\n\n    if magtape_tls_secret
-    != magtape_tls_pair_secret_name:\n\n        logging.debug(\"Magtape TLS Secret
-    specified\")\n\n    try:\n\n        config.load_incluster_config()\n\n    except
-    Exception as exception:\n\n        logging.info(f\"Exception loading in-cluster
-    configuration: {exception}\")\n\n        try:\n            logging.info(\"Loading
+    process\")\n\n    # Check if custom secret was specified in ENV vars\n    magtape_tls_secret_name
+    = os.getenv(\"magtape_tls_secret_name\", magtape_tls_pair_secret_name)\n\n    if
+    magtape_tls_secret_name != magtape_tls_pair_secret_name:\n\n        logging.debug(\"Magtape
+    TLS Secret specified\")\n\n    try:\n\n        config.load_incluster_config()\n\n
+    \   except Exception as exception:\n\n        logging.info(f\"Exception loading
+    in-cluster configuration: {exception}\")\n\n        try:\n            logging.info(\"Loading
     local kubeconfig\")\n            config.load_kube_config()\n\n        except Exception
     as exception:\n\n            logging.error(f\"Exception loading local kubeconfig:
     {exception}\")\n            sys.exit(1)\n\n    configuration = client.Configuration()\n
     \   core_api = client.CoreV1Api(client.ApiClient(configuration))\n    certificates_api
     = client.CertificatesV1beta1Api(client.ApiClient(configuration))\n\n    # Read
-    existing secret\n    cert_data, tls_pair, secret_exists, magtape_tls_byoc = read_tls_pair(namespace,
+    existing secret\n    tls_secret, tls_pair, secret_exists, magtape_tls_byoc = read_tls_pair(namespace,
     magtape_tls_pair_secret_name, tls_pair, core_api)\n\n    if secret_exists:\n\n
-    \       logging.info(\"Existing TLS cert and key found\")\n        # Sleep for
-    5 seconds to prevent race condition\n        time.sleep(5)\n\n    # Check if cert
-    should be updated\n    secret_should_update = cert_should_update(namespace, cert_data,
-    magtape_tls_byoc)\n    \n    if secret_should_update:\n\n        if magtape_tls_byoc:\n\n
-    \           logging.warning(f\"WARN - Certificate used for Admission Webhook is
-    past threshhold for normal rotation. Not rotating because this cert isn't managed
-    by the K8s CA\")\n\n        else:\n\n            logging.info(f\"Generating new
-    cert/key pair for TLS\")\n\n            # Generate TLS Pair\n            tls_pair
-    = build_tls_pair(namespace, magtape_tls_pair_secret_name, magtape_service_name,
-    certificates_api)\n\n    # Handle cert creation or update\n    write_tls_pair(namespace,
-    magtape_tls_secret, secret_exists, secret_should_update, tls_pair, magtape_tls_byoc,
-    core_api)\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    \       logging.info(\"Existing TLS cert and key found\")\n\n    # Check if cert
+    should be updated\n    secret_should_update = cert_should_update(namespace, secret_exists,
+    tls_secret, magtape_tls_byoc)\n\n    # TO-DO(phenixblue): CLeanup before shipping\n
+    \   logging.info(f\"secret_should_update = {secret_should_update}\")\n    \n    if
+    secret_should_update:\n\n        if magtape_tls_byoc:\n\n            logging.warning(f\"WARN
+    - Certificate used for Admission Webhook is past threshhold for normal rotation.
+    Not rotating because this cert isn't managed by the K8s CA\")\n\n        else:\n\n
+    \           logging.info(f\"Generating new cert/key pair for TLS\")\n\n            #
+    Generate TLS Pair\n            tls_pair = build_tls_pair(namespace, magtape_tls_pair_secret_name,
+    magtape_service_name, certificates_api)\n\n    # Handle cert creation or update\n
+    \   write_tls_pair(namespace, magtape_tls_secret_name, secret_exists, secret_should_update,
+    tls_secret, tls_pair, magtape_tls_byoc, core_api)\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
     get_rootca(namespace, configuration, magtape_tls_byoc, core_api):\n\n    \"\"\"Function
     to get root ca used for securing admission webhook\"\"\"\n\n    if magtape_tls_byoc:\n\n
     \       # Read from secret\n        try:\n        \n            secret = core_api.read_namespaced_secret(magtape_tls_rootca_secret_name,
