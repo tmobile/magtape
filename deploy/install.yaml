@@ -933,7 +933,7 @@ metadata:
   labels:
     app: magtape
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: magtape
