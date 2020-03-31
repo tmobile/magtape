@@ -52,6 +52,7 @@ magtape_vwc_name = "magtape-webhook"
 magtape_vwc_template_file = f"{magtape_vwc_template_path}/magtape-vwc.yaml"
 magtape_vwc_webhook_name = "magtape.webhook.k8s.t-mobile.com"
 magtape_tls_byoc = False
+magtape_pks_namespace = "pks-system"
 
 ###############################################################################$
 ################################################################################
@@ -174,8 +175,6 @@ def build_k8s_csr(namespace, service_name, key):
 def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
 
     """Function to submit or approve a Kubernetes CSR"""
-
-    print("I made it to submit_and_approve_k8s_csr")
 
     # TO-DO (phenixblue): cleanup before release
     logging.info("Got to CSR logic")
@@ -680,6 +679,39 @@ def init_tls_pair(namespace):
 ################################################################################
 ################################################################################
 
+def check_for_pks(core_api):
+
+    """Function to if cluster is of PKS origin"""
+
+    # This is a simple test to check for the "pks-system" namespace. May need
+    # to do something more in-depth later.
+
+    try:
+        
+            namespace_list = core_api.list_namespace()
+
+    except ApiException as exception:
+
+        logging.error(f"Unable to read namespaces\n")
+        logging.debug(f"Exception:\n{exception}\n")
+        sys.exit(1)
+
+    logging.debug(f"Namespace List:\n{namespace_list}\n")
+
+    ns = any(ns.metadata.name == magtape_pks_namespace for ns in namespace_list.items)
+
+    if ns:
+
+        return True
+
+    else:
+
+        return False
+
+################################################################################
+################################################################################
+################################################################################
+
 def get_rootca(namespace, configuration, magtape_tls_byoc, core_api):
 
     """Function to get root ca used for securing admission webhook"""
@@ -706,6 +738,38 @@ def get_rootca(namespace, configuration, magtape_tls_byoc, core_api):
                 sys.exit(1)
 
         root_ca = secret.data["rootca.pem"]
+
+    elif check_for_pks(core_api):
+
+        # PKS Seems to manage certificates and the cluster Root CA slightly
+        # different than other K8s distributions. This pulls the Root CA bundle
+        # from a configmap that should exist in the kube-system namespace on PKS
+        # provisioned clusters.
+
+        pks_cm = "extension-apiserver-authentication"
+        kube_system_ns = "kube-system"
+
+        logging.info("PKS Cluster detected\n")
+
+        try:
+        
+            configmap = core_api.read_namespaced_config_map(pks_cm, kube_system_ns)
+
+        except ApiException as exception:
+
+            if exception.status != 404:
+
+                logging.error(f"Unable to read configmap \"{pks_cm}\" in the \"{kube_system_ns}\" namespace\n")
+                logging.debug(f"Exception:\n{exception}\n")
+                sys.exit(1)
+
+            else:
+
+                logging.error(f"Did not find configmap \"{pks_cm}\" in the \"{kube_system_ns}\" namespace")
+                logging.debug(f"Exception:\n{exception}\n")
+                sys.exit(1)
+
+        root_ca = base64.b64encode(configmap.data["client-ca-file"].encode('utf-8')).decode('utf-8').rstrip()
 
     else:
 

@@ -177,7 +177,8 @@ data:
     = \"magtape-svc\"\nmagtape_tls_path = \"/tls\"\nmagtape_vwc_template_path = \"/vwc\"\nmagtape_tls_key
     = \"\"\nmagtape_tls_cert = \"\"\nmagtape_vwc_name = \"magtape-webhook\"\nmagtape_vwc_template_file
     = f\"{magtape_vwc_template_path}/magtape-vwc.yaml\"\nmagtape_vwc_webhook_name
-    = \"magtape.webhook.k8s.t-mobile.com\"\nmagtape_tls_byoc = False\n\n###############################################################################$\n################################################################################\n################################################################################\n\ndef
+    = \"magtape.webhook.k8s.t-mobile.com\"\nmagtape_tls_byoc = False\nmagtape_pks_namespace
+    = \"pks-system\"\n\n###############################################################################$\n################################################################################\n################################################################################\n\ndef
     check_for_byoc(namespace, secret, core_api):\n\n    \"\"\"Function to check for
     the \"Bring Your Own Cert\" annotation\"\"\"\n\n    logging.info(\"We made it
     to check_for_byoc\")\n\n    secret_name = secret.metadata.name\n    secret_annotations
@@ -219,11 +220,10 @@ data:
     \       spec=k8s_csr_spec,\n    )\n\n    logging.debug(f\"CSR: {k8s_csr}\\n\")\n\n
     \   return k8s_csr\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
     submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):\n\n    \"\"\"Function
-    to submit or approve a Kubernetes CSR\"\"\"\n\n    print(\"I made it to submit_and_approve_k8s_csr\")\n\n
-    \   # TO-DO (phenixblue): cleanup before release\n    logging.info(\"Got to CSR
-    logic\")\n\n    new_k8s_csr_name = k8s_csr.metadata.name\n\n    # Read existing
-    Kubernetes CSR\n    try:\n\n        logging.info(\"Looking for existing CSR\")\n
-    \       certificates_api.read_certificate_signing_request(new_k8s_csr_name)\n\n
+    to submit or approve a Kubernetes CSR\"\"\"\n\n    # TO-DO (phenixblue): cleanup
+    before release\n    logging.info(\"Got to CSR logic\")\n\n    new_k8s_csr_name
+    = k8s_csr.metadata.name\n\n    # Read existing Kubernetes CSR\n    try:\n\n        logging.info(\"Looking
+    for existing CSR\")\n        certificates_api.read_certificate_signing_request(new_k8s_csr_name)\n\n
     \   except ApiException as exception:\n\n        if exception.status != 404:\n\n
     \           logging.error(f\"Problem reading existing certificate requests: {exception}\\n\")\n
     \           sys.exit(1)\n\n        elif exception.status == 404:\n\n            logging.info(f\"Did
@@ -396,6 +396,14 @@ data:
     magtape_service_name, certificates_api)\n\n    # Handle cert creation or update\n
     \   write_tls_pair(namespace, magtape_tls_secret_name, secret_exists, secret_should_update,
     tls_secret, tls_pair, magtape_tls_byoc, core_api)\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
+    check_for_pks(core_api):\n\n    \"\"\"Function to if cluster is of PKS origin\"\"\"\n\n
+    \   # This is a simple test to check for the \"pks-system\" namespace. May need\n
+    \   # to do something more in-depth later.\n\n    try:\n        \n            namespace_list
+    = core_api.list_namespace()\n\n    except ApiException as exception:\n\n        logging.error(f\"Unable
+    to read namespaces\\n\")\n        logging.debug(f\"Exception:\\n{exception}\\n\")\n
+    \       sys.exit(1)\n\n    logging.debug(f\"Namespace List:\\n{namespace_list}\\n\")\n\n
+    \   ns = any(ns.metadata.name == magtape_pks_namespace for ns in namespace_list.items)\n\n
+    \   if ns:\n\n        return True\n\n    else:\n\n        return False\n\n################################################################################\n################################################################################\n################################################################################\n\ndef
     get_rootca(namespace, configuration, magtape_tls_byoc, core_api):\n\n    \"\"\"Function
     to get root ca used for securing admission webhook\"\"\"\n\n    if magtape_tls_byoc:\n\n
     \       # Read from secret\n        try:\n        \n            secret = core_api.read_namespaced_secret(magtape_tls_rootca_secret_name,
@@ -406,6 +414,20 @@ data:
     not find secret \\\"{magtape_tls_rootca_secret_name}\\\" in the \\\"{namespace}\\\"
     namespace\")\n                logging.debug(f\"Exception:\\n{exception}\\n\")\n
     \               sys.exit(1)\n\n        root_ca = secret.data[\"rootca.pem\"]\n\n
+    \   elif check_for_pks(core_api):\n\n        # PKS Seems to manage certificates
+    and the cluster Root CA slightly\n        # different than other K8s distributions.
+    This pulls the Root CA bundle\n        # from a configmap that should exist in
+    the kube-system namespace on PKS\n        # provisioned clusters.\n\n        pks_cm
+    = \"extension-apiserver-authentication\"\n        kube_system_ns = \"kube-system\"\n\n
+    \       logging.info(\"PKS Cluster detected\\n\")\n\n        try:\n        \n
+    \           configmap = core_api.read_namespaced_config_map(pks_cm, kube_system_ns)\n\n
+    \       except ApiException as exception:\n\n            if exception.status !=
+    404:\n\n                logging.error(f\"Unable to read configmap \\\"{pks_cm}\\\"
+    in the \\\"{kube_system_ns}\\\" namespace\\n\")\n                logging.debug(f\"Exception:\\n{exception}\\n\")\n
+    \               sys.exit(1)\n\n            else:\n\n                logging.error(f\"Did
+    not find configmap \\\"{pks_cm}\\\" in the \\\"{kube_system_ns}\\\" namespace\")\n
+    \               logging.debug(f\"Exception:\\n{exception}\\n\")\n                sys.exit(1)\n\n
+    \       root_ca = base64.b64encode(configmap.data[\"client-ca-file\"].encode('utf-8')).decode('utf-8').rstrip()\n\n
     \   else:\n\n        # Find Cluster CA file from in-cluster kubeconfig\n        root_ca_file_path
     = configuration.ssl_ca_cert\n\n        # Read cert from file\n        try: \n
     \           \n            with open(root_ca_file_path, 'r') as root_ca_file:\n\n
