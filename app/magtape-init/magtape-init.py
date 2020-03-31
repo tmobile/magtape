@@ -176,9 +176,6 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
 
     """Function to submit or approve a Kubernetes CSR"""
 
-    # TO-DO (phenixblue): cleanup before release
-    logging.info("Got to CSR logic")
-
     new_k8s_csr_name = k8s_csr.metadata.name
 
     # Read existing Kubernetes CSR
@@ -225,7 +222,6 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
     # Create K8s CSR resource
     try:
 
-        # TO-DO (phenixblue): Cleanup before release
         logging.info("Create k8s CSR")
         logging.debug(k8s_csr)
         certificates_api.create_certificate_signing_request(k8s_csr)
@@ -261,7 +257,7 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
 
     # Patch the k8s CSR resource
     try:
-        # TO-DO (phenixblue): Cleanup before release
+
         logging.info(f"Patch k8s CSR: {new_k8s_csr_name}")
         certificates_api.replace_certificate_signing_request_approval(new_k8s_csr_name, new_k8s_csr_body)
 
@@ -344,7 +340,6 @@ def build_tls_pair(namespace, secret_name, service_name, certificates_api):
     )
 
     # Build K8s CSR
-    # TO-DO (phenixblue): cleanup before release
     logging.info("Building K8s CSR")
     k8s_csr = build_k8s_csr(namespace, service_name, tls_key)
     k8s_csr = submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr)
@@ -556,9 +551,6 @@ def write_tls_pair(namespace, secret_name, secret_exists, secret_should_update, 
     # If this is a BYOC pair, then skip the patch
     if not secret_exists and not magtape_tls_byoc and secret_should_update:
 
-        # TO-DO (phenixblue): Cleanup
-        logging.info("Got to point of patching secret")
-
         secret = client.V1Secret()
 
         secret.metadata.labels = {
@@ -655,9 +647,6 @@ def init_tls_pair(namespace):
 
     # Check if cert should be updated
     secret_should_update = cert_should_update(namespace, secret_exists, tls_secret, magtape_tls_byoc)
-
-    # TO-DO(phenixblue): CLeanup before shipping
-    logging.info(f"secret_should_update = {secret_should_update}")
     
     if secret_should_update:
 
@@ -1072,9 +1061,6 @@ def write_vwc(namespace, ca_secret_name, vwc, configuration, admission_api, core
     else:
 
         vwc = vwc_template
-
-        # TO-DO (phenixblue): Need to remove for cleanup., No longer needed.
-        #delete_vwc(namespace, admission_api)
 
         logging.info(f"Creating VWC \"{magtape_vwc_name}\"")
 
