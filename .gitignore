@@ -9,4 +9,5 @@
 **/.coverage
 **/__pycache__
 **/scratch
+**/*slim*
 deploy/overlays/test

@@ -18,8 +18,8 @@
 # its contributors may be used to endorse or promote products derived from this
 # software without specific prior written permission.
 
-INIT="./app/magtape-init.py"
-APP="./app/magtape.py"
+INIT="./app/magtape-init/magtape-init.py"
+APP="./app/magtape/magtape.py"
 MANIFEST_DIR="./deploy/manifests"
 POLICY_DIR="./policies"
 INSTALL_MANIFEST="./deploy/install.yaml"

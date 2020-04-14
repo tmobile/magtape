@@ -22,9 +22,7 @@ DEPLOY_DIR ?= $(CURDIR)/deploy
 POLICY_DIR ?= $(CURDIR)/policies
 WEBHOOK_NAMESPACE ?= "magtape-system"
 TEST_NAMESPACE ?= "test1"
-
-
-SHELL := /bin/bash
+DOCKER := docker
 
 .PHONY: all
 all:
@@ -40,14 +38,14 @@ echo:
 .PHONY: ns-create-magtape
 ns-create-magtape:
 
-	@kubectl create ns $(WEBHOOK_NAMESPACE);
+	kubectl create ns $(WEBHOOK_NAMESPACE)
 
 # Create Namespace for testing
 .PHONY: ns-create-test
 ns-create-test:
 
-	@kubectl create ns $(TEST_NAMESPACE); \
-  	kubectl label ns $(TEST_NAMESPACE) k8s.t-mobile.com/magtape=enabled --overwrite
+	kubectl create ns $(TEST_NAMESPACE)
+	kubectl label ns $(TEST_NAMESPACE) k8s.t-mobile.com/magtape=enabled --overwrite
 
 # Delete Namespace for MagTape
 .PHONY: ns-delete-magtape
@@ -83,6 +81,7 @@ uninstall:
 
 	kubectl delete -f $(DEPLOY_DIR)/install.yaml
 	kubectl delete validatingwebhookconfiguration magtape-webhook
+	kubectl delete csr magtape-svc.magtape-system.cert-request
 
 .PHONY: clean
 clean: uninstall
@@ -113,3 +112,32 @@ release: echo
 build-install-manifest:
 
 	hack/build-single-manifest.sh
+
+.PHONY: build-magtape-init
+build-magtape-init:
+
+	$(DOCKER) build -t tmobile/magtape-init:latest app/magtape-init/
+
+.PHONY: push-magtape-init
+push-magtape-init:
+
+	$(DOCKER) push tmobile/magtape-init:latest
+
+.PHONY: build-magtape
+build-magtape:
+
+	$(DOCKER) build -t tmobile/magtape:latest app/magtape/
+
+.PHONY: push-magtape
+push-magtape:
+
+	$(DOCKER) push tmobile/magtape:latest
+
+.PHONY: build
+build: build-magtape-init push-magtape-init build-magtape push-magtape
+
+.PHONY: new-magtape-init
+new-magtape-init: build-magtape-init push-magtape-init
+
+.PHONY: new-magtape
+new-magtape: build-magtape push-magtape
