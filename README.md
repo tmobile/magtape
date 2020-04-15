@@ -3,7 +3,7 @@
 
 # MagTape
 
-MagTape is a Policy-as-Code tool for Kubernetes utilizing the Validating [Admission Webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#admission-webhooks) model. MagTape leverages [OPA](https://www.openpolicyagent.org) under the covers for it's generic policy engine and language, but also adds some additional features and flexibility on top of what OPA offers out of the box.
+MagTape is a Policy-as-Code tool for Kubernetes utilizing the Validating [Admission Webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#admission-webhooks) model. MagTape leverages [OPA](https://www.openpolicyagent.org) under the covers for it's generic policy engine and language, but also adds some additional features and flexibility on top of what OPA offers out of the box (Policy metadata/context, variable DENY levels, Slack alerting, and targeted metrics).
 
 MagTape is NOT meant to be a replacement or competitor to OPA, but rather an example of wrapping additional business logic and features around OPA's core. MagTape is also not primarily meant to be a security tool, even though it can easily enforce security policy.
 
@@ -27,7 +27,7 @@ MagTape examines kubernetes objects against a set of defined policies (best prac
 
 ### Prereqs
 
-Kubernetes 1.9.0 or above with the `admissionregistration.k8s.io` API enabled. Verify that by the following command:
+A modern version of Kubernetes with the `admissionregistration.k8s.io` API enabled. Verify that by the following command:
 
 ```shell
 $ kubectl api-versions | grep admissionregistration.k8s.io
@@ -40,6 +40,8 @@ admissionregistration.k8s.io/v1beta1
 ```
 
 In addition, the `MutatingAdmissionWebhook` and `ValidatingAdmissionWebhook` admission controllers should be added and listed in the correct order in the admission-control flag of kube-apiserver.
+
+NOTE: MagTape has been tested and is known to work for Kubernetes versions 1.13+ on various Distros/Cloud Providers (DOKS, GKE, EKS, AKS, PKS, and KinD)
 
 #### Permissions
 
@@ -278,6 +280,8 @@ Prometheus formatted metrics are exposed on the `/metrics` endpoint. Metrics tra
 
 Info on testing resources can be found in the [testing](./testing) directory
 
+NOTE: These manifests are meant to test deploy-time validation, some pods related to these test manifests may fail to come up properly. A failing pod doesn't represent an issue with MagTape.
+
 ## Cautions
 
 ### Production Considerations
@@ -309,8 +313,6 @@ $ kubectl port-forward <pod_name> -n <namespace> 5000:5000
 ```shell
 $ curl -vX POST https://localhost:5000/ -d @test.json -H "Content-Type: application/json"
 ```
-
-NOTE: Since the python client library for Kubernetes was added to facilitate making calls to the Kubernetes API Server, testing the script locally (not on a K8s Cluster) will fail if the `MAGTAPE_K8S_EVENTS_ENABLED` ENV variable is set to `TRUE`
 
 ### Follow logs of the webhook pod
 

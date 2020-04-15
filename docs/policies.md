@@ -68,7 +68,7 @@ web → 80 or 443
 
 The upstream Istio project is working to resolve this [issue](https://github.com/istio/istio/issues/16458).
 
-### Example Bag Policy
+### Example Bad Policy
 
 ```yaml
 apiVersion: v1
