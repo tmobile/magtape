@@ -23,8 +23,8 @@
 ################################################################################
 
 RUN_TYPE="${1}"
-TESTFILE_DIR="./testing/deployments"
-TEST_NAMESPACE="test1"
+TESTFILE_DIR="${2}"
+TEST_NAMESPACE="${3}"
 
 ################################################################################
 #### Functions #################################################################
@@ -35,7 +35,10 @@ TEST_NAMESPACE="test1"
 # **********************************************
 help_message() {
 
-  echo "You need to specify an argument (\"test\" or \"cleanup\")"
+  echo "You need to specify the proper arguments:"
+  echo "    Actions Type: (\"test\" or \"clean\")"
+  echo "    Test File Directory: (\"./testing/deployments\")"
+  echo "    Test Namespace: (\"test1\""
 
 }
 
@@ -44,7 +47,7 @@ help_message() {
 # **********************************************
 check_arguments() {
 
-  if [ "${RUN_TYPE}" == "" ]; then
+  if [ "${RUN_TYPE}" == "" ] || [ "${TESTFILE_DIR}" == "" ] || [ "${TEST_NAMESPACE}" == "" ]; then
 
     help_message
     exit 1
@@ -60,7 +63,7 @@ run_tests() {
 
     COMMAND="${1}"
 
-    for testfile in $(ls ${TESTFILE_DIR}/test-deploy*.yaml); do 
+    for testfile in $(ls ${TESTFILE_DIR}/test-*.yaml); do 
 
         echo "============================================================================"
         echo "[INFO] ${COMMAND}: \"${testfile}\""
@@ -81,7 +84,7 @@ case ${RUN_TYPE} in
   test)
       run_tests "apply"
       ;;
-  cleanup)
+  clean)
       run_tests "delete"
       ;;
        *)

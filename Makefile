@@ -20,19 +20,10 @@ REPO_ROOT := $(CURDIR)
 APP_NAME ?= "magtape.py"
 DEPLOY_DIR ?= $(CURDIR)/deploy
 POLICY_DIR ?= $(CURDIR)/policies
+TESTING_DIR ?= $(CURDIR)/testing
 WEBHOOK_NAMESPACE ?= "magtape-system"
 TEST_NAMESPACE ?= "test1"
 DOCKER := docker
-
-.PHONY: all
-all:
-
-	demo
-
-.PHONY: echo
-echo:
-
-	@echo "$(REPO_ROOT)"
 
 # Create Namespace for MagTape
 .PHONY: ns-create-magtape
@@ -68,14 +59,13 @@ cert-gen:
     --secret magtape-certs \
     --namespace $(WEBHOOK_NAMESPACE)
 
-.PHONY: demo
-demo:
+# Install MagTape (Demo Install)
+.PHONY: install
+install:
 
 	kubectl apply -f $(DEPLOY_DIR)/install.yaml
 
-.PHONY: install
-install: demo
-
+# Uninstall Magtape (Demo Install)
 .PHONY: uninstall
 uninstall:
 
@@ -83,61 +73,72 @@ uninstall:
 	kubectl delete validatingwebhookconfiguration magtape-webhook
 	kubectl delete csr magtape-svc.magtape-system.cert-request
 
+# Cleanup MagTape (Demo Install)
 .PHONY: clean
 clean: uninstall
 
+# Run unit tests for MagTape/MagTape-Init
 .PHONY: unit
 unit:
 
 	hack/run_tests.sh
 
-.PHONY: test-functional
-test-functional:
-
-	testing/test-deploy.sh test
-
+# Run unit tests for MagTape/MagTape-Init
 .PHONY: test
 test: unit
 
+# Run MagTape functional tests for Deployments
+.PHONY: test-functional-deployments
+test-functional-deployments:
+
+	hack/deploy-test-manifests.sh test $(TESTING_DIR)/deployments test1
+
+# Run all unit and finctional tests for MagTape/MagTape-Init
 .PHONY: test-all
-test-all: test test-functional
+test-all: test test-functional-deployments
 
-.PHONY: coverage
-coverage: echo
-
+# Cut new MagTape release
 .PHONY: release
 release: echo
 
+# Build dmeo install manifest for MagTape
 .PHONY: build-install-manifest
 build-install-manifest:
 
 	hack/build-single-manifest.sh
 
+# Build MagTape-Init container image
 .PHONY: build-magtape-init
 build-magtape-init:
 
 	$(DOCKER) build -t tmobile/magtape-init:latest app/magtape-init/
 
+# Push MagTape-Init container image to DockerHub
 .PHONY: push-magtape-init
 push-magtape-init:
 
 	$(DOCKER) push tmobile/magtape-init:latest
 
+# Build MagTape container image
 .PHONY: build-magtape
 build-magtape:
 
 	$(DOCKER) build -t tmobile/magtape:latest app/magtape/
 
+# Push MagTape container image to DockerHub
 .PHONY: push-magtape
 push-magtape:
 
 	$(DOCKER) push tmobile/magtape:latest
 
+# Build and push all MagTape container images to DockerHub
 .PHONY: build
 build: build-magtape-init push-magtape-init build-magtape push-magtape
 
+# Build and push MagTape-Init container image to DockerHub
 .PHONY: new-magtape-init
 new-magtape-init: build-magtape-init push-magtape-init
 
+# Build and push MagTape container image to DockerHub
 .PHONY: new-magtape
 new-magtape: build-magtape push-magtape
