@@ -1,0 +1,27 @@
+name: ci-e2e-checks
+
+on: [pull_request]
+
+# Jobs
+jobs:
+  # Job to lint code
+  e2e-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup KinD Cluster
+      uses: engineerd/setup-kind@v0.3.0
+
+    - name: Install MagTape
+      run: |
+        make install
+
+    - name: Configure Test Namespace
+      run: |
+        make ns-create-test
+
+    - name: Execute Functional Tests for Deployments
+      run: |
+        make test-functional-deployments
