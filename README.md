@@ -183,7 +183,8 @@ MagTape has a rudimentary healthcheck endpoint configured at `/healthz`. The end
 
 MagTape uses a few images for operation. Please reference the image repos for more information on the image structure and contents
 
-- [magtape and magtape-init](https://github.com/tmobile/magtape-image)
+- [magtape-init](./app/magtape-init/Dockerfile)
+- [magtape](./app/magtape/Dockerfile)
 - [opa](https://github.com/open-policy-agent/opa)
 - [kube-mgmt](https://github.com/open-policy-agent/kube-mgmt)
 
