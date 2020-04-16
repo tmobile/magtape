@@ -81,7 +81,7 @@ clean: uninstall
 .PHONY: unit
 unit:
 
-	hack/run_python_tests.sh
+	hack/run-python-tests.sh
 
 # Run unit tests for MagTape/MagTape-Init
 .PHONY: test
