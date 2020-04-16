@@ -6,9 +6,9 @@
 MagTape is a Policy-as-Code tool for Kubernetes that allows for evaluating Kubernetes resources against a set of defined policies to inform and enforce best practice configurations. This includes variable policy enforcement, notifications, and targeted metrics.
 
 
-MagTape builds on the [Kubernetes Admission Webhooks](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#admission-webhooks) concept and uses [Open Policy Agent](https://www.openpolicyagent.org) for its generic policy language and engine.
+MagTape builds on the [Kubernetes Admission Webhooks](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#admission-webhooks) concept and uses [Open Policy Agent (OPA)](https://www.openpolicyagent.org) for its generic policy language and engine.
 
-MagTape is NOT meant to be a replacement or competitor to OPA, but rather an example of wrapping additional business logic and features around OPA's core. MagTape is also not primarily meant to be a security tool, even though it can easily enforce security policy.
+Our hope is that MagTape is not seen as a competitor to OPA, but rather an example of wrapping additional business logic and features around OPA's core. MagTape is also not primarily meant to be a security tool, even though it can easily enforce security policy.
 
 ## Overview
 
