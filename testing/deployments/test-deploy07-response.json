@@ -1,0 +1,9 @@
+{
+    "response": {
+      "allowed": false,
+      "status": {
+        "message": "[FAIL] LOW - Resource limits missing (CPU) for container \"test-deploy07\" (MT1003)"
+      },
+      "uid": "e7ebc129-091c-41d4-a716-4beea34c5399"
+    }
+  }

@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-deploy02
+  labels:
+    app: test-deploy02
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-deploy02
+  template:
+    metadata:
+      labels:
+        app: test-deploy02
+    spec:
+      containers:
+      - name: test-deploy02
+        image: k8s.gcr.io/liveness
+        args:
+        - /server
+        securityContext:
+          privileged: true

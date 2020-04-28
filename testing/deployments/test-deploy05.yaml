@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-deploy05
+  labels:
+    app: test-deploy05
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-deploy05
+  template:
+    metadata:
+      labels:
+        app: test-deploy05
+    spec:
+      containers:
+      - name: test-deploy05
+        image: k8s.gcr.io/liveness
+        args:
+        - /server
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            httpHeaders:
+            - name: X-Custom-Header
+              value: Awesome
+          initialDelaySeconds: 3
+          periodSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            httpHeaders:
+            - name: X-Custom-Header
+              value: Awesome
+          initialDelaySeconds: 3
+          periodSeconds: 3
+        resources:
+          limits:
+            cpu: "50m"
+            memory: "128Mi"
+          requests:
+            memory: "128Mi"

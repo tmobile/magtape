@@ -1,0 +1,51 @@
+name: e2e-checks
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+# Jobs
+jobs:
+  # Job to lint code
+  e2e-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup KinD Cluster
+      timeout-minutes: 5
+      uses: engineerd/setup-kind@v0.3.0
+
+    - name: Install MagTape
+      timeout-minutes: 5
+      run: |
+        make install
+        EXPECTED_REPLICAS=$(kubectl get deploy -n magtape-system magtape -o jsonpath='{.status.replicas}')
+        READY_REPLICAS=$(kubectl get deploy -n magtape-system magtape -o jsonpath='{.status.readyReplicas}')
+        while [ "${READY_REPLICAS}" != "${EXPECTED_REPLICAS}" ]; do
+          READY_REPLICAS=$(kubectl get deploy -n magtape-system magtape -o jsonpath='{.status.readyReplicas}')
+          echo "Replicas aren't all ready yet: ${READY_REPLICAS}/${EXPECTED_REPLICAS}"
+          sleep 2
+        done
+
+    - name: Configure Test Namespace
+      timeout-minutes: 5
+      run: |
+        make ns-create-test
+
+    - name: Install tools
+      timeout-minutes: 5
+      run: |
+        sudo add-apt-repository ppa:rmescandon/yq
+        sudo apt update
+        sudo apt install yq -y
+
+    - name: Execute Functional Tests
+      timeout-minutes: 5
+      run: |
+        make test-functional

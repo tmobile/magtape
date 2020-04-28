@@ -1,0 +1,13 @@
+**/ssl
+**/*.crt
+**/*.key
+**/*.pem
+**/*.tmp*
+**/*-patched.yaml
+**/.vscode
+**/.DS_Store
+**/.coverage
+**/__pycache__
+**/scratch
+**/*slim*
+deploy/overlays/test

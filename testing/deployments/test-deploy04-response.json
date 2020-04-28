@@ -1,0 +1,9 @@
+{
+    "response": {
+      "allowed": false,
+      "status": {
+        "message": "[FAIL] LOW - Readiness Probe missing for container \"test-deploy04\" (MT1002)"
+      },
+      "uid": "f34ee74a-e154-4a87-b460-f1521bf16c65"
+    }
+  }

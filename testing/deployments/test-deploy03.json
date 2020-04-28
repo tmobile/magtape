@@ -1,0 +1,132 @@
+{
+  "apiVersion": "admission.k8s.io/v1beta1",
+  "kind": "AdmissionReview",
+  "request": {
+    "dryRun": false,
+    "kind": {
+      "group": "apps",
+      "kind": "Deployment",
+      "version": "v1"
+    },
+    "namespace": "test1",
+    "object": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "annotations": {
+          "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app\":\"test-deploy03\"},\"name\":\"test-deploy03\",\"namespace\":\"test1\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app\":\"test-deploy03\"}},\"template\":{\"metadata\":{\"labels\":{\"app\":\"test-deploy03\"}},\"spec\":{\"containers\":[{\"args\":[\"/server\"],\"image\":\"k8s.gcr.io/liveness\",\"name\":\"test-deploy03\",\"readinessProbe\":{\"httpGet\":{\"httpHeaders\":[{\"name\":\"X-Custom-Header\",\"value\":\"Awesome\"}],\"path\":\"/healthz\",\"port\":8080},\"initialDelaySeconds\":3,\"periodSeconds\":3},\"resources\":{\"limits\":{\"cpu\":\"50m\",\"memory\":\"128Mi\"},\"requests\":{\"cpu\":\"50m\",\"memory\":\"128Mi\"}}}]}}}}\n"
+        },
+        "creationTimestamp": "2019-08-05T05:20:12Z",
+        "generation": 1,
+        "labels": {
+          "app": "test-deploy03"
+        },
+        "name": "test-deploy03",
+        "namespace": "test1",
+        "uid": "5a3c9553-64f6-44b6-8b97-d0d9c56c341f"
+      },
+      "spec": {
+        "progressDeadlineSeconds": 600,
+        "replicas": 1,
+        "revisionHistoryLimit": 10,
+        "selector": {
+          "matchLabels": {
+            "app": "test-deploy03"
+          }
+        },
+        "strategy": {
+          "rollingUpdate": {
+            "maxSurge": "25%",
+            "maxUnavailable": "25%"
+          },
+          "type": "RollingUpdate"
+        },
+        "template": {
+          "metadata": {
+            "creationTimestamp": null,
+            "labels": {
+              "app": "test-deploy03"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "args": [
+                  "/server"
+                ],
+                "image": "k8s.gcr.io/liveness",
+                "imagePullPolicy": "Always",
+                "name": "test-deploy03",
+                "readinessProbe": {
+                  "failureThreshold": 3,
+                  "httpGet": {
+                    "httpHeaders": [
+                      {
+                        "name": "X-Custom-Header",
+                        "value": "Awesome"
+                      }
+                    ],
+                    "path": "/healthz",
+                    "port": 8080,
+                    "scheme": "HTTP"
+                  },
+                  "initialDelaySeconds": 3,
+                  "periodSeconds": 3,
+                  "successThreshold": 1,
+                  "timeoutSeconds": 1
+                },
+                "resources": {
+                  "limits": {
+                    "cpu": "50m",
+                    "memory": "128Mi"
+                  },
+                  "requests": {
+                    "cpu": "50m",
+                    "memory": "128Mi"
+                  }
+                },
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File"
+              }
+            ],
+            "dnsPolicy": "ClusterFirst",
+            "restartPolicy": "Always",
+            "schedulerName": "default-scheduler",
+            "securityContext": {},
+            "terminationGracePeriodSeconds": 30
+          }
+        }
+      },
+      "status": {}
+    },
+    "oldObject": null,
+    "operation": "CREATE",
+    "options": {
+      "apiVersion": "meta.k8s.io/v1",
+      "kind": "CreateOptions"
+    },
+    "requestKind": {
+      "group": "apps",
+      "kind": "Deployment",
+      "version": "v1"
+    },
+    "requestResource": {
+      "group": "apps",
+      "resource": "deployments",
+      "version": "v1"
+    },
+    "resource": {
+      "group": "apps",
+      "resource": "deployments",
+      "version": "v1"
+    },
+    "uid": "a7947390-70b8-458b-8e52-87f52fdea04a",
+    "userInfo": {
+      "groups": [
+        "system:masters",
+        "system:authenticated"
+      ],
+      "username": "kubernetes-admin"
+    }
+  }
+}

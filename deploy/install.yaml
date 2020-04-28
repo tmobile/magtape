@@ -1,0 +1,653 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: magtape-system
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: magtape-write
+  labels:
+    app: magtape
+rules:
+- apiGroups:
+  - admissionregistration.k8s.io
+  - certificates.k8s.io
+  - events.k8s.io
+  - ""
+  resources:
+    - validatingwebhookconfigurations
+    - certificatesigningrequests
+    - certificatesigningrequests/approval
+    - certificatesigningrequests/status
+    - events
+  verbs:
+    - get
+    - list
+    - watch
+    - create
+    - patch
+    - update
+    - delete
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: magtape-read
+  labels:
+    app: magtape
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - pods
+  - services
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  - extensions
+  resources:
+  - deployments
+  - daemonsets
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - get
+  - list
+  - watch
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: magtape-write-crb
+  labels:
+    app: magtape
+roleRef:
+  kind: ClusterRole
+  name: magtape-write
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: magtape-sa
+  namespace: magtape-system
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: magtape-read-crb
+  labels:
+    app: magtape
+roleRef:
+  kind: ClusterRole
+  name: magtape-read
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: magtape-sa
+  namespace: magtape-system
+---
+# Define role for OPA/kube-mgmt to update configmaps with policy status.
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: magtape-ops
+  namespace: magtape-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: magtape-ops-rb
+  namespace: magtape-system
+roleRef:
+  kind: Role
+  name: magtape-ops
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: magtape-sa
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: magtape-sa
+  namespace: magtape-system
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: magtape-env
+  namespace: magtape-system
+data:
+  FLASK_ENV: "production"
+  PYTHONUNBUFFERED: "TRUE"
+  MAGTAPE_CLUSTER_NAME: "test-cluster"
+  MAGTAPE_LOG_LEVEL: "INFO"
+  MAGTAPE_DENY_LEVEL: "LOW"
+  MAGTAPE_K8S_EVENTS_ENABLED: "TRUE"
+  MAGTAPE_SLACK_ENABLED: "FALSE"
+  MAGTAPE_SLACK_PASSIVE: "FALSE"
+  MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT: "https://hooks.slack.com/services/XXXXXXXX/XXXXXXXX/XXXXXXXXXXXXXXXXXX"
+  MAGTAPE_SLACK_ANNOTATION: "magtape/slack-webhook-url"
+  MAGTAPE_SLACK_USER: "mtbot"
+  MAGTAPE_SLACK_ICON: ":magtape:"
+  OPA_BASE_URL: "http://127.0.0.1:8181"
+  OPA_K8S_PATH: "/v0/data/magtape"
+---
+apiVersion: v1
+data:
+  magtape-vwc: |
+    apiVersion: admissionregistration.k8s.io/v1beta1
+    kind: ValidatingWebhookConfiguration
+    metadata:
+      name: magtape-webhook
+    webhooks:
+      - name: magtape.webhook.k8s.t-mobile.com
+        clientConfig:
+          service:
+            name: magtape-svc
+            namespace: magtape-system
+            path: "/"
+          caBundle:
+        failurePolicy: Fail
+        rules:
+          - operations:
+              - CREATE
+              - UPDATE
+            apiGroups:
+              - "*"
+            apiVersions:
+              - "*"
+            resources:
+              - "deployments"
+              - "statefulsets"
+              - "daemonsets"
+              - "pods"
+              - "poddisruptionbudgets"
+        namespaceSelector:
+          matchLabels:
+            k8s.t-mobile.com/magtape: "enabled"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: magtape-vwc-template
+  namespace: magtape-system
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: magtape-opa-default-main
+  namespace: magtape-system
+data:
+  main: |
+    package system
+
+    import data.kubernetes.admission
+
+    main = {
+      "apiVersion": "admission.k8s.io/v1beta1",
+      "kind": "AdmissionReview",
+      "response": response,
+    }
+
+    default response = {"allowed": true}
+
+    response = {
+        "allowed": false,
+        "status": {
+            "reason": reason,
+        },
+    } {
+        reason = concat(", ", admission.deny)
+        reason != ""
+    }
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: magtape-opa-entrypoint
+  namespace: magtape-system
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+
+data:
+  magtape.rego: |-
+    package magtape
+
+    # This acts as an entrypoint to call all policies under "kubernetes.admission"
+
+    decisions[{"policy": p, "reasons": reasons}] {
+
+      data.kubernetes.admission[p].matches
+      reasons := data.kubernetes.admission[p].deny
+
+    }
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: magtape-svc
+  labels:
+    app: magtape
+  namespace: magtape-system
+spec:
+  ports:
+  - name: https
+    port: 443
+    targetPort: 5000
+  selector:
+    app: magtape
+  sessionAffinity: None
+  type: ClusterIP
+
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: magtape-pdb
+  namespace: magtape-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: magtape
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: magtape
+  namespace: magtape-system
+  labels:
+    app: magtape
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: magtape
+  template:
+    metadata:
+      labels:
+        app: magtape
+    spec:
+      serviceAccountName: magtape-sa
+      initContainers:
+        - name: magtape-init
+          image: tmobile/magtape-init:v2.1.0
+          command: [/app/magtape-init.py]
+          imagePullPolicy: Always
+          env:
+          - name: MAGTAPE_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: MAGTAPE_NAMESPACE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          envFrom:
+            - configMapRef:
+                name: magtape-env
+          volumeMounts:
+          - name: magtape-tls
+            mountPath: /tls
+          - name: magtape-vwc
+            mountPath: /vwc
+      containers:
+      - name: magtape
+        image: tmobile/magtape:v2.1.0
+        ports:
+        - containerPort: 5000
+        command: [/app/magtape.py]
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            scheme: HTTPS
+            port: 5000
+            path: /healthz
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        readinessProbe:
+          httpGet:
+            scheme: HTTPS
+            port: 5000
+            path: /healthz
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        env:
+        - name: MAGTAPE_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: MAGTAPE_NAMESPACE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        envFrom:
+        - configMapRef:
+            name: magtape-env
+        volumeMounts:
+          - name: magtape-tls
+            mountPath: /tls
+      - name: opa
+        image: openpolicyagent/opa:0.19.2
+        args:
+          - "run"
+          - "--server"
+          - "--tls-cert-file=/tls/cert.pem"
+          - "--tls-private-key-file=/tls/key.pem"
+          - "--addr=0.0.0.0:443"
+          - "--addr=http://127.0.0.1:8181"
+        readinessProbe:
+          httpGet:
+            scheme: HTTPS
+            port: 443
+            path: /health
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            scheme: HTTPS
+            port: 443
+            path: /health
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        resources:
+          limits:
+            cpu: "500m"
+            memory: 1Gi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        volumeMounts:
+          - name: magtape-tls
+            mountPath: /tls
+      - name: kube-mgmt
+        image: openpolicyagent/kube-mgmt:0.11
+        args:
+          - "--policies=magtape-system"
+          - "--require-policy-label=true"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+      volumes:
+        - name: magtape-vwc
+          configMap:
+              name: magtape-vwc-template
+              items:
+              - key: magtape-vwc
+                path: magtape-vwc.yaml
+        - name: magtape-tls
+          emptyDir: {}
+      terminationGracePeriodSeconds: 5
+
+---
+
+apiVersion: v1
+data:
+  policy-liveness-probe-check.rego: "package kubernetes.admission.policy_liveness_probe\n\npolicy_metadata
+    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-liveness-probe\",\n
+    \   \"severity\": \"LOW\",\n    \"errcode\": \"MT1001\",\n    \"targets\": {\"Deployment\",
+    \"StatefulSet\", \"DaemonSet\", \"Pod\"},\n\n}\n\nservicetype = input.request.kind.kind\n\nmatches
+    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
+    \   \n}\n\ndeny[info] {\n\n    # Find container spec\n    containers := find_containers(servicetype,
+    policy_metadata)\n\n    # Check for livenessProbe in each container spec\n    container
+    := containers[_]\n    name := container.name\n    not container.livenessProbe\n\n
+    \   # Build message to return\n    msg = sprintf(\"[FAIL] %v - Liveness Probe
+    missing for container \\\"%v\\\" (%v)\", [policy_metadata.severity, name, policy_metadata.errcode])\n\n
+    \   info := {\n        \n    \t\"name\": policy_metadata.name,\n\t\t\"severity\":
+    policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n\t\t\"msg\":
+    msg,\n    }\n}\n\n# find_containers accepts a value (k8s object type) and returns
+    the container spec\nfind_containers(type, metadata) = input.request.object.spec.containers
+    {\n\n    type == \"Pod\"\n\n} else = input.request.object.spec.template.spec.containers
+    {\n\n\tmetadata.targets[type]\n    \n}"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-liveness-probe-check
+  namespace: magtape-system
+---
+
+apiVersion: v1
+data:
+  policy-pdb-check.rego: "package kubernetes.admission.policy_pdb\n\npolicy_metadata
+    = {\n\n\t# Set MagTape Policy Info\n\t\"name\": \"policy-pdb\",\n\t\"severity\":
+    \"HIGH\",\n\t\"errcode\": \"MT1005\",\n\t\"targets\": {\"PodDisruptionBudget\"},\n\n}\n\nservicetype
+    = input.request.kind.kind\n\nmatches {\n\n    # Verify request object type matches
+    targets\n    policy_metadata.targets[servicetype]\n    \n}\n\nlimits = {\n\n\t\"minAvailable\":
+    [0, 66],\n    \"maxUnavailable\": [33, 100],\n\t\n}\n\n# Generates a violation
+    if the input doesn't specify a percentage (e.g., they used an absolute.)\ndeny[info]
+    {\n\n\t# Get limit type\n\tlimits[name]\n\n    # Get limit value\n\tvalue := input.request.object.spec[name]\n\n
+    \ \t# Verify the value is a percentage\n\t[_, false] = get_percentage(value)\n\n
+    \   msg := sprintf(\"[FAIL] %v - Value \\\"%v\\\" for \\\"%v\\\" should be a Percentage,
+    not an Integer (%v)\", [policy_metadata.severity, value, name, policy_metadata.errcode])\n\n\tinfo
+    := {\n\n    \t\"name\": policy_metadata.name,\n\t\t\"severity\": policy_metadata.severity,\n
+    \       \"errcode\": policy_metadata.errcode,\n\t\t\"msg\": msg,\n\n    }\n\n}\n\n#
+    Generates a violation if the input specifes a percentage out-of-range.\ndeny[info]
+    {\n\n    # Get limit range\n\trange := limits[name]\n\n\t# Get the percentage
+    value\n    [percent, true] = get_percentage(input.request.object.spec[name])\n\n
+    \   # Verify the percentage is within range\n\tnot within_range(percent, range)\n\n
+    \   msg := sprintf(\"[FAIL] %v - Value (%v%%) for \\\"%v\\\" not within range
+    %v%%-%v%% (%v)\", [policy_metadata.severity, percent, name, range[0], range[1],
+    policy_metadata.errcode])\n\n\tinfo := {\n\n        \"name\": policy_metadata.name,\n
+    \       \"severity\": policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n
+    \       \"msg\": msg,\n\n    }\n\n}\n\nwithin_range(x, [_min, _max]) {\n\n\tx
+    >= _min\n    x <= _max\n\n}\n\n# get_percentage accepts a value and generates
+    a tuple containing the \n# numeric percentage value and a boolean value indicating
+    whether the\n# input value could be converted to a numeric percentage.\n#\n# Examples:\n#\n#
+    \  get_percentage(50) == [0, false]\n#   get_percentage(\"50\") == [0, false]\n#
+    \  get_percentage(\"50%\") == [50, true]\nget_percentage(value) = [0, false] {\n\n\tnot
+    is_string(value)\n\n} else = [0, false] {\n\n\tnot contains(value, \"%\")\n\n}
+    else = [percent, true] {\n\n\tpercent := to_number(trim(value, \"%\"))\n\n}"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-pdb-check
+  namespace: magtape-system
+---
+
+apiVersion: v1
+data:
+  policy-port-name-mismatch.rego: "package kubernetes.admission.policy_port_name_mismatch\n\npolicy_metadata
+    = {\n    \n    # Set MagTape Policy Info\n    \"name\": \"policy-port-name-mismatch\",\n
+    \   \"severity\": \"HIGH\",\n    \"errcode\": \"MT1006\",\n    \"targets\": {\"Service\"},\n\n}\n\nservicetype
+    = input.request.kind.kind\nsvc_name := input.request.object.metadata.name\n\nmatches
+    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
+    \   \n}\n\ndeny[info] {\n\n    # Find service ports\n    ports := input.request.object.spec.ports\n\n
+    \   # Check all port spec's\n    port := ports[_]\n    port_name := port.name\n
+    \   port_number := port.port\n\n    # Check for mismatch between logical port
+    name and port number in service spec\n    port_name == \"http\"\n    port_number
+    == 443\n\n    msg = sprintf(\"[FAIL] %v - Logical port name \\\"%v\\\" mismatch
+    with port number \\\"%v\\\" for service \\\"%v\\\" (%v)\", [policy_metadata.severity,
+    port_name, port_number, svc_name, policy_metadata.errcode])\n\n    info := {\n\n
+    \       \"name\": policy_metadata.name,\n        \"severity\": policy_metadata.severity,\n
+    \       \"errcode\": policy_metadata.errcode,\n        \"msg\": msg,\n\n    }\n\n}"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-port-name-mismatch
+  namespace: magtape-system
+---
+
+apiVersion: v1
+data:
+  policy-privileged-pod-check.rego: "package kubernetes.admission.policy_privileged_pod\n\npolicy_metadata
+    = {\n    \n    # Set MagTape Policy Info\n    \"name\": \"policy-privileged-pod\",\n
+    \   \"severity\": \"HIGH\",\n    \"errcode\": \"MT2001\",\n    \"targets\": {\"Deployment\",
+    \"StatefulSet\", \"DaemonSet\", \"Pod\"},\n\n}\n\nservicetype = input.request.kind.kind\n\nmatches
+    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
+    \   \n}\n\ndeny[info] {\n\n    # Find container spec\n    containers := find_containers(servicetype,
+    policy_metadata)\n\n    # Check for Privileged SecurityContext in container spec\n
+    \   container := containers[_]\n    name := container.name\n    container.securityContext.privileged\n\n
+    \   msg = sprintf(\"[FAIL] %v - Found privileged Security Context for container
+    \\\"%v\\\" (%v)\", [policy_metadata.severity, name, policy_metadata.errcode])\n\n
+    \   info := {\n\n        \"name\": policy_metadata.name,\n        \"severity\":
+    policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n        \"msg\":
+    msg,\n\n    }\n\n}\n\n# find_containers accepts a value (k8s object type) and
+    returns the container spec\nfind_containers(type, metadata) = input.request.object.spec.containers
+    {\n\n    type == \"Pod\"\n\n} else = input.request.object.spec.template.spec.containers
+    {\n\n\tmetadata.targets[type]\n    \n}"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-privileged-pod-check
+  namespace: magtape-system
+---
+
+apiVersion: v1
+data:
+  policy-readiness-probe-check.rego: "package kubernetes.admission.policy_readiness_probe\n\npolicy_metadata
+    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-readiness-probe\",\n
+    \   \"severity\": \"LOW\",\n    \"errcode\": \"MT1002\",\n    \"targets\": {\"Deployment\",
+    \"StatefulSet\", \"DaemonSet\", \"Pod\"},\n\n}\n\nservicetype = input.request.kind.kind\n\nmatches
+    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
+    \   \n}\n\ndeny[info] {\n\n    # Find container spec\n    containers := find_containers(servicetype,
+    policy_metadata)\n\n    # Check for ReadinessProbe in each container spec\n    container
+    := containers[_]\n    name := container.name\n    not container.readinessProbe\n\n
+    \   # Build message to return\n    msg = sprintf(\"[FAIL] %v - Readiness Probe
+    missing for container \\\"%v\\\" (%v)\", [policy_metadata.severity, name, policy_metadata.errcode])\n\n
+    \   info := {\n\n        \"name\": policy_metadata.name,\n        \"severity\":
+    policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n        \"msg\":
+    msg,\n\n    }\n\n}\n\n# find_containers accepts a value (k8s object type) and
+    returns the container spec\nfind_containers(type, metadata) = input.request.object.spec.containers
+    {\n\n    type == \"Pod\"\n\n} else = input.request.object.spec.template.spec.containers
+    {\n\n\tmetadata.targets[type]\n    \n}"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-readiness-probe-check
+  namespace: magtape-system
+---
+
+apiVersion: v1
+data:
+  policy-resource-limits-check.rego: "package kubernetes.admission.policy_resource_limits\n\npolicy_metadata
+    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-resource-limits\",\n
+    \   \"severity\": \"LOW\",\n    \"errcode\": \"MT1003\",\n    \"targets\": {\"Deployment\",
+    \"StatefulSet\", \"DaemonSet\", \"Pod\"},\n\n}\n\nservicetype = input.request.kind.kind\n\nmatches
+    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
+    \   \n}\n\ndeny[info] {\n\n    # Find container spec\n    containers := find_containers(servicetype,
+    policy_metadata)\n\n    # Check for livenessProbe in container spec\n    container
+    := containers[_]\n    name := container.name\n    resource_type := get_resource_type(container)\n\n
+    \   # Build message to return\n    msg = sprintf(\"[FAIL] %v - Resource limits
+    missing (%v) for container \\\"%v\\\" (%v)\", [policy_metadata.severity, resource_type,
+    name, policy_metadata.errcode])\n\n    info := {\n\n        \"name\": policy_metadata.name,\n
+    \       \"severity\": policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n
+    \       \"msg\": msg,\n\n    }\n\n}\n\n# find_containers accepts a value (k8s
+    object type) and returns the container spec\nfind_containers(type, metadata) =
+    input.request.object.spec.containers {\n\n    type == \"Pod\"\n\n} else = input.request.object.spec.template.spec.containers
+    {\n\n\tmetadata.targets[type]\n    \n}\n\n# get_resource_type accepts a value
+    (containers) and returns the missing resource type based on missing limits\nget_resource_type(container)
+    = \"CPU/MEM\" {\n\n    not container.resources.limits.cpu\n    not container.resources.limits.memory\n
+    \   \n} else = \"CPU\" {\n\t\n    not container.resources.limits.cpu\n    \n}
+    else = \"MEM\" {\n\t\n    not container.resources.limits.memory\n    \n}"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-resource-limits-check
+  namespace: magtape-system
+---
+
+apiVersion: v1
+data:
+  policy-resource-requests-check.rego: "package kubernetes.admission.policy_resource_requests\n\npolicy_metadata
+    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-resource-requests\",\n
+    \   \"severity\": \"LOW\",\n    \"errcode\": \"MT1004\",\n    \"targets\": {\"Deployment\",
+    \"StatefulSet\", \"DaemonSet\", \"Pod\"},\n\n}\n\nservicetype = input.request.kind.kind\n\nmatches
+    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
+    \   \n}\n\ndeny[info] {\n\n    # Find container spec\n    containers := find_containers(servicetype,
+    policy_metadata)\n\n    # Check for livenessProbe in each container spec\n    container
+    := containers[_]\n    name := container.name\n    resource_type := get_resource_type(container)\n\n
+    \   # Build message to return\n    msg := sprintf(\"[FAIL] %v - Resource requests
+    missing (%v) for container \\\"%v\\\" (%v)\", [policy_metadata.severity, resource_type,
+    name, policy_metadata.errcode])\n\n    info := {\n\n        \"name\": policy_metadata.name,\n
+    \       \"severity\": policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n
+    \       \"msg\": msg,\n\n    }\n    \n}\n\n# find_containers accepts a value (k8s
+    object type) and returns the container spec\nfind_containers(type, metadata) =
+    input.request.object.spec.containers {\n\n    type == \"Pod\"\n\n} else = input.request.object.spec.template.spec.containers
+    {\n\n\tmetadata.targets[type]\n    \n}\n\n# get_resource_type accepts a value
+    (containers) and returns the missing resource type based on missing limits\nget_resource_type(container)
+    = \"CPU/MEM\" {\n\n    not container.resources.requests.cpu\n    not container.resources.requests.memory\n
+    \   \n} else = \"CPU\" {\n\t\n    not container.resources.requests.cpu\n    \n}
+    else = \"MEM\" {\n\t\n    not container.resources.requests.memory\n    \n}"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-resource-requests-check
+  namespace: magtape-system
+---
+

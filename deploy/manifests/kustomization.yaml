@@ -1,0 +1,16 @@
+resources:
+  - magtape-cluster-rbac.yaml
+  - magtape-deploy.yaml
+  - magtape-env-cm.yaml
+  - magtape-ns-rbac.yaml
+  - magtape-ns.yaml
+  - magtape-opa-cm.yaml
+  - magtape-opa-entrypoint-cm.yaml
+  - magtape-pdb.yaml
+  - magtape-sa.yaml
+  - magtape-svc.yaml
+
+configMapGenerator:
+- name: magtape-vwc-template
+  files:
+    -   magtape-vwc=magtape-vwc.yaml

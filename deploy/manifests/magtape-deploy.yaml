@@ -1,0 +1,138 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: magtape
+  namespace: magtape-system
+  labels:
+    app: magtape
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: magtape
+  template:
+    metadata:
+      labels:
+        app: magtape
+    spec:
+      serviceAccountName: magtape-sa
+      initContainers:
+        - name: magtape-init
+          image: tmobile/magtape-init:v2.1.0
+          command: [/app/magtape-init.py]
+          imagePullPolicy: Always
+          env:
+          - name: MAGTAPE_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: MAGTAPE_NAMESPACE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          envFrom:
+            - configMapRef:
+                name: magtape-env
+          volumeMounts:
+          - name: magtape-tls
+            mountPath: /tls
+          - name: magtape-vwc
+            mountPath: /vwc
+      containers:
+      - name: magtape
+        image: tmobile/magtape:v2.1.0
+        ports:
+        - containerPort: 5000
+        command: [/app/magtape.py]
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            scheme: HTTPS
+            port: 5000
+            path: /healthz
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        readinessProbe:
+          httpGet:
+            scheme: HTTPS
+            port: 5000
+            path: /healthz
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        env:
+        - name: MAGTAPE_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: MAGTAPE_NAMESPACE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        envFrom:
+        - configMapRef:
+            name: magtape-env
+        volumeMounts:
+          - name: magtape-tls
+            mountPath: /tls
+      - name: opa
+        image: openpolicyagent/opa:0.19.2
+        args:
+          - "run"
+          - "--server"
+          - "--tls-cert-file=/tls/cert.pem"
+          - "--tls-private-key-file=/tls/key.pem"
+          - "--addr=0.0.0.0:443"
+          - "--addr=http://127.0.0.1:8181"
+        readinessProbe:
+          httpGet:
+            scheme: HTTPS
+            port: 443
+            path: /health
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            scheme: HTTPS
+            port: 443
+            path: /health
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        resources:
+          limits:
+            cpu: "500m"
+            memory: 1Gi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        volumeMounts:
+          - name: magtape-tls
+            mountPath: /tls
+      - name: kube-mgmt
+        image: openpolicyagent/kube-mgmt:0.11
+        args:
+          - "--policies=magtape-system"
+          - "--require-policy-label=true"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+      volumes:
+        - name: magtape-vwc
+          configMap:
+              name: magtape-vwc-template
+              items:
+              - key: magtape-vwc
+                path: magtape-vwc.yaml
+        - name: magtape-tls
+          emptyDir: {}
+      terminationGracePeriodSeconds: 5

@@ -1,0 +1,9 @@
+{
+    "response": {
+      "allowed": false,
+      "status": {
+        "message": "[FAIL] LOW - Liveness Probe missing for container \"test-deploy03\" (MT1001)"
+      },
+      "uid": "a7947390-70b8-458b-8e52-87f52fdea04a"
+    }
+  }

@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-deploy11
+  labels:
+    app: test-deploy11
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-deploy11
+  template:
+    metadata:
+      labels:
+        app: test-deploy11
+    spec:
+      containers:
+      - name: test-deploy11
+        image: k8s.gcr.io/liveness
+        args:
+        - /server
+      - name: test-deploy11-sidecar
+        image: busybox
+        args:
+        - "while true; do echo 'still running'; sleep 30; done"
