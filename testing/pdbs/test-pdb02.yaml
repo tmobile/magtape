@@ -1,9 +1,9 @@
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
-  name: test1-pdb
+  name: test-pdb02
 spec:
   minAvailable: "66%"
   selector:
     matchLabels:
-      app: test1
+      app: test-pdb02
