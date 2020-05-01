@@ -1,6 +1,6 @@
 [![Latest release](https://img.shields.io/github/release/tmobile/magtape.svg)](https://github.com/tmobile/magtape/releases/latest)
 [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://github.com/tmobile/magtape/blob/master/LICENSE)
-[![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/TMO-OSS/magtape)
+[![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/TMO-OSS/magtape) [![Join the chat at https://gitter.im/tmobile/magtape](https://badges.gitter.im/tmobile/magtape.svg)](https://gitter.im/tmobile/magtape?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 ![python-checks](https://github.com/tmobile/magtape/workflows/python-checks/badge.svg)
 ![e2e-checks](https://github.com/tmobile/magtape/workflows/e2e-checks/badge.svg)
 ![image-build](https://github.com/tmobile/magtape/workflows/image-build/badge.svg)
