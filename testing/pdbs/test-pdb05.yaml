@@ -1,9 +1,9 @@
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
-  name: test1-pdb
+  name: test-pdb05
 spec:
   maxUnavailable: "33%"
   selector:
     matchLabels:
-      app: test1
+      app: test-pdb05
