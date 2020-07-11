@@ -40,10 +40,10 @@ spec:
             mountPath: /vwc
       containers:
       - name: magtape
-        image: tmobile/magtape:v2.1.2
+        image: jmsearcy/magtape-gunicorn:latest
         ports:
         - containerPort: 5000
-        command: [/app/magtape.py]
+        command: ["gunicorn", "magtape:app", "--config=config.py"]
         imagePullPolicy: Always
         livenessProbe:
           httpGet:

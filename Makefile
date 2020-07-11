@@ -81,6 +81,12 @@ uninstall:
 	kubectl delete validatingwebhookconfiguration magtape-webhook
 	kubectl delete csr magtape-svc.magtape-system.cert-request
 
+# Restart Magtape Pods (Demo Install)
+.PHONY: restart
+restart:
+
+	kubectl rollout restart deploy magtape -n magtape-system
+
 # Cleanup MagTape (Demo Install)
 .PHONY: clean
 clean: uninstall
@@ -187,13 +193,13 @@ push-magtape-init:
 .PHONY: build-magtape
 build-magtape:
 
-	$(DOCKER) build -t tmobile/magtape:latest app/magtape/
+	$(DOCKER) build -t jmsearcy/magtape-gunicorn:latest app/magtape/
 
 # Push MagTape container image to DockerHub
 .PHONY: push-magtape
 push-magtape:
 
-	$(DOCKER) push tmobile/magtape:latest
+	$(DOCKER) push jmsearcy/magtape-gunicorn:latest
 
 # Build and push all MagTape container images to DockerHub
 .PHONY: build

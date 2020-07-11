@@ -10,6 +10,8 @@ flask = "*"
 kubernetes = "~=11.0"
 prometheus-client = "*"
 prometheus-flask-exporter = "*"
+gunicorn = "*"
+werkzeug = "*"
 
 [requires]
 python_version = "3.8"

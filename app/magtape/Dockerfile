@@ -13,6 +13,7 @@ RUN pip install pipenv
 RUN pipenv install --system --deploy
 
 COPY ./magtape.py /app/
+COPY ./config.py /app/
 
-CMD ["python", "magtape.py"]
+CMD ["gunicorn", "magtape:app", "--config=config.py"]
 

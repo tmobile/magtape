@@ -53,7 +53,6 @@ app.logger.setLevel(magtape_log_level)
 cluster = os.environ["MAGTAPE_CLUSTER_NAME"]
 magtape_namespace_name = os.environ["MAGTAPE_NAMESPACE_NAME"]
 magtape_pod_name = os.environ["MAGTAPE_POD_NAME"]
-magtape_tls_path = "/tls"
 
 # Set Slack related variables
 slack_enabled = os.environ["MAGTAPE_SLACK_ENABLED"]
@@ -716,7 +715,10 @@ def main():
         port=5000,
         debug=False,
         threaded=True,
-        ssl_context=(f"{magtape_tls_path}/cert.pem", f"{magtape_tls_path}/key.pem"),
+        ssl_context=(
+            f"{config.magtape_tls_path}/cert.pem",
+            f"{config.magtape_tls_path}/key.pem",
+        ),
     )
 
 
