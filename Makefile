@@ -16,7 +16,7 @@
 # its contributors may be used to endorse or promote products derived from this
 # software without specific prior written permission.
 
-MAGTAPE_VERSION := v2.1.2
+MAGTAPE_VERSION := v2.1.3
 OPA_VERSION := 0.19.2
 KUBE_MGMT_VERSION := 0.11
 
@@ -81,6 +81,12 @@ uninstall:
 	kubectl delete validatingwebhookconfiguration magtape-webhook
 	kubectl delete csr magtape-svc.magtape-system.cert-request
 
+# Restart Magtape Pods (Demo Install)
+.PHONY: restart
+restart:
+
+	kubectl rollout restart deploy magtape -n magtape-system
+
 # Cleanup MagTape (Demo Install)
 .PHONY: clean
 clean: uninstall
@@ -135,7 +141,7 @@ test-clean:
 
 # Run all unit and functional tests for MagTape/MagTape-Init
 .PHONY: test-all
-test-all: test test-functional-deployments
+test-all: test test-functional
 
 ###############################################################################
 # Misc Repo Targets ###########################################################

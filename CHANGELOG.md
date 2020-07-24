@@ -18,3 +18,6 @@ This release contains several package updates geared towards fixing security rel
 
  The updated pyyaml package required updates to the Kubernetes Python client library, moving primary support to Kubernetes 1.15+. Backwards compatibility to Kubernetes 1.13 should exist, but isn't tested/gauranteed.
 
+## 2.1.3
+
+This release migrates to using the Gunicorn WSGI HTTP Server instead of the default Flask server. This change reduces average latency by about 75% in our normal benchmarking tests. THis change also means the standar 3 replica deployment can handle almost 3 times the request rate as before.
