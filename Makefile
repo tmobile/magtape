@@ -141,7 +141,7 @@ test-clean:
 
 # Run all unit and functional tests for MagTape/MagTape-Init
 .PHONY: test-all
-test-all: test test-functional-deployments
+test-all: test test-functional
 
 ###############################################################################
 # Misc Repo Targets ###########################################################
@@ -193,13 +193,13 @@ push-magtape-init:
 .PHONY: build-magtape
 build-magtape:
 
-	$(DOCKER) build -t jmsearcy/magtape-gunicorn:latest app/magtape/
+	$(DOCKER) build -t tmobile/magtape:latest app/magtape/
 
 # Push MagTape container image to DockerHub
 .PHONY: push-magtape
 push-magtape:
 
-	$(DOCKER) push jmsearcy/magtape-gunicorn:latest
+	$(DOCKER) push tmobile/magtape:latest
 
 # Build and push all MagTape container images to DockerHub
 .PHONY: build
