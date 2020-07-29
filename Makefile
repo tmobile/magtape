@@ -168,10 +168,10 @@ compare-single-manifest:
 .PHONY: set-release-version
 set-release-version:
 
-	sed -i "" "s/\(image: tmobile\/magtape-init:\).*/\1${MAGTAPE_VERSION}/" deploy/manifests/magtape-deploy.yaml
-	sed -i "" "s/\(image: tmobile\/magtape:\).*/\1${MAGTAPE_VERSION}/" deploy/manifests/magtape-deploy.yaml
-	sed -i "" "s/\(image: openpolicyagent\/opa:\).*/\1${OPA_VERSION}/" deploy/manifests/magtape-deploy.yaml
-	sed -i "" "s/\(image: openpolicyagent\/kube-mgmt:\).*/\1${KUBE_MGMT_VERSION}/" deploy/manifests/magtape-deploy.yaml
+	sed -i="" "s/\(image: tmobile\/magtape-init:\).*/\1${MAGTAPE_VERSION}/" deploy/manifests/magtape-deploy.yaml
+	sed -i="" "s/\(image: tmobile\/magtape:\).*/\1${MAGTAPE_VERSION}/" deploy/manifests/magtape-deploy.yaml
+	sed -i="" "s/\(image: openpolicyagent\/opa:\).*/\1${OPA_VERSION}/" deploy/manifests/magtape-deploy.yaml
+	sed -i="" "s/\(image: openpolicyagent\/kube-mgmt:\).*/\1${KUBE_MGMT_VERSION}/" deploy/manifests/magtape-deploy.yaml
 
 ###############################################################################
 # Container Image Targets #####################################################
