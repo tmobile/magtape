@@ -17,6 +17,33 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Check out the repo
+      uses: actions/checkout@v2
+
+    - name: Build magtape-init Container Image
+      if: github.repository == 'tmobile/magtape'
+      timeout-minutes: 10
+      uses: docker/build-push-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+        path: ./app/magtape-init/
+        repository: tmobile/magtape-init
+        tag_with_sha: true
+        push: false
+
+    - name: Build magtape Container Image
+      if: github.repository == 'tmobile/magtape'
+      timeout-minutes: 10
+      uses: docker/build-push-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+        path: ./app/magtape/
+        repository: tmobile/magtape
+        tag_with_sha: true
+        push: false
+
     - name: Setup KinD Cluster
       timeout-minutes: 5
       uses: engineerd/setup-kind@v0.3.0
@@ -24,12 +51,24 @@ jobs:
     - name: Install MagTape
       timeout-minutes: 5
       run: |
+        echo "Loading MagTape images to KinD nodes"
+        GIT_SHA=${{github.sha}}
+        kind load docker-image tmobile/magtape-init:sha-${GIT_SHA::7}
+        kind load docker-image tmobile/magtape:sha-${GIT_SHA::7}
+        echo "Updating target image to use local ref"
+        sed -i -E "s/(MAGTAPE_VERSION := )(.*$)/\1sha-${GIT_SHA::7}/" Makefile
+        sed -i -E 's/(imagePullPolicy:) Always/\1 IfNotPresent/' deploy/manifests/magtape-deploy.yaml
+        cat Makefile
+        cat deploy/manifests/magtape-deploy.yaml
+        make set-release-version
+        make build-single-manifest
+        echo "Install MagTape"
         make install
         EXPECTED_REPLICAS=$(kubectl get deploy -n magtape-system magtape -o jsonpath='{.status.replicas}')
         READY_REPLICAS=$(kubectl get deploy -n magtape-system magtape -o jsonpath='{.status.readyReplicas}')
         while [ "${READY_REPLICAS}" != "${EXPECTED_REPLICAS}" ]; do
           READY_REPLICAS=$(kubectl get deploy -n magtape-system magtape -o jsonpath='{.status.readyReplicas}')
-          echo "Replicas aren't all ready yet: ${READY_REPLICAS}/${EXPECTED_REPLICAS}"
+          echo "Replicas aren't all ready yet: ${READY_REPLICAS:=0}/${EXPECTED_REPLICAS}"
           sleep 2
         done
 
