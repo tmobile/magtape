@@ -1,0 +1,64 @@
+{
+    "apiVersion": "admission.k8s.io/v1beta1",
+    "kind": "AdmissionReview",
+    "request": {
+      "dryRun": false,
+      "kind": {
+        "group": "",
+        "kind": "Service",
+        "version": "v1"
+      },
+      "namespace": "test1",
+      "object": {
+        "apiVersion": "v1",
+        "kind": "Service",
+        "metadata": {
+          "annotations": {
+            "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"Service\",\"metadata\":{\"annotations\":{},\"labels\":{\"app\":\"test-svc\"},\"name\":\"test-svc\",\"namespace\":\"test1\"},\"spec\":{\"ports\":[{\"name\":\"test\",\"nodePort\":30400,\"port\":443,\"protocol\":\"TCP\",\"targetPort\":443}],\"selector\":{\"app\":\"test-svc\"},\"type\":\"NodePort\"}}\n"
+          },
+          "creationTimestamp": "2020-03-20T17:51:09Z",
+          "labels": {
+            "app": "test-svc"
+          },
+          "name": "test-svc02",
+          "namespace": "test1",
+          "uid": "618ae7bb-6ad3-11ea-b876-005056a7db08"
+        },
+        "spec": {
+          "clusterIP": "198.19.132.197",
+          "externalTrafficPolicy": "Cluster",
+          "ports": [
+            {
+              "name": "test",
+              "nodePort": 30400,
+              "port": 443,
+              "protocol": "TCP",
+              "targetPort": 443
+            }
+          ],
+          "selector": {
+            "app": "test-svc"
+          },
+          "sessionAffinity": "None",
+          "type": "NodePort"
+        },
+        "status": {
+          "loadBalancer": {}
+        }
+      },
+      "oldObject": null,
+      "operation": "CREATE",
+      "resource": {
+        "group": "",
+        "resource": "services",
+        "version": "v1"
+      },
+      "uid": "618aebe1-6ad3-11ea-b876-005056a7db08",
+      "userInfo": {
+        "groups": [
+          "group1"
+        ],
+        "username": "user1"
+      }
+    }
+  }

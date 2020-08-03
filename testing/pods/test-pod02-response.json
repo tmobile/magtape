@@ -1,0 +1,9 @@
+{
+    "response": {
+      "allowed": false,
+      "status": {
+        "message": "[FAIL] HIGH - hostPath is configured for volume \"default-token\" (MT2004), [FAIL] LOW - Liveness Probe missing for container \"test-pod02\" (MT1001), [FAIL] LOW - Readiness Probe missing for container \"test-pod02\" (MT1002), [FAIL] LOW - Resource limits missing (CPU/MEM) for container \"test-pod02\" (MT1003), [FAIL] LOW - Resource requests missing (CPU/MEM) for container \"test-pod02\" (MT1004)"
+      },
+      "uid": "7a202044-58cd-11ea-85c2-005056a72258"
+    }
+}

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: my-svc
+  name: test-svc04
+spec:
+  ports:
+  - name: 5000-8080
+    port: 5000
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: my-svc
+  type: ClusterIP
+status:
+  loadBalancer: {}

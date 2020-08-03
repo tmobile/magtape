@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: test-svc
+  name: test-svc03
+spec:
+  ports:
+  - name: test
+    port: 443
+    nodePort: 30101
+    protocol: TCP
+    targetPort: 443
+  selector:
+    app: test-svc
+  type: NodePort

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: toolbox
+  name: test-pod04
+  ownerReferences:
+    - name: my-repset
+      kind: Replica
+      uid: uidexa1
+      apiVersion: v1
+spec:
+  containers:
+  - command:
+    - sleep
+    - "360000"
+    image: jmsearcy/twrtools
+    imagePullPolicy: Always
+    name: toolbox
