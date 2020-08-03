@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: toolbox
+  name: test-pod01
+spec:
+  containers:
+  - command:
+    - sleep
+    - "360000"
+    image: jmsearcy/twrtools
+    imagePullPolicy: Always
+    name: toolbox
+    ports:
+    - containerPort: 8080
+      hostPort: 8080
