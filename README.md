@@ -129,7 +129,12 @@ The below [policy examples](policies) are available within this repo. The can be
 - Resource Requests (Check ID: MT1004)
 - Pod Disruption Budget (Check ID: MT1005)
 - Istio Port Name/Number Mismatch (Check ID: MT1006)
+- Singleton Pods (Check ID: MT1007)
 - Privileged Pod Security Context (Check ID: MT2001)
+- Host Port (Check ID: MT2002)
+- emptyDir Volume (Check ID: MT2003)
+- Host Path (Check ID: MT2004)
+- Node Port Range (Check ID: MT2005)
 
 More detailed info about these policies can be found [here](docs/policies.md).
 
