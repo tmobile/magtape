@@ -16,6 +16,7 @@ rules:
     - certificatesigningrequests/approval
     - certificatesigningrequests/status
     - events
+    - signers
   verbs:
     - get
     - list
@@ -24,6 +25,7 @@ rules:
     - patch
     - update
     - delete
+    - approve
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
