@@ -46,7 +46,9 @@ jobs:
 
     - name: Setup KinD Cluster
       timeout-minutes: 5
-      uses: engineerd/setup-kind@v0.3.0
+      uses: engineerd/setup-kind@v0.4.0
+      with:
+          version: "v0.8.1"
 
     - name: Install MagTape
       timeout-minutes: 5
