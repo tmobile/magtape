@@ -317,7 +317,7 @@ spec:
       serviceAccountName: magtape-sa
       initContainers:
         - name: magtape-init
-          image: tmobile/magtape-init:v2.1.3
+          image: tmobile/magtape-init:v2.1.4
           command: [/app/magtape-init.py]
           imagePullPolicy: Always
           env:
@@ -339,7 +339,7 @@ spec:
             mountPath: /vwc
       containers:
       - name: magtape
-        image: tmobile/magtape:v2.1.3
+        image: tmobile/magtape:v2.1.4
         ports:
         - containerPort: 5000
         command: ["gunicorn", "magtape:app", "--config=config.py"]
