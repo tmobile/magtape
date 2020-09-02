@@ -24,3 +24,20 @@ resources:
         - test-pdb03.yaml
         - test-pdb04.yaml
         - test-pdb06.yaml
+  - name: pods
+    tests:
+      pass:
+        - test-pod02.yaml
+        - test-pod03.yaml
+        - test-pod04.yaml
+        - test-pod05.yaml
+        - test-pod06.yaml
+      fail:
+        - test-pod01.yaml
+  - name: services
+    tests:
+      pass:
+        - test-svc01.yaml
+        - test-svc02.yaml
+        - test-svc03.yaml
+        - test-svc04.yaml
