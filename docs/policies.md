@@ -138,7 +138,7 @@ Read more about hostPath in the [official Kubernetes documentation](https://kube
 
 This policy enforces that a nodePort configured in a Service falls within the nodePort range that is defined in the corresponding namespace annotation.
 
-NodePorts are used as a way to expose a Service to an external IP. This policy aims to remove the possibility that two Services are configured to identical nodePorts.
+NodePorts are used as a way to expose a Service external to a cluster. Since NodePorts are a finite resource, this policy aims to control NodePort usage via an allow list model using an annotation on a Namespace to designate the allowable NodePort values/range.
 
 The configuration should follow these recommended rules:
 
