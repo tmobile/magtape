@@ -5,7 +5,7 @@ policy_metadata = {
     # Set MagTape Policy Info
     "name": "policy-emptydir",
     "severity": "MED",
-    "errcode": "MT2003",
+    "errcode": "MT1009",
     "targets": {"Pod"},
 
 }

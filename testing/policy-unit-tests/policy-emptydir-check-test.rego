@@ -179,8 +179,8 @@ test_emptydir_large_denied {
 
     # count(policy_emptydir.deny) == 1 with input as in
     policy_emptydir.deny[_] == {
-        "errcode": "MT2003",
-        "msg": "[FAIL] MED - Size limit of emptyDir volume \"default-token\" is greater than 100 Megabytes (MT2003)",
+        "errcode": "MT1009",
+        "msg": "[FAIL] MED - Size limit of emptyDir volume \"default-token\" is greater than 100 Megabytes (MT1009)",
         "name": "policy-emptydir",
         "severity": "MED"
     }
@@ -276,8 +276,8 @@ test_emptydir_wrong_ending_denied {
 
     # count(policy_emptydir.deny) == 1 with input as in
     policy_emptydir.deny[_] == {
-        "errcode": "MT2003",
-        "msg": "[FAIL] MED - Size limit of emptyDir volume \"default-token\" is not in Megabytes (MT2003)",
+        "errcode": "MT1009",
+        "msg": "[FAIL] MED - Size limit of emptyDir volume \"default-token\" is not in Megabytes (MT1009)",
         "name": "policy-emptydir",
         "severity": "MED"
     }
@@ -371,8 +371,8 @@ test_emptydir_not_set_denied {
 
     # count(policy_emptydir.deny) == 1 with input as in
     policy_emptydir.deny[_] == {
-            "errcode": "MT2003",
-            "msg": "[FAIL] MED - Size limit of emptyDir volume \"default-token\" is not set (MT2003)",
+            "errcode": "MT1009",
+            "msg": "[FAIL] MED - Size limit of emptyDir volume \"default-token\" is not set (MT1009)",
             "name": "policy-emptydir",
             "severity": "MED"
         }

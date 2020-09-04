@@ -7,7 +7,7 @@ policy_metadata = {
     # Set MagTape Policy Info
     "name": "policy-nodeport-range",
     "severity": "MED",
-    "errcode": "MT2005",
+    "errcode": "MT2002",
     "targets": {"Service"},
 
 }

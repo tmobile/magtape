@@ -187,8 +187,8 @@ test_host_port_denied {
 
     # count(policy_hostport.deny) == 1 with input as in
     policy_hostport.deny[_] == {
-            "errcode": "MT2002",
-            "msg": "[FAIL] HIGH - hostPort is configured for container \"toolbox\" (MT2002)",
+            "errcode": "MT1008",
+            "msg": "[FAIL] HIGH - hostPort is configured for container \"toolbox\" (MT1008)",
             "name": "policy-hostport",
             "severity": "HIGH"
         }

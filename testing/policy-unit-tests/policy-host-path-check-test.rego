@@ -174,8 +174,8 @@ test_host_path_denied {
 
     # count(policy_host_path.deny) == 1 with input as in
     policy_host_path.deny[_] ==  {
-            "errcode": "MT2004",
-            "msg": "[FAIL] MED - hostPath is configured for volume \"default-token\" (MT2004)",
+            "errcode": "MT1010",
+            "msg": "[FAIL] MED - hostPath is configured for volume \"default-token\" (MT1010)",
             "name": "policy-host-path",
             "severity": "MED"
         }

@@ -5,7 +5,7 @@ policy_metadata = {
     # Set MagTape Policy Info
     "name": "policy-hostport",
     "severity": "HIGH",
-    "errcode": "MT2002",
+    "errcode": "MT1008",
     "targets": {"Pod"},
 
 }

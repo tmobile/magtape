@@ -409,8 +409,8 @@ test_np_range_one_num_denied {
 
     # count(policy_nodeport_range.deny) == 1
     policy_nodeport_range.deny[_] == {
-            "errcode": "MT2005",
-            "msg": "[FAIL] MED - nodePort 30101 is out of defined range for Service \"test-svc\" (MT2005)",
+            "errcode": "MT2002",
+            "msg": "[FAIL] MED - nodePort 30101 is out of defined range for Service \"test-svc\" (MT2002)",
             "name": "policy-nodeport-range",
             "severity": "MED"
         }
@@ -497,8 +497,8 @@ test_np_range_comma_denied {
 
     # count(policy_nodeport_range.deny) == 1
     policy_nodeport_range.deny[_] == {
-            "errcode": "MT2005",
-            "msg": "[FAIL] MED - nodePort 30101 is out of defined range for Service \"test-svc\" (MT2005)",
+            "errcode": "MT2002",
+            "msg": "[FAIL] MED - nodePort 30101 is out of defined range for Service \"test-svc\" (MT2002)",
             "name": "policy-nodeport-range",
             "severity": "MED"
         }
@@ -585,8 +585,8 @@ test_np_range_range_denied {
 
     # count(policy_nodeport_range.deny) == 1
     policy_nodeport_range.deny[_] == {
-            "errcode": "MT2005",
-            "msg": "[FAIL] MED - nodePort 30075 is out of defined range for Service \"test-svc\" (MT2005)",
+            "errcode": "MT2002",
+            "msg": "[FAIL] MED - nodePort 30075 is out of defined range for Service \"test-svc\" (MT2002)",
             "name": "policy-nodeport-range",
             "severity": "MED"
         }
@@ -673,8 +673,8 @@ test_np_range_combo_denied {
 
     # count(policy_nodeport_range.deny) == 1
     policy_nodeport_range.deny[_] == {
-            "errcode": "MT2005",
-            "msg": "[FAIL] MED - nodePort 30075 is out of defined range for Service \"test-svc\" (MT2005)",
+            "errcode": "MT2002",
+            "msg": "[FAIL] MED - nodePort 30075 is out of defined range for Service \"test-svc\" (MT2002)",
             "name": "policy-nodeport-range",
             "severity": "MED"
         }
@@ -762,8 +762,8 @@ test_np_range_extra_symbols_denied {
 
     # count(policy_nodeport_range.deny) == 0
     policy_nodeport_range.deny[_] ==  {
-            "errcode": "MT2005",
-            "msg": "[FAIL] MED - nodePort 301010 is out of defined range for Service \"test-svc\" (MT2005)",
+            "errcode": "MT2002",
+            "msg": "[FAIL] MED - nodePort 301010 is out of defined range for Service \"test-svc\" (MT2002)",
             "name": "policy-nodeport-range",
             "severity": "MED"
         }
@@ -850,8 +850,8 @@ test_np_range_denied_alpha {
 
     # count(policy_nodeport_range.deny) == 0
     policy_nodeport_range.deny[_] == {
-            "errcode": "MT2005",
-            "msg": "[FAIL] MED - Invalid data in nodePort annotation in \"test1\" namespace (MT2005)",
+            "errcode": "MT2002",
+            "msg": "[FAIL] MED - Invalid data in nodePort annotation in \"test1\" namespace (MT2002)",
             "name": "policy-nodeport-range",
             "severity": "MED"
         }
@@ -939,8 +939,8 @@ test_np_range_sym_denied {
 
     # count(policy_nodeport_range.deny) == 0
     policy_nodeport_range.deny[_] == {
-            "errcode": "MT2005",
-            "msg": "[FAIL] MED - Invalid data in nodePort annotation in \"test1\" namespace (MT2005)",
+            "errcode": "MT2002",
+            "msg": "[FAIL] MED - Invalid data in nodePort annotation in \"test1\" namespace (MT2002)",
             "name": "policy-nodeport-range",
             "severity": "MED"
         }
