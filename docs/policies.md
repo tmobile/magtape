@@ -88,6 +88,44 @@ spec:
   type: ClusterIP
 ```
 
+## Singleton Pods (Check ID: MT1007)
+
+This policy checks for singleton Pods by looking for ownerRefrences in the workload configuration.
+
+A singleton pod is one that has no replication control. Without replication control, there may be moments when the pod becomes unavailable and there is no lifecycle management to recreate the pod if it ever dies. If ownerReferences is present in the configuration, the pod is seen as a dependent of a ReplicationController, ReplicaSet, StatefulSet, DaemonSet, Deployment, Job or CronJob.
+
+Read more about Pods in the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/workloads/controllers/garbage-collection/#owners-and-dependents)
+
+## Host Port (Check ID: MT1008)
+
+This policy checks for the existence of a hostPort within the workload configuration and will deny the workload if detected.
+
+Pods can be configured with a hostPort in their container spec. This configuration will expose the port to the external network and can lead to port conflicts as the number of applications on the cluster grows.
+
+Read more about host ports in the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/overview/#services)
+
+## emptyDir Volume (Check ID: MT1009)
+
+This policy checks that the sizeLimit for the emptyDir volume is both present and less than a desired size limit.
+
+An emptyDir volume is automatically created when a Pod is assigned to a Node. When the Pod is removed, so is its emptyDir volume. Using emptyDir leads to consumption of ephemeral storage on the underlying nodes and can fill up easily affecting others on the platform.
+
+The configuration should follow these recommended rules:
+
+Always set the emptyDir "sizeLimit"
+Define the "sizeLimit" in Megabytes(M)
+sizeLimit value should be set to less than 100M
+
+Read more about emptyDir volumes in the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir)
+
+## Host Path (Check ID: MT1010)
+
+This policy checks for the existence of a hostPath within the workload configuration.
+
+A hostPath configuration mounts a file or directory from the host node's filesystem to a Pod. If a pod gets rescheduled to a different node, it can act differently due to files being different on each node. Allowing a host path to be set could result in unintended security risks.
+
+Read more about hostPath in the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/storage/volumes/#hostpath)
+
 ## Privileged Pod Security Context (Check ID: MT2001)
 
 This policy checks for the existence of a Privileged Pod Security Context within the workload configuration and will deny the workload if detected.
@@ -95,3 +133,17 @@ This policy checks for the existence of a Privileged Pod Security Context within
 Pods can enable privileged mode, using the privileged flag on the SecurityContext of the container spec. This configuration allows for many unintended security related vulnerabilities and should therefore be disallowed on clusters. This is a pretty basic check, and there are certainly more ways to abuse a pods security context, but this should provide a base to start from to build a more advanced policy.
 
 Read more about Privileged Pods in the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/workloads/pods/pod/#privileged-mode-for-pod-containers)
+
+## Node Port Range (Check ID: MT2002)
+
+This policy enforces that a nodePort configured in a Service falls within the nodePort range that is defined in the corresponding namespace annotation.
+
+NodePorts are used as a way to expose a Service external to a cluster. Since NodePorts are a finite resource, this policy aims to control NodePort usage via an allow list model using an annotation on a Namespace to designate the allowable NodePort values/range.
+
+The configuration should follow these recommended rules:
+
+The nodePort range annotation can be a single number, numbers separated by commas, a range split with a hyphen, or a combination of the three
+The nodePort annotation on the namespace should be "k8s.t-mobile.com/nodeportRange"
+Set the annotation to "na" if no nodePort range will to be set, that is seen as an exception value
+
+Read more about NodePorts in the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types)

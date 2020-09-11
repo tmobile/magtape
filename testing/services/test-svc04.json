@@ -1,0 +1,62 @@
+{
+    "apiVersion": "admission.k8s.io/v1beta1",
+    "kind": "AdmissionReview",
+    "request": {
+      "dryRun": false,
+      "kind": {
+        "group": "",
+        "kind": "Service",
+        "version": "v1"
+      },
+      "namespace": "test1",
+      "object": {
+        "apiVersion": "v1",
+        "kind": "Service",
+        "metadata": {
+          "annotations": {
+            "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"Service\",\"metadata\":{\"annotations\":{},\"creationTimestamp\":null,\"labels\":{\"app\":\"my-svc\"},\"name\":\"my-svc\",\"namespace\":\"test1\"},\"spec\":{\"ports\":[{\"name\":\"5000-8080\",\"port\":5000,\"protocol\":\"TCP\",\"targetPort\":8080}],\"selector\":{\"app\":\"my-svc\"},\"type\":\"ClusterIP\"},\"status\":{\"loadBalancer\":{}}}\n"
+          },
+          "creationTimestamp": "2020-03-25T17:38:31Z",
+          "labels": {
+            "app": "my-svc"
+          },
+          "name": "test-svc04",
+          "namespace": "test1",
+          "uid": "7197a413-6ebf-11ea-b876-005056a7db08"
+        },
+        "spec": {
+          "clusterIP": "198.19.221.114",
+          "ports": [
+            {
+              "name": "5000-8080",
+              "port": 5000,
+              "protocol": "TCP",
+              "targetPort": 8080
+            }
+          ],
+          "selector": {
+            "app": "my-svc"
+          },
+          "sessionAffinity": "None",
+          "type": "ClusterIP"
+        },
+        "status": {
+          "loadBalancer": {}
+        }
+      },
+      "oldObject": null,
+      "operation": "CREATE",
+      "resource": {
+        "group": "",
+        "resource": "services",
+        "version": "v1"
+      },
+      "uid": "7197a7d7-6ebf-11ea-b876-005056a7db08",
+      "userInfo": {
+        "groups": [
+          "group1"
+        ],
+        "username": "user1"
+      }
+    }
+  }

@@ -440,6 +440,93 @@ spec:
 
 apiVersion: v1
 data:
+  policy-emptydir-check.rego: "package kubernetes.admission.policy_emptydir\n\npolicy_metadata
+    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-emptydir\",\n    \"severity\":
+    \"MED\",\n    \"errcode\": \"MT1009\",\n    \"targets\": {\"Pod\"},\n\n}\n\nkind
+    = input.request.kind.kind\nsizeLimit = 100\n\nmatches {\n\n    # Verify request
+    object type matches targets\n    policy_metadata.targets[kind]\n    \n}\n\ndeny[info]
+    {\n\n    # Find volume spec\n    volumes := input.request.object.spec.volumes\n
+    \   exceed_err_msg := sprintf(\"is greater than %v Megabytes\", [sizeLimit])\n\n
+    \   # Checks emptydir configuration\n    volume := volumes[_]\n    name := volume.name\n
+    \   emptydir_state := check_emptydir(volume, exceed_err_msg, sizeLimit)\n\n    #
+    Build message to return\n    msg := sprintf(\"[FAIL] %v - Size limit of emptyDir
+    volume \\\"%v\\\" %v (%v)\", [policy_metadata.severity, name, emptydir_state,
+    policy_metadata.errcode])\n\n    info := {\n\t\t\n        \"name\": policy_metadata.name,\n
+    \       \"severity\": policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n
+    \       \"msg\": msg,\n\n    }\n    \n}\n\n# check_emptydir accepts three values
+    (volume, exceed_err_msg, sizeLimit) \n# returns whether there the sizeLimit configuration
+    for emptyDir is present, in megaBytes, and below the sizeLimit set above\ncheck_emptydir(volume,
+    exceed_err_msg, sizeLimit) = \"is not set\" {\n\t\n    volume.emptyDir\n    not
+    volume.emptyDir.sizeLimit\n    \n} else = \"is not in Megabytes\" {\n\n    volume.emptyDir.sizeLimit\n
+    \   not endswith(trim_space(volume.emptyDir.sizeLimit), \"M\")\n    \n} else =
+    exceed_err_msg {\n\n    volume.emptyDir.sizeLimit\n    limit := to_number(trim(trim_space(volume.emptyDir.sizeLimit),
+    \"M\"))\n    limit > sizeLimit\n    \n}\n"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-emptydir-check
+  namespace: magtape-system
+---
+
+apiVersion: v1
+data:
+  policy-host-path-check.rego: "package kubernetes.admission.policy_host_path\n\npolicy_metadata
+    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-host-path\",\n    \"severity\":
+    \"MED\",\n    \"errcode\": \"MT1010\",\n    \"targets\": {\"Pod\"},\n\n}\n\nkind
+    = input.request.kind.kind\n\nmatches {\n\n    # Verify request object type matches
+    targets\n    policy_metadata.targets[kind]\n    \n}\n\ndeny[info] {\n\n    # Find
+    volume spec\n    volumes := input.request.object.spec.volumes\n\n    # Check for
+    hostPath in each volume spec\n    volume := volumes[_]\n    name := volume.name\n\thostpath_state
+    := check_hostpath(volume)\n\n    # Build message to return\n    msg := sprintf(\"[FAIL]
+    %v - %v for volume \\\"%v\\\" (%v)\", [policy_metadata.severity, hostpath_state,
+    name, policy_metadata.errcode])\n\n    info := {\n\t\t\n        \"name\": policy_metadata.name,\n
+    \       \"severity\": policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n
+    \       \"msg\": msg,\n\n    }\n    \n}\n\n# check_hostpath accepts a value (volume)\n#
+    returns whether there is a hostPath configured in the volume\ncheck_hostpath(volume)
+    = \"hostPath is configured\" {\n\t\n\tvolume.hostPath\n    \n}\n"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-host-path-check
+  namespace: magtape-system
+---
+
+apiVersion: v1
+data:
+  policy-host-port-check.rego: "package kubernetes.admission.policy_hostport\n\npolicy_metadata
+    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-hostport\",\n    \"severity\":
+    \"HIGH\",\n    \"errcode\": \"MT1008\",\n    \"targets\": {\"Pod\"},\n\n}\n\nkind
+    = input.request.kind.kind\n\nmatches {\n\n    # Verify request object type matches
+    targets\n    policy_metadata.targets[kind]\n\n}\n\ndeny[info] {\n\n    # Find
+    container spec\n    # Since only target is Pod, containers will always be found
+    in same place\n    containers := input.request.object.spec.containers\n\n    #
+    Check for hostPort in each container spec\n    container := containers[_]\n    name
+    := container.name\n    port_present := check_hostport(container)\n\n    # Build
+    message to return\n    msg := sprintf(\"[FAIL] %v - %v for container \\\"%v\\\"
+    (%v)\", [policy_metadata.severity, port_present, name, policy_metadata.errcode])\n\n
+    \   info := {\n\n        \"name\": policy_metadata.name,\n        \"severity\":
+    policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n        \"msg\":
+    msg,\n\n    }\n\n}\n\n# check_hostport accepts a value (container) \n# returns
+    whether the hostPort is found in config\ncheck_hostport(container) = \"hostPort
+    is configured\" {\n\n    ports := container.ports[_]\n    ports.hostPort\n\n}\n"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-host-port-check
+  namespace: magtape-system
+---
+
+apiVersion: v1
+data:
   policy-liveness-probe-check.rego: "package kubernetes.admission.policy_liveness_probe\n\npolicy_metadata
     = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-liveness-probe\",\n
     \   \"severity\": \"LOW\",\n    \"errcode\": \"MT1001\",\n    \"targets\": {\"Deployment\",
@@ -463,6 +550,75 @@ metadata:
     app: opa
     openpolicyagent.org/policy: rego
   name: policy-liveness-probe-check
+  namespace: magtape-system
+---
+
+apiVersion: v1
+data:
+  policy-node-port-range-check.rego: "package kubernetes.admission.policy_nodeport_range\n\nimport
+    data.kubernetes.namespaces\n\npolicy_metadata = {\n\n    # Set MagTape Policy
+    Info\n    \"name\": \"policy-nodeport-range\",\n    \"severity\": \"MED\",\n    \"errcode\":
+    \"MT2002\",\n    \"targets\": {\"Service\"},\n\n}\n\nkind = input.request.kind.kind\nsvc_type
+    = input.request.object.spec.type\nexception_val = \"na\"\n\nmatches {\n\n    #
+    Verify request object type matches targets\n    # Verify service is of type NodePort\n
+    \   policy_metadata.targets[kind]\n    svc_type == \"NodePort\"\n\n}\n\n# Generate
+    violation if nodePort Range is not within allocated range\ndeny[info] {\n\n    #
+    ns_name: namespace connected to service trying to be deployed\n    # ports: where
+    the hostport config is found within the service\n    # np_range: pull the information
+    connected to the nodeportRange label in the namespace yaml config\n    ns_name
+    := input.request.namespace\n    service_name := input.request.object.metadata.name\n
+    \   ports := input.request.object.spec.ports\n\n    port := ports[_]\n    np :=
+    port.nodePort\n    np_range := data.kubernetes.namespaces[ns_name].metadata.annotations[\"k8s.t-mobile.com/nodeportRange\"]\n
+    \   port_in_range := check_nodeport_range(np, np_range)\n\n    # Build message
+    to return\n    msg := sprintf(\"[FAIL] %v - nodePort %v %v for Service \\\"%v\\\"
+    (%v)\", [policy_metadata.severity, np, port_in_range, service_name, policy_metadata.errcode])\n\n
+    \   info := {\n\n        \"name\": policy_metadata.name,\n        \"severity\":
+    policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n        \"msg\":
+    msg,\n\n    }\n}\n\n# Generate violation if annotation contains anything besides
+    #, commas, hyphen, or exception_val\ndeny[info] {\n\n    # ns_name: namespace
+    connected to service trying to be deployed\n    # ports: where the hostport config
+    is found within the service\n    # np_range: pull the information connected to
+    the nodeportRange label in the namespace yaml config\n    ns_name := input.request.namespace\n
+    \   service_name := input.request.object.metadata.name\n    ports := input.request.object.spec.ports\n\n
+    \   port := ports[_]\n    np_range := data.kubernetes.namespaces[ns_name].metadata.annotations[\"k8s.t-mobile.com/nodeportRange\"]\n
+    \   annotation_valid := check_annotation(np_range, exception_val)\n\n\n    # Build
+    message to return\n    msg := sprintf(\"[FAIL] %v - Invalid data in nodePort annotation
+    in \\\"%v\\\" namespace (%v)\", [policy_metadata.severity, ns_name, policy_metadata.errcode])\n
+    \   info := {\n\n        \"name\": policy_metadata.name,\n        \"severity\":
+    policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n        \"msg\":
+    msg,\n\n    }\n\n}\n\n# Check_annotation accepts two values (np, np_range)\n#
+    Returns whether the nodeport range contains unknown symbols and is not the exception
+    value\ncheck_annotation(np_range, exception_val) {\n\n    not re_match(`^[-, ]*[0-9
+    ]+(?:-[0-9 ]+)?(,[0-9 ]+(?:-[0-9 ]+)?)*[-, ]*$`, trim_space(np_range))\n    lower(trim_space(np_range))
+    != exception_val\n\n}\n\n\n# Check_nodeport_range accepts two values (np, np_range)
+    \n# Returns whether the nodeport(np) is within the range(np_range)\ncheck_nodeport_range(np,
+    np_range) = \"is out of defined range\" {\n\n    contains(np_range, \"-\")\n    contains(np_range,
+    \",\")\n    re_match(`^[-, ]*[0-9 ]+(?:-[0-9 ]+)?(,[0-9 ]+(?:-[0-9 ]+)?)*[-, ]*$`,
+    trim_space(np_range))\n    range_split := split(np_range, \",\")\n    not range_matches_any(np,
+    range_split)\n    \n} else = \"is out of defined range\" {\n\n    contains(np_range,
+    \"-\")\n    not contains(np_range, \",\")\n    re_match(`^[-, ]*[0-9 ]+(?:-[0-9
+    ]+)?(,[0-9 ]+(?:-[0-9 ]+)?)*[-, ]*$`, trim_space(np_range))\n    not range_matches(np,
+    np_range)\n\n} else = \"is out of defined range\" {\n\t\n    contains(np_range,
+    \",\")\n    not contains(np_range, \"-\")\n    re_match(`^[-, ]*[0-9 ]+(?:-[0-9
+    ]+)?(,[0-9 ]+(?:-[0-9 ]+)?)*[-, ]*$`, trim_space(np_range))\n    range_split :=
+    split(np_range, \",\")\n    not range_matches_any(np, range_split)\n\n}  else
+    = \"is out of defined range\" {\n\n    not contains(np_range, \",\")\n    not
+    contains(np_range, \"-\")\n    re_match(`^\\d+$`, trim_space(np_range))\n    to_number(trim_space(np_range))
+    != to_number(np)\n\n}\n\nrange_matches_any(npNum, list) {\n    range_matches(npNum,
+    list[_])\n}\n\n# Checks if nodePort is in comma separated list\nrange_matches(npNum,
+    list) {\n    not contains(list, \"-\")\n    not contains(list, \",\")\n    count(trim_space(list))
+    > 0\n\n    to_number(trim_space(list)) == to_number(npNum)\n}\n\n# Checks if nodePort
+    is within range\nrange_matches(npNum, list) {\n    contains(list, \"-\")\n    range_split
+    := split(list, \"-\")\n    count(trim_space(range_split[0])) > 0\n    count(trim_space(range_split[1]))
+    > 0\n\n    to_number(npNum) >= to_number(trim_space(range_split[0]))\n    to_number(npNum)
+    <= to_number(trim_space(range_split[1]))\n}\n"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-node-port-range-check
   namespace: magtape-system
 ---
 
@@ -650,6 +806,59 @@ metadata:
     app: opa
     openpolicyagent.org/policy: rego
   name: policy-resource-requests-check
+  namespace: magtape-system
+---
+
+apiVersion: v1
+data:
+  policy-singleton-pod-check.rego: |
+    package kubernetes.admission.policy_singleton_pod_check
+
+    policy_metadata = {
+
+        # Set MagTape Policy Info
+        "name": "policy-singleton-pod-check",
+        "severity": "LOW",
+        "errcode": "MT1007",
+        "targets": {"Pod"},
+
+    }
+
+    kind = input.request.kind.kind
+
+    matches {
+
+        # Verify request object type matches targets
+        policy_metadata.targets[kind]
+
+    }
+
+    deny[info] {
+
+        name := input.request.object.metadata.name
+
+        # Check for ownerReferences, will only be present if something is dependent on the Pod
+        not input.request.object.metadata.ownerReferences
+
+        # Build message to return
+        msg := sprintf("[FAIL] %v - \"%v\" is a singleton pod. (%v)", [policy_metadata.severity, name, policy_metadata.errcode])
+
+        info := {
+
+            "name": policy_metadata.name,
+            "severity": policy_metadata.severity,
+            "errcode": policy_metadata.errcode,
+            "msg": msg,
+
+        }
+    }
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: opa
+    openpolicyagent.org/policy: rego
+  name: policy-singleton-pod-check
   namespace: magtape-system
 ---
 

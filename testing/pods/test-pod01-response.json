@@ -1,0 +1,9 @@
+{
+  "response": {
+    "allowed": false,
+    "status": {
+      "message": "[FAIL] HIGH - hostPort is configured for container \"test-pod01\" (MT1008), [FAIL] LOW - Liveness Probe missing for container \"test-pod01\" (MT1001), [FAIL] LOW - Readiness Probe missing for container \"test-pod01\" (MT1002), [FAIL] LOW - Resource limits missing (CPU/MEM) for container \"test-pod01\" (MT1003), [FAIL] LOW - Resource requests missing (CPU/MEM) for container \"test-pod01\" (MT1004)"
+    },
+    "uid": "573f0594-58cb-11ea-b876-005056a7db08"
+  }
+}

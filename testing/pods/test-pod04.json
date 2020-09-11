@@ -1,0 +1,109 @@
+{
+  "apiVersion": "admission.k8s.io/v1beta1",
+  "kind": "AdmissionReview",
+  "request": {
+    "dryRun": false,
+    "kind": {
+      "group": "",
+      "kind": "Pod",
+      "version": "v1"
+    },
+    "namespace": "test1",
+    "object": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "metadata": {
+        "annotations": {
+          "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"Pod\",\"metadata\":{\"annotations\":{},\"labels\":{\"run\":\"toolbox\"},\"name\":\"toolbox\",\"namespace\":\"test1\",\"ownerReferences\":[{\"apiVersion\":\"v1\",\"kind\":\"Replica\",\"name\":\"my-repset\",\"uid\":\"uidexa1\"}]},\"spec\":{\"containers\":[{\"command\":[\"sleep\",\"360000\"],\"image\":\"jmsearcy/twrtools\",\"imagePullPolicy\":\"Always\",\"name\":\"toolbox\"}]}}\n"
+        },
+        "creationTimestamp": "2020-03-04T21:38:41Z",
+        "labels": {
+          "run": "toolbox"
+        },
+        "name": "test-pod04",
+        "namespace": "test1",
+        "ownerReferences": [
+          {
+            "apiVersion": "v1",
+            "kind": "Replica",
+            "name": "my-repset",
+            "uid": "uidexa1"
+          }
+        ],
+        "uid": "84007904-5e60-11ea-a33d-005056a72b7b"
+      },
+      "spec": {
+        "containers": [
+          {
+            "command": [
+              "sleep",
+              "360000"
+            ],
+            "image": "jmsearcy/twrtools",
+            "imagePullPolicy": "Always",
+            "name": "toolbox",
+            "resources": {},
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "volumeMounts": [
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "default-token-q999w",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "dnsPolicy": "ClusterFirst",
+        "enableServiceLinks": true,
+        "priority": 0,
+        "restartPolicy": "Always",
+        "schedulerName": "default-scheduler",
+        "securityContext": {},
+        "serviceAccount": "default",
+        "serviceAccountName": "default",
+        "terminationGracePeriodSeconds": 30,
+        "tolerations": [
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          },
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          }
+        ],
+        "volumes": [
+          {
+            "name": "default-token-q999w",
+            "secret": {
+              "secretName": "default-token-q999w"
+            }
+          }
+        ]
+      },
+      "status": {
+        "phase": "Pending",
+        "qosClass": "BestEffort"
+      }
+    },
+    "oldObject": null,
+    "operation": "CREATE",
+    "resource": {
+      "group": "",
+      "resource": "pods",
+      "version": "v1"
+    },
+    "uid": "84007d21-5e60-11ea-a33d-005056a72b7b",
+    "userInfo": {
+      "groups": [
+        "group1"
+      ],
+      "username": "user1"
+    }
+  }
+}

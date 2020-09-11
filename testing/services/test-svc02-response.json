@@ -1,0 +1,9 @@
+{
+    "response": {
+      "allowed": false,
+      "status": {
+        "message": "[FAIL] HIGH - nodePort out of defined range for Service \"test-svc01\" (MT2002)"
+      },
+      "uid": "386b7c9d-6ae7-11ea-b876-005056a7db08"
+    }
+  }
