@@ -4,11 +4,9 @@ on:
   pull_request:
     branches:
       - master
-      - ci-k8s-matrix
   push:
     branches:
       - master
-      - ci-k8s-matrix
 
 # Jobs
 jobs:
