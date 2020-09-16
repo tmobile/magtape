@@ -4,9 +4,11 @@ on:
   pull_request:
     branches:
       - master
+      - ci-k8s-matrix
   push:
     branches:
       - master
+      - ci-k8s-matrix
 
 # Jobs
 jobs:
@@ -67,7 +69,7 @@ jobs:
           version: "v0.9.0"
           image: ${{ matrix.kind-node-image }}
 
-    - name: Install MagTape on K8s
+    - name: Install MagTape
       timeout-minutes: 5
       run: |
         echo "Loading MagTape images to KinD nodes"
@@ -94,7 +96,7 @@ jobs:
       run: |
         make ns-create-test
 
-    - name: Install tools 
+    - name: Install Tools 
       timeout-minutes: 5
       run: |
         sudo add-apt-repository ppa:rmescandon/yq
