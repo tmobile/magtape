@@ -123,15 +123,21 @@ ci-lint-python:
 # Rego Targets ################################################################
 ###############################################################################
 
-# Run unit tests for MagTape/MagTape-Init
+# Run unit tests for MagTape Policies
 .PHONY: unit-rego
 unit-rego:
 
-	hack/run-python-tests.sh
+	opa test -v policies/
 
-# Run unit tests for MagTape/MagTape-Init
+# Check Coverage for MagTape Policy tests
+.PHONY: coverage-rego
+coverage-rego:
+
+	opa coverage --threshold 80.0 policies/
+
+# Run test suite for MagTape Policies
 .PHONY: test-rego
-test-rego: unit-rego
+test-rego: unit-rego coverage-rego
 
 # Lint Python and update python code
 .Phony: lint-rego
