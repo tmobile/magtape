@@ -441,26 +441,24 @@ spec:
 apiVersion: v1
 data:
   policy-emptydir-check.rego: "package kubernetes.admission.policy_emptydir\n\npolicy_metadata
-    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-emptydir\",\n    \"severity\":
-    \"MED\",\n    \"errcode\": \"MT1009\",\n    \"targets\": {\"Pod\"},\n\n}\n\nkind
-    = input.request.kind.kind\nsizeLimit = 100\n\nmatches {\n\n    # Verify request
-    object type matches targets\n    policy_metadata.targets[kind]\n    \n}\n\ndeny[info]
-    {\n\n    # Find volume spec\n    volumes := input.request.object.spec.volumes\n
-    \   exceed_err_msg := sprintf(\"is greater than %v Megabytes\", [sizeLimit])\n\n
-    \   # Checks emptydir configuration\n    volume := volumes[_]\n    name := volume.name\n
-    \   emptydir_state := check_emptydir(volume, exceed_err_msg, sizeLimit)\n\n    #
-    Build message to return\n    msg := sprintf(\"[FAIL] %v - Size limit of emptyDir
-    volume \\\"%v\\\" %v (%v)\", [policy_metadata.severity, name, emptydir_state,
-    policy_metadata.errcode])\n\n    info := {\n\t\t\n        \"name\": policy_metadata.name,\n
-    \       \"severity\": policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n
-    \       \"msg\": msg,\n\n    }\n    \n}\n\n# check_emptydir accepts three values
-    (volume, exceed_err_msg, sizeLimit) \n# returns whether there the sizeLimit configuration
-    for emptyDir is present, in megaBytes, and below the sizeLimit set above\ncheck_emptydir(volume,
-    exceed_err_msg, sizeLimit) = \"is not set\" {\n\t\n    volume.emptyDir\n    not
-    volume.emptyDir.sizeLimit\n    \n} else = \"is not in Megabytes\" {\n\n    volume.emptyDir.sizeLimit\n
-    \   not endswith(trim_space(volume.emptyDir.sizeLimit), \"M\")\n    \n} else =
-    exceed_err_msg {\n\n    volume.emptyDir.sizeLimit\n    limit := to_number(trim(trim_space(volume.emptyDir.sizeLimit),
-    \"M\"))\n    limit > sizeLimit\n    \n}\n"
+    = {\n\t# Set MagTape Policy Info\n\t\"name\": \"policy-emptydir\",\n\t\"severity\":
+    \"MED\",\n\t\"errcode\": \"MT1009\",\n\t\"targets\": {\"Pod\"},\n}\n\nkind = input.request.kind.kind\n\nsizeLimit
+    = 100\n\nmatches {\n\t# Verify request object type matches targets\n\tpolicy_metadata.targets[kind]\n}\n\ndeny[info]
+    {\n\t# Find volume spec\n\tvolumes := input.request.object.spec.volumes\n\texceed_err_msg
+    := sprintf(\"is greater than %v Megabytes\", [sizeLimit])\n\n\t# Checks emptydir
+    configuration\n\tvolume := volumes[_]\n\tname := volume.name\n\temptydir_state
+    := check_emptydir(volume, exceed_err_msg, sizeLimit)\n\n\t# Build message to return\n\tmsg
+    := sprintf(\"[FAIL] %v - Size limit of emptyDir volume \\\"%v\\\" %v (%v)\", [policy_metadata.severity,
+    name, emptydir_state, policy_metadata.errcode])\n\n\tinfo := {\n\t\t\"name\":
+    policy_metadata.name,\n\t\t\"severity\": policy_metadata.severity,\n\t\t\"errcode\":
+    policy_metadata.errcode,\n\t\t\"msg\": msg,\n\t}\n}\n\n# check_emptydir accepts
+    three values (volume, exceed_err_msg, sizeLimit) \n# returns whether there the
+    sizeLimit configuration for emptyDir is present, in megaBytes, and below the sizeLimit
+    set above\ncheck_emptydir(volume, exceed_err_msg, sizeLimit) = \"is not set\"
+    {\n\tvolume.emptyDir\n\tnot volume.emptyDir.sizeLimit\n} else = \"is not in Megabytes\"
+    {\n\tvolume.emptyDir.sizeLimit\n\tnot endswith(trim_space(volume.emptyDir.sizeLimit),
+    \"M\")\n} else = exceed_err_msg {\n\tvolume.emptyDir.sizeLimit\n\tlimit := to_number(trim(trim_space(volume.emptyDir.sizeLimit),
+    \"M\"))\n\tlimit > sizeLimit\n}\n"
 kind: ConfigMap
 metadata:
   creationTimestamp: null
@@ -474,19 +472,18 @@ metadata:
 apiVersion: v1
 data:
   policy-host-path-check.rego: "package kubernetes.admission.policy_host_path\n\npolicy_metadata
-    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-host-path\",\n    \"severity\":
-    \"MED\",\n    \"errcode\": \"MT1010\",\n    \"targets\": {\"Pod\"},\n\n}\n\nkind
-    = input.request.kind.kind\n\nmatches {\n\n    # Verify request object type matches
-    targets\n    policy_metadata.targets[kind]\n    \n}\n\ndeny[info] {\n\n    # Find
-    volume spec\n    volumes := input.request.object.spec.volumes\n\n    # Check for
-    hostPath in each volume spec\n    volume := volumes[_]\n    name := volume.name\n\thostpath_state
-    := check_hostpath(volume)\n\n    # Build message to return\n    msg := sprintf(\"[FAIL]
+    = {\n\t# Set MagTape Policy Info\n\t\"name\": \"policy-host-path\",\n\t\"severity\":
+    \"MED\",\n\t\"errcode\": \"MT1010\",\n\t\"targets\": {\"Pod\"},\n}\n\nkind = input.request.kind.kind\n\nmatches
+    {\n\t# Verify request object type matches targets\n\tpolicy_metadata.targets[kind]\n}\n\ndeny[info]
+    {\n\t# Find volume spec\n\tvolumes := input.request.object.spec.volumes\n\n\t#
+    Check for hostPath in each volume spec\n\tvolume := volumes[_]\n\tname := volume.name\n\thostpath_state
+    := check_hostpath(volume)\n\n\t# Build message to return\n\tmsg := sprintf(\"[FAIL]
     %v - %v for volume \\\"%v\\\" (%v)\", [policy_metadata.severity, hostpath_state,
-    name, policy_metadata.errcode])\n\n    info := {\n\t\t\n        \"name\": policy_metadata.name,\n
-    \       \"severity\": policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n
-    \       \"msg\": msg,\n\n    }\n    \n}\n\n# check_hostpath accepts a value (volume)\n#
-    returns whether there is a hostPath configured in the volume\ncheck_hostpath(volume)
-    = \"hostPath is configured\" {\n\t\n\tvolume.hostPath\n    \n}\n"
+    name, policy_metadata.errcode])\n\n\tinfo := {\n\t\t\"name\": policy_metadata.name,\n\t\t\"severity\":
+    policy_metadata.severity,\n\t\t\"errcode\": policy_metadata.errcode,\n\t\t\"msg\":
+    msg,\n\t}\n}\n\n# check_hostpath accepts a value (volume)\n# returns whether there
+    is a hostPath configured in the volume\ncheck_hostpath(volume) = \"hostPath is
+    configured\" {\n\tvolume.hostPath\n}\n"
 kind: ConfigMap
 metadata:
   creationTimestamp: null
@@ -500,21 +497,19 @@ metadata:
 apiVersion: v1
 data:
   policy-host-port-check.rego: "package kubernetes.admission.policy_hostport\n\npolicy_metadata
-    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-hostport\",\n    \"severity\":
-    \"HIGH\",\n    \"errcode\": \"MT1008\",\n    \"targets\": {\"Pod\"},\n\n}\n\nkind
-    = input.request.kind.kind\n\nmatches {\n\n    # Verify request object type matches
-    targets\n    policy_metadata.targets[kind]\n\n}\n\ndeny[info] {\n\n    # Find
-    container spec\n    # Since only target is Pod, containers will always be found
-    in same place\n    containers := input.request.object.spec.containers\n\n    #
-    Check for hostPort in each container spec\n    container := containers[_]\n    name
-    := container.name\n    port_present := check_hostport(container)\n\n    # Build
-    message to return\n    msg := sprintf(\"[FAIL] %v - %v for container \\\"%v\\\"
-    (%v)\", [policy_metadata.severity, port_present, name, policy_metadata.errcode])\n\n
-    \   info := {\n\n        \"name\": policy_metadata.name,\n        \"severity\":
-    policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n        \"msg\":
-    msg,\n\n    }\n\n}\n\n# check_hostport accepts a value (container) \n# returns
-    whether the hostPort is found in config\ncheck_hostport(container) = \"hostPort
-    is configured\" {\n\n    ports := container.ports[_]\n    ports.hostPort\n\n}\n"
+    = {\n\t# Set MagTape Policy Info\n\t\"name\": \"policy-hostport\",\n\t\"severity\":
+    \"HIGH\",\n\t\"errcode\": \"MT1008\",\n\t\"targets\": {\"Pod\"},\n}\n\nkind =
+    input.request.kind.kind\n\nmatches {\n\t# Verify request object type matches targets\n\tpolicy_metadata.targets[kind]\n}\n\ndeny[info]
+    {\n\t# Find container spec\n\t# Since only target is Pod, containers will always
+    be found in same place\n\tcontainers := input.request.object.spec.containers\n\n\t#
+    Check for hostPort in each container spec\n\tcontainer := containers[_]\n\tname
+    := container.name\n\tport_present := check_hostport(container)\n\n\t# Build message
+    to return\n\tmsg := sprintf(\"[FAIL] %v - %v for container \\\"%v\\\" (%v)\",
+    [policy_metadata.severity, port_present, name, policy_metadata.errcode])\n\n\tinfo
+    := {\n\t\t\"name\": policy_metadata.name,\n\t\t\"severity\": policy_metadata.severity,\n\t\t\"errcode\":
+    policy_metadata.errcode,\n\t\t\"msg\": msg,\n\t}\n}\n\n# check_hostport accepts
+    a value (container) \n# returns whether the hostPort is found in config\ncheck_hostport(container)
+    = \"hostPort is configured\" {\n\tports := container.ports[_]\n\tports.hostPort\n}\n"
 kind: ConfigMap
 metadata:
   creationTimestamp: null
@@ -528,21 +523,20 @@ metadata:
 apiVersion: v1
 data:
   policy-liveness-probe-check.rego: "package kubernetes.admission.policy_liveness_probe\n\npolicy_metadata
-    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-liveness-probe\",\n
-    \   \"severity\": \"LOW\",\n    \"errcode\": \"MT1001\",\n    \"targets\": {\"Deployment\",
-    \"StatefulSet\", \"DaemonSet\", \"Pod\"},\n\n}\n\nservicetype = input.request.kind.kind\n\nmatches
-    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
-    \   \n}\n\ndeny[info] {\n\n    # Find container spec\n    containers := find_containers(servicetype,
-    policy_metadata)\n\n    # Check for livenessProbe in each container spec\n    container
-    := containers[_]\n    name := container.name\n    not container.livenessProbe\n\n
-    \   # Build message to return\n    msg = sprintf(\"[FAIL] %v - Liveness Probe
-    missing for container \\\"%v\\\" (%v)\", [policy_metadata.severity, name, policy_metadata.errcode])\n\n
-    \   info := {\n        \n    \t\"name\": policy_metadata.name,\n\t\t\"severity\":
-    policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n\t\t\"msg\":
-    msg,\n    }\n}\n\n# find_containers accepts a value (k8s object type) and returns
-    the container spec\nfind_containers(type, metadata) = input.request.object.spec.containers
-    {\n\n    type == \"Pod\"\n\n} else = input.request.object.spec.template.spec.containers
-    {\n\n\tmetadata.targets[type]\n    \n}"
+    = {\n\t# Set MagTape Policy Info\n\t\"name\": \"policy-liveness-probe\",\n\t\"severity\":
+    \"LOW\",\n\t\"errcode\": \"MT1001\",\n\t\"targets\": {\"Deployment\", \"StatefulSet\",
+    \"DaemonSet\", \"Pod\"},\n}\n\nservicetype = input.request.kind.kind\n\nmatches
+    {\n\t# Verify request object type matches targets\n\tpolicy_metadata.targets[servicetype]\n}\n\ndeny[info]
+    {\n\t# Find container spec\n\tcontainers := find_containers(servicetype, policy_metadata)\n\n\t#
+    Check for livenessProbe in each container spec\n\tcontainer := containers[_]\n\tname
+    := container.name\n\tnot container.livenessProbe\n\n\t# Build message to return\n\tmsg
+    = sprintf(\"[FAIL] %v - Liveness Probe missing for container \\\"%v\\\" (%v)\",
+    [policy_metadata.severity, name, policy_metadata.errcode])\n\n\tinfo := {\n\t\t\"name\":
+    policy_metadata.name,\n\t\t\"severity\": policy_metadata.severity,\n\t\t\"errcode\":
+    policy_metadata.errcode,\n\t\t\"msg\": msg,\n\t}\n}\n\n# find_containers accepts
+    a value (k8s object type) and returns the container spec\nfind_containers(type,
+    metadata) = input.request.object.spec.containers {\n\ttype == \"Pod\"\n} else
+    = input.request.object.spec.template.spec.containers {\n\tmetadata.targets[type]\n}\n"
 kind: ConfigMap
 metadata:
   creationTimestamp: null
@@ -556,61 +550,58 @@ metadata:
 apiVersion: v1
 data:
   policy-node-port-range-check.rego: "package kubernetes.admission.policy_nodeport_range\n\nimport
-    data.kubernetes.namespaces\n\npolicy_metadata = {\n\n    # Set MagTape Policy
-    Info\n    \"name\": \"policy-nodeport-range\",\n    \"severity\": \"MED\",\n    \"errcode\":
-    \"MT2002\",\n    \"targets\": {\"Service\"},\n\n}\n\nkind = input.request.kind.kind\nsvc_type
-    = input.request.object.spec.type\nexception_val = \"na\"\n\nmatches {\n\n    #
-    Verify request object type matches targets\n    # Verify service is of type NodePort\n
-    \   policy_metadata.targets[kind]\n    svc_type == \"NodePort\"\n\n}\n\n# Generate
-    violation if nodePort Range is not within allocated range\ndeny[info] {\n\n    #
-    ns_name: namespace connected to service trying to be deployed\n    # ports: where
-    the hostport config is found within the service\n    # np_range: pull the information
-    connected to the nodeportRange label in the namespace yaml config\n    ns_name
-    := input.request.namespace\n    service_name := input.request.object.metadata.name\n
-    \   ports := input.request.object.spec.ports\n\n    port := ports[_]\n    np :=
-    port.nodePort\n    np_range := data.kubernetes.namespaces[ns_name].metadata.annotations[\"k8s.t-mobile.com/nodeportRange\"]\n
-    \   port_in_range := check_nodeport_range(np, np_range)\n\n    # Build message
-    to return\n    msg := sprintf(\"[FAIL] %v - nodePort %v %v for Service \\\"%v\\\"
-    (%v)\", [policy_metadata.severity, np, port_in_range, service_name, policy_metadata.errcode])\n\n
-    \   info := {\n\n        \"name\": policy_metadata.name,\n        \"severity\":
-    policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n        \"msg\":
-    msg,\n\n    }\n}\n\n# Generate violation if annotation contains anything besides
-    #, commas, hyphen, or exception_val\ndeny[info] {\n\n    # ns_name: namespace
-    connected to service trying to be deployed\n    # ports: where the hostport config
-    is found within the service\n    # np_range: pull the information connected to
-    the nodeportRange label in the namespace yaml config\n    ns_name := input.request.namespace\n
-    \   service_name := input.request.object.metadata.name\n    ports := input.request.object.spec.ports\n\n
-    \   port := ports[_]\n    np_range := data.kubernetes.namespaces[ns_name].metadata.annotations[\"k8s.t-mobile.com/nodeportRange\"]\n
-    \   annotation_valid := check_annotation(np_range, exception_val)\n\n\n    # Build
-    message to return\n    msg := sprintf(\"[FAIL] %v - Invalid data in nodePort annotation
-    in \\\"%v\\\" namespace (%v)\", [policy_metadata.severity, ns_name, policy_metadata.errcode])\n
-    \   info := {\n\n        \"name\": policy_metadata.name,\n        \"severity\":
-    policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n        \"msg\":
-    msg,\n\n    }\n\n}\n\n# Check_annotation accepts two values (np, np_range)\n#
-    Returns whether the nodeport range contains unknown symbols and is not the exception
-    value\ncheck_annotation(np_range, exception_val) {\n\n    not re_match(`^[-, ]*[0-9
-    ]+(?:-[0-9 ]+)?(,[0-9 ]+(?:-[0-9 ]+)?)*[-, ]*$`, trim_space(np_range))\n    lower(trim_space(np_range))
-    != exception_val\n\n}\n\n\n# Check_nodeport_range accepts two values (np, np_range)
-    \n# Returns whether the nodeport(np) is within the range(np_range)\ncheck_nodeport_range(np,
-    np_range) = \"is out of defined range\" {\n\n    contains(np_range, \"-\")\n    contains(np_range,
-    \",\")\n    re_match(`^[-, ]*[0-9 ]+(?:-[0-9 ]+)?(,[0-9 ]+(?:-[0-9 ]+)?)*[-, ]*$`,
-    trim_space(np_range))\n    range_split := split(np_range, \",\")\n    not range_matches_any(np,
-    range_split)\n    \n} else = \"is out of defined range\" {\n\n    contains(np_range,
-    \"-\")\n    not contains(np_range, \",\")\n    re_match(`^[-, ]*[0-9 ]+(?:-[0-9
-    ]+)?(,[0-9 ]+(?:-[0-9 ]+)?)*[-, ]*$`, trim_space(np_range))\n    not range_matches(np,
-    np_range)\n\n} else = \"is out of defined range\" {\n\t\n    contains(np_range,
-    \",\")\n    not contains(np_range, \"-\")\n    re_match(`^[-, ]*[0-9 ]+(?:-[0-9
-    ]+)?(,[0-9 ]+(?:-[0-9 ]+)?)*[-, ]*$`, trim_space(np_range))\n    range_split :=
-    split(np_range, \",\")\n    not range_matches_any(np, range_split)\n\n}  else
-    = \"is out of defined range\" {\n\n    not contains(np_range, \",\")\n    not
-    contains(np_range, \"-\")\n    re_match(`^\\d+$`, trim_space(np_range))\n    to_number(trim_space(np_range))
-    != to_number(np)\n\n}\n\nrange_matches_any(npNum, list) {\n    range_matches(npNum,
+    data.kubernetes.namespaces\n\npolicy_metadata = {\n\t# Set MagTape Policy Info\n\t\"name\":
+    \"policy-nodeport-range\",\n\t\"severity\": \"MED\",\n\t\"errcode\": \"MT2002\",\n\t\"targets\":
+    {\"Service\"},\n}\n\nkind = input.request.kind.kind\n\nsvc_type = input.request.object.spec.type\n\nexception_val
+    = \"na\"\n\nmatches {\n\t# Verify request object type matches targets\n\t# Verify
+    service is of type NodePort\n\tpolicy_metadata.targets[kind]\n\tsvc_type == \"NodePort\"\n}\n\n#
+    Generate violation if nodePort Range is not within allocated range\ndeny[info]
+    {\n\t# ns_name: namespace connected to service trying to be deployed\n\t# ports:
+    where the hostport config is found within the service\n\t# np_range: pull the
+    information connected to the nodeportRange label in the namespace yaml config\n\tns_name
+    := input.request.namespace\n\tservice_name := input.request.object.metadata.name\n\tports
+    := input.request.object.spec.ports\n\n\tport := ports[_]\n\tnp := port.nodePort\n\tnp_range
+    := data.kubernetes.namespaces[ns_name].metadata.annotations[\"k8s.t-mobile.com/nodeportRange\"]\n\tport_in_range
+    := check_nodeport_range(np, np_range)\n\n\t# Build message to return\n\tmsg :=
+    sprintf(\"[FAIL] %v - nodePort %v %v for Service \\\"%v\\\" (%v)\", [policy_metadata.severity,
+    np, port_in_range, service_name, policy_metadata.errcode])\n\n\tinfo := {\n\t\t\"name\":
+    policy_metadata.name,\n\t\t\"severity\": policy_metadata.severity,\n\t\t\"errcode\":
+    policy_metadata.errcode,\n\t\t\"msg\": msg,\n\t}\n}\n\n# Generate violation if
+    annotation contains anything besides #, commas, hyphen, or exception_val\ndeny[info]
+    {\n\t# ns_name: namespace connected to service trying to be deployed\n\t# ports:
+    where the hostport config is found within the service\n\t# np_range: pull the
+    information connected to the nodeportRange label in the namespace yaml config\n\tns_name
+    := input.request.namespace\n\tservice_name := input.request.object.metadata.name\n\tports
+    := input.request.object.spec.ports\n\n\tport := ports[_]\n\tnp_range := data.kubernetes.namespaces[ns_name].metadata.annotations[\"k8s.t-mobile.com/nodeportRange\"]\n\tannotation_valid
+    := check_annotation(np_range, exception_val)\n\n\t# Build message to return\n\tmsg
+    := sprintf(\"[FAIL] %v - Invalid data in nodePort annotation in \\\"%v\\\" namespace
+    (%v)\", [policy_metadata.severity, ns_name, policy_metadata.errcode])\n\tinfo
+    := {\n\t\t\"name\": policy_metadata.name,\n\t\t\"severity\": policy_metadata.severity,\n\t\t\"errcode\":
+    policy_metadata.errcode,\n\t\t\"msg\": msg,\n\t}\n}\n\n# Check_annotation accepts
+    two values (np, np_range)\n# Returns whether the nodeport range contains unknown
+    symbols and is not the exception value\ncheck_annotation(np_range, exception_val)
+    {\n\tnot re_match(`^[-, ]*[0-9 ]+(?:-[0-9 ]+)?(,[0-9 ]+(?:-[0-9 ]+)?)*[-, ]*$`,
+    trim_space(np_range))\n\tlower(trim_space(np_range)) != exception_val\n}\n\n#
+    Check_nodeport_range accepts two values (np, np_range) \n# Returns whether the
+    nodeport(np) is within the range(np_range)\ncheck_nodeport_range(np, np_range)
+    = \"is out of defined range\" {\n\tcontains(np_range, \"-\")\n\tcontains(np_range,
+    \",\")\n\tre_match(`^[-, ]*[0-9 ]+(?:-[0-9 ]+)?(,[0-9 ]+(?:-[0-9 ]+)?)*[-, ]*$`,
+    trim_space(np_range))\n\trange_split := split(np_range, \",\")\n\tnot range_matches_any(np,
+    range_split)\n} else = \"is out of defined range\" {\n\tcontains(np_range, \"-\")\n\tnot
+    contains(np_range, \",\")\n\tre_match(`^[-, ]*[0-9 ]+(?:-[0-9 ]+)?(,[0-9 ]+(?:-[0-9
+    ]+)?)*[-, ]*$`, trim_space(np_range))\n\tnot range_matches(np, np_range)\n} else
+    = \"is out of defined range\" {\n\tcontains(np_range, \",\")\n\tnot contains(np_range,
+    \"-\")\n\tre_match(`^[-, ]*[0-9 ]+(?:-[0-9 ]+)?(,[0-9 ]+(?:-[0-9 ]+)?)*[-, ]*$`,
+    trim_space(np_range))\n\trange_split := split(np_range, \",\")\n\tnot range_matches_any(np,
+    range_split)\n} else = \"is out of defined range\" {\n\tnot contains(np_range,
+    \",\")\n\tnot contains(np_range, \"-\")\n\tre_match(`^\\d+$`, trim_space(np_range))\n\tto_number(trim_space(np_range))
+    != to_number(np)\n}\n\nrange_matches_any(npNum, list) {\n\trange_matches(npNum,
     list[_])\n}\n\n# Checks if nodePort is in comma separated list\nrange_matches(npNum,
-    list) {\n    not contains(list, \"-\")\n    not contains(list, \",\")\n    count(trim_space(list))
-    > 0\n\n    to_number(trim_space(list)) == to_number(npNum)\n}\n\n# Checks if nodePort
-    is within range\nrange_matches(npNum, list) {\n    contains(list, \"-\")\n    range_split
-    := split(list, \"-\")\n    count(trim_space(range_split[0])) > 0\n    count(trim_space(range_split[1]))
-    > 0\n\n    to_number(npNum) >= to_number(trim_space(range_split[0]))\n    to_number(npNum)
+    list) {\n\tnot contains(list, \"-\")\n\tnot contains(list, \",\")\n\tcount(trim_space(list))
+    > 0\n\n\tto_number(trim_space(list)) == to_number(npNum)\n}\n\n# Checks if nodePort
+    is within range\nrange_matches(npNum, list) {\n\tcontains(list, \"-\")\n\trange_split
+    := split(list, \"-\")\n\tcount(trim_space(range_split[0])) > 0\n\tcount(trim_space(range_split[1]))
+    > 0\n\n\tto_number(npNum) >= to_number(trim_space(range_split[0]))\n\tto_number(npNum)
     <= to_number(trim_space(range_split[1]))\n}\n"
 kind: ConfigMap
 metadata:
@@ -625,34 +616,33 @@ metadata:
 apiVersion: v1
 data:
   policy-pdb-check.rego: "package kubernetes.admission.policy_pdb\n\npolicy_metadata
-    = {\n\n\t# Set MagTape Policy Info\n\t\"name\": \"policy-pdb\",\n\t\"severity\":
-    \"HIGH\",\n\t\"errcode\": \"MT1005\",\n\t\"targets\": {\"PodDisruptionBudget\"},\n\n}\n\nservicetype
-    = input.request.kind.kind\n\nmatches {\n\n    # Verify request object type matches
-    targets\n    policy_metadata.targets[servicetype]\n    \n}\n\nlimits = {\n\n\t\"minAvailable\":
-    [0, 66],\n    \"maxUnavailable\": [33, 100],\n\t\n}\n\n# Generates a violation
-    if the input doesn't specify a percentage (e.g., they used an absolute.)\ndeny[info]
-    {\n\n\t# Get limit type\n\tlimits[name]\n\n    # Get limit value\n\tvalue := input.request.object.spec[name]\n\n
-    \ \t# Verify the value is a percentage\n\t[_, false] = get_percentage(value)\n\n
-    \   msg := sprintf(\"[FAIL] %v - Value \\\"%v\\\" for \\\"%v\\\" should be a Percentage,
+    = {\n\t# Set MagTape Policy Info\n\t\"name\": \"policy-pdb\",\n\t\"severity\":
+    \"HIGH\",\n\t\"errcode\": \"MT1005\",\n\t\"targets\": {\"PodDisruptionBudget\"},\n}\n\nservicetype
+    = input.request.kind.kind\n\nmatches {\n\t# Verify request object type matches
+    targets\n\tpolicy_metadata.targets[servicetype]\n}\n\nlimits = {\n\t\"minAvailable\":
+    [0, 66],\n\t\"maxUnavailable\": [33, 100],\n}\n\n# Generates a violation if the
+    input doesn't specify a percentage (e.g., they used an absolute.)\ndeny[info]
+    {\n\t# Get limit type\n\tlimits[name]\n\n\t# Get limit value\n\tvalue := input.request.object.spec[name]\n\n\t#
+    Verify the value is a percentage\n\t[_, false] = get_percentage(value)\n\n\tmsg
+    := sprintf(\"[FAIL] %v - Value \\\"%v\\\" for \\\"%v\\\" should be a Percentage,
     not an Integer (%v)\", [policy_metadata.severity, value, name, policy_metadata.errcode])\n\n\tinfo
-    := {\n\n    \t\"name\": policy_metadata.name,\n\t\t\"severity\": policy_metadata.severity,\n
-    \       \"errcode\": policy_metadata.errcode,\n\t\t\"msg\": msg,\n\n    }\n\n}\n\n#
-    Generates a violation if the input specifes a percentage out-of-range.\ndeny[info]
-    {\n\n    # Get limit range\n\trange := limits[name]\n\n\t# Get the percentage
-    value\n    [percent, true] = get_percentage(input.request.object.spec[name])\n\n
-    \   # Verify the percentage is within range\n\tnot within_range(percent, range)\n\n
-    \   msg := sprintf(\"[FAIL] %v - Value (%v%%) for \\\"%v\\\" not within range
-    %v%%-%v%% (%v)\", [policy_metadata.severity, percent, name, range[0], range[1],
-    policy_metadata.errcode])\n\n\tinfo := {\n\n        \"name\": policy_metadata.name,\n
-    \       \"severity\": policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n
-    \       \"msg\": msg,\n\n    }\n\n}\n\nwithin_range(x, [_min, _max]) {\n\n\tx
-    >= _min\n    x <= _max\n\n}\n\n# get_percentage accepts a value and generates
-    a tuple containing the \n# numeric percentage value and a boolean value indicating
-    whether the\n# input value could be converted to a numeric percentage.\n#\n# Examples:\n#\n#
-    \  get_percentage(50) == [0, false]\n#   get_percentage(\"50\") == [0, false]\n#
-    \  get_percentage(\"50%\") == [50, true]\nget_percentage(value) = [0, false] {\n\n\tnot
-    is_string(value)\n\n} else = [0, false] {\n\n\tnot contains(value, \"%\")\n\n}
-    else = [percent, true] {\n\n\tpercent := to_number(trim(value, \"%\"))\n\n}"
+    := {\n\t\t\"name\": policy_metadata.name,\n\t\t\"severity\": policy_metadata.severity,\n\t\t\"errcode\":
+    policy_metadata.errcode,\n\t\t\"msg\": msg,\n\t}\n}\n\n# Generates a violation
+    if the input specifes a percentage out-of-range.\ndeny[info] {\n\t# Get limit
+    range\n\trange := limits[name]\n\n\t# Get the percentage value\n\t[percent, true]
+    = get_percentage(input.request.object.spec[name])\n\n\t# Verify the percentage
+    is within range\n\tnot within_range(percent, range)\n\n\tmsg := sprintf(\"[FAIL]
+    %v - Value (%v%%) for \\\"%v\\\" not within range %v%%-%v%% (%v)\", [policy_metadata.severity,
+    percent, name, range[0], range[1], policy_metadata.errcode])\n\n\tinfo := {\n\t\t\"name\":
+    policy_metadata.name,\n\t\t\"severity\": policy_metadata.severity,\n\t\t\"errcode\":
+    policy_metadata.errcode,\n\t\t\"msg\": msg,\n\t}\n}\n\nwithin_range(x, [_min,
+    _max]) {\n\tx >= _min\n\tx <= _max\n}\n\n# get_percentage accepts a value and
+    generates a tuple containing the \n# numeric percentage value and a boolean value
+    indicating whether the\n# input value could be converted to a numeric percentage.\n#\n#
+    Examples:\n#\n#   get_percentage(50) == [0, false]\n#   get_percentage(\"50\")
+    == [0, false]\n#   get_percentage(\"50%\") == [50, true]\nget_percentage(value)
+    = [0, false] {\n\tnot is_string(value)\n} else = [0, false] {\n\tnot contains(value,
+    \"%\")\n} else = [percent, true] {\n\tpercent := to_number(trim(value, \"%\"))\n}\n"
 kind: ConfigMap
 metadata:
   creationTimestamp: null
@@ -666,19 +656,19 @@ metadata:
 apiVersion: v1
 data:
   policy-port-name-mismatch.rego: "package kubernetes.admission.policy_port_name_mismatch\n\npolicy_metadata
-    = {\n    \n    # Set MagTape Policy Info\n    \"name\": \"policy-port-name-mismatch\",\n
-    \   \"severity\": \"HIGH\",\n    \"errcode\": \"MT1006\",\n    \"targets\": {\"Service\"},\n\n}\n\nservicetype
-    = input.request.kind.kind\nsvc_name := input.request.object.metadata.name\n\nmatches
-    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
-    \   \n}\n\ndeny[info] {\n\n    # Find service ports\n    ports := input.request.object.spec.ports\n\n
-    \   # Check all port spec's\n    port := ports[_]\n    port_name := port.name\n
-    \   port_number := port.port\n\n    # Check for mismatch between logical port
-    name and port number in service spec\n    port_name == \"http\"\n    port_number
-    == 443\n\n    msg = sprintf(\"[FAIL] %v - Logical port name \\\"%v\\\" mismatch
-    with port number \\\"%v\\\" for service \\\"%v\\\" (%v)\", [policy_metadata.severity,
-    port_name, port_number, svc_name, policy_metadata.errcode])\n\n    info := {\n\n
-    \       \"name\": policy_metadata.name,\n        \"severity\": policy_metadata.severity,\n
-    \       \"errcode\": policy_metadata.errcode,\n        \"msg\": msg,\n\n    }\n\n}"
+    = {\n\t# Set MagTape Policy Info\n\t\"name\": \"policy-port-name-mismatch\",\n\t\"severity\":
+    \"HIGH\",\n\t\"errcode\": \"MT1006\",\n\t\"targets\": {\"Service\"},\n}\n\nservicetype
+    = input.request.kind.kind\n\nsvc_name := input.request.object.metadata.name\n\nmatches
+    {\n\t# Verify request object type matches targets\n\tpolicy_metadata.targets[servicetype]\n}\n\ndeny[info]
+    {\n\t# Find service ports\n\tports := input.request.object.spec.ports\n\n\t# Check
+    all port spec's\n\tport := ports[_]\n\tport_name := port.name\n\tport_number :=
+    port.port\n\n\t# Check for mismatch between logical port name and port number
+    in service spec\n\tport_name == \"http\"\n\tport_number == 443\n\n\tmsg = sprintf(\"[FAIL]
+    %v - Logical port name \\\"%v\\\" mismatch with port number \\\"%v\\\" for service
+    \\\"%v\\\" (%v)\", [policy_metadata.severity, port_name, port_number, svc_name,
+    policy_metadata.errcode])\n\n\tinfo := {\n\t\t\"name\": policy_metadata.name,\n\t\t\"severity\":
+    policy_metadata.severity,\n\t\t\"errcode\": policy_metadata.errcode,\n\t\t\"msg\":
+    msg,\n\t}\n}\n"
 kind: ConfigMap
 metadata:
   creationTimestamp: null
@@ -692,21 +682,20 @@ metadata:
 apiVersion: v1
 data:
   policy-privileged-pod-check.rego: "package kubernetes.admission.policy_privileged_pod\n\npolicy_metadata
-    = {\n    \n    # Set MagTape Policy Info\n    \"name\": \"policy-privileged-pod\",\n
-    \   \"severity\": \"HIGH\",\n    \"errcode\": \"MT2001\",\n    \"targets\": {\"Deployment\",
-    \"StatefulSet\", \"DaemonSet\", \"Pod\"},\n\n}\n\nservicetype = input.request.kind.kind\n\nmatches
-    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
-    \   \n}\n\ndeny[info] {\n\n    # Find container spec\n    containers := find_containers(servicetype,
-    policy_metadata)\n\n    # Check for Privileged SecurityContext in container spec\n
-    \   container := containers[_]\n    name := container.name\n    container.securityContext.privileged\n\n
-    \   msg = sprintf(\"[FAIL] %v - Found privileged Security Context for container
-    \\\"%v\\\" (%v)\", [policy_metadata.severity, name, policy_metadata.errcode])\n\n
-    \   info := {\n\n        \"name\": policy_metadata.name,\n        \"severity\":
-    policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n        \"msg\":
-    msg,\n\n    }\n\n}\n\n# find_containers accepts a value (k8s object type) and
-    returns the container spec\nfind_containers(type, metadata) = input.request.object.spec.containers
-    {\n\n    type == \"Pod\"\n\n} else = input.request.object.spec.template.spec.containers
-    {\n\n\tmetadata.targets[type]\n    \n}"
+    = {\n\t# Set MagTape Policy Info\n\t\"name\": \"policy-privileged-pod\",\n\t\"severity\":
+    \"HIGH\",\n\t\"errcode\": \"MT2001\",\n\t\"targets\": {\"Deployment\", \"StatefulSet\",
+    \"DaemonSet\", \"Pod\"},\n}\n\nservicetype = input.request.kind.kind\n\nmatches
+    {\n\t# Verify request object type matches targets\n\tpolicy_metadata.targets[servicetype]\n}\n\ndeny[info]
+    {\n\t# Find container spec\n\tcontainers := find_containers(servicetype, policy_metadata)\n\n\t#
+    Check for Privileged SecurityContext in container spec\n\tcontainer := containers[_]\n\tname
+    := container.name\n\tcontainer.securityContext.privileged\n\n\tmsg = sprintf(\"[FAIL]
+    %v - Found privileged Security Context for container \\\"%v\\\" (%v)\", [policy_metadata.severity,
+    name, policy_metadata.errcode])\n\n\tinfo := {\n\t\t\"name\": policy_metadata.name,\n\t\t\"severity\":
+    policy_metadata.severity,\n\t\t\"errcode\": policy_metadata.errcode,\n\t\t\"msg\":
+    msg,\n\t}\n}\n\n# find_containers accepts a value (k8s object type) and returns
+    the container spec\nfind_containers(type, metadata) = input.request.object.spec.containers
+    {\n\ttype == \"Pod\"\n} else = input.request.object.spec.template.spec.containers
+    {\n\tmetadata.targets[type]\n}\n"
 kind: ConfigMap
 metadata:
   creationTimestamp: null
@@ -720,21 +709,20 @@ metadata:
 apiVersion: v1
 data:
   policy-readiness-probe-check.rego: "package kubernetes.admission.policy_readiness_probe\n\npolicy_metadata
-    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-readiness-probe\",\n
-    \   \"severity\": \"LOW\",\n    \"errcode\": \"MT1002\",\n    \"targets\": {\"Deployment\",
-    \"StatefulSet\", \"DaemonSet\", \"Pod\"},\n\n}\n\nservicetype = input.request.kind.kind\n\nmatches
-    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
-    \   \n}\n\ndeny[info] {\n\n    # Find container spec\n    containers := find_containers(servicetype,
-    policy_metadata)\n\n    # Check for ReadinessProbe in each container spec\n    container
-    := containers[_]\n    name := container.name\n    not container.readinessProbe\n\n
-    \   # Build message to return\n    msg = sprintf(\"[FAIL] %v - Readiness Probe
-    missing for container \\\"%v\\\" (%v)\", [policy_metadata.severity, name, policy_metadata.errcode])\n\n
-    \   info := {\n\n        \"name\": policy_metadata.name,\n        \"severity\":
-    policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n        \"msg\":
-    msg,\n\n    }\n\n}\n\n# find_containers accepts a value (k8s object type) and
-    returns the container spec\nfind_containers(type, metadata) = input.request.object.spec.containers
-    {\n\n    type == \"Pod\"\n\n} else = input.request.object.spec.template.spec.containers
-    {\n\n\tmetadata.targets[type]\n    \n}"
+    = {\n\t# Set MagTape Policy Info\n\t\"name\": \"policy-readiness-probe\",\n\t\"severity\":
+    \"LOW\",\n\t\"errcode\": \"MT1002\",\n\t\"targets\": {\"Deployment\", \"StatefulSet\",
+    \"DaemonSet\", \"Pod\"},\n}\n\nservicetype = input.request.kind.kind\n\nmatches
+    {\n\t# Verify request object type matches targets\n\tpolicy_metadata.targets[servicetype]\n}\n\ndeny[info]
+    {\n\t# Find container spec\n\tcontainers := find_containers(servicetype, policy_metadata)\n\n\t#
+    Check for ReadinessProbe in each container spec\n\tcontainer := containers[_]\n\tname
+    := container.name\n\tnot container.readinessProbe\n\n\t# Build message to return\n\tmsg
+    = sprintf(\"[FAIL] %v - Readiness Probe missing for container \\\"%v\\\" (%v)\",
+    [policy_metadata.severity, name, policy_metadata.errcode])\n\n\tinfo := {\n\t\t\"name\":
+    policy_metadata.name,\n\t\t\"severity\": policy_metadata.severity,\n\t\t\"errcode\":
+    policy_metadata.errcode,\n\t\t\"msg\": msg,\n\t}\n}\n\n# find_containers accepts
+    a value (k8s object type) and returns the container spec\nfind_containers(type,
+    metadata) = input.request.object.spec.containers {\n\ttype == \"Pod\"\n} else
+    = input.request.object.spec.template.spec.containers {\n\tmetadata.targets[type]\n}\n"
 kind: ConfigMap
 metadata:
   creationTimestamp: null
@@ -748,25 +736,25 @@ metadata:
 apiVersion: v1
 data:
   policy-resource-limits-check.rego: "package kubernetes.admission.policy_resource_limits\n\npolicy_metadata
-    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-resource-limits\",\n
-    \   \"severity\": \"LOW\",\n    \"errcode\": \"MT1003\",\n    \"targets\": {\"Deployment\",
-    \"StatefulSet\", \"DaemonSet\", \"Pod\"},\n\n}\n\nservicetype = input.request.kind.kind\n\nmatches
-    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
-    \   \n}\n\ndeny[info] {\n\n    # Find container spec\n    containers := find_containers(servicetype,
-    policy_metadata)\n\n    # Check for livenessProbe in container spec\n    container
-    := containers[_]\n    name := container.name\n    resource_type := get_resource_type(container)\n\n
-    \   # Build message to return\n    msg = sprintf(\"[FAIL] %v - Resource limits
-    missing (%v) for container \\\"%v\\\" (%v)\", [policy_metadata.severity, resource_type,
-    name, policy_metadata.errcode])\n\n    info := {\n\n        \"name\": policy_metadata.name,\n
-    \       \"severity\": policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n
-    \       \"msg\": msg,\n\n    }\n\n}\n\n# find_containers accepts a value (k8s
-    object type) and returns the container spec\nfind_containers(type, metadata) =
-    input.request.object.spec.containers {\n\n    type == \"Pod\"\n\n} else = input.request.object.spec.template.spec.containers
-    {\n\n\tmetadata.targets[type]\n    \n}\n\n# get_resource_type accepts a value
-    (containers) and returns the missing resource type based on missing limits\nget_resource_type(container)
-    = \"CPU/MEM\" {\n\n    not container.resources.limits.cpu\n    not container.resources.limits.memory\n
-    \   \n} else = \"CPU\" {\n\t\n    not container.resources.limits.cpu\n    \n}
-    else = \"MEM\" {\n\t\n    not container.resources.limits.memory\n    \n}"
+    = {\n\t# Set MagTape Policy Info\n\t\"name\": \"policy-resource-limits\",\n\t\"severity\":
+    \"LOW\",\n\t\"errcode\": \"MT1003\",\n\t\"targets\": {\"Deployment\", \"StatefulSet\",
+    \"DaemonSet\", \"Pod\"},\n}\n\nservicetype = input.request.kind.kind\n\nmatches
+    {\n\t# Verify request object type matches targets\n\tpolicy_metadata.targets[servicetype]\n}\n\ndeny[info]
+    {\n\t# Find container spec\n\tcontainers := find_containers(servicetype, policy_metadata)\n\n\t#
+    Check for livenessProbe in container spec\n\tcontainer := containers[_]\n\tname
+    := container.name\n\tresource_type := get_resource_type(container)\n\n\t# Build
+    message to return\n\tmsg = sprintf(\"[FAIL] %v - Resource limits missing (%v)
+    for container \\\"%v\\\" (%v)\", [policy_metadata.severity, resource_type, name,
+    policy_metadata.errcode])\n\n\tinfo := {\n\t\t\"name\": policy_metadata.name,\n\t\t\"severity\":
+    policy_metadata.severity,\n\t\t\"errcode\": policy_metadata.errcode,\n\t\t\"msg\":
+    msg,\n\t}\n}\n\n# find_containers accepts a value (k8s object type) and returns
+    the container spec\nfind_containers(type, metadata) = input.request.object.spec.containers
+    {\n\ttype == \"Pod\"\n} else = input.request.object.spec.template.spec.containers
+    {\n\tmetadata.targets[type]\n}\n\n# get_resource_type accepts a value (containers)
+    and returns the missing resource type based on missing limits\nget_resource_type(container)
+    = \"CPU/MEM\" {\n\tnot container.resources.limits.cpu\n\tnot container.resources.limits.memory\n}
+    else = \"CPU\" {\n\tnot container.resources.limits.cpu\n} else = \"MEM\" {\n\tnot
+    container.resources.limits.memory\n}\n"
 kind: ConfigMap
 metadata:
   creationTimestamp: null
@@ -780,25 +768,25 @@ metadata:
 apiVersion: v1
 data:
   policy-resource-requests-check.rego: "package kubernetes.admission.policy_resource_requests\n\npolicy_metadata
-    = {\n\n    # Set MagTape Policy Info\n    \"name\": \"policy-resource-requests\",\n
-    \   \"severity\": \"LOW\",\n    \"errcode\": \"MT1004\",\n    \"targets\": {\"Deployment\",
-    \"StatefulSet\", \"DaemonSet\", \"Pod\"},\n\n}\n\nservicetype = input.request.kind.kind\n\nmatches
-    {\n\n    # Verify request object type matches targets\n    policy_metadata.targets[servicetype]\n
-    \   \n}\n\ndeny[info] {\n\n    # Find container spec\n    containers := find_containers(servicetype,
-    policy_metadata)\n\n    # Check for livenessProbe in each container spec\n    container
-    := containers[_]\n    name := container.name\n    resource_type := get_resource_type(container)\n\n
-    \   # Build message to return\n    msg := sprintf(\"[FAIL] %v - Resource requests
-    missing (%v) for container \\\"%v\\\" (%v)\", [policy_metadata.severity, resource_type,
-    name, policy_metadata.errcode])\n\n    info := {\n\n        \"name\": policy_metadata.name,\n
-    \       \"severity\": policy_metadata.severity,\n        \"errcode\": policy_metadata.errcode,\n
-    \       \"msg\": msg,\n\n    }\n    \n}\n\n# find_containers accepts a value (k8s
-    object type) and returns the container spec\nfind_containers(type, metadata) =
-    input.request.object.spec.containers {\n\n    type == \"Pod\"\n\n} else = input.request.object.spec.template.spec.containers
-    {\n\n\tmetadata.targets[type]\n    \n}\n\n# get_resource_type accepts a value
-    (containers) and returns the missing resource type based on missing limits\nget_resource_type(container)
-    = \"CPU/MEM\" {\n\n    not container.resources.requests.cpu\n    not container.resources.requests.memory\n
-    \   \n} else = \"CPU\" {\n\t\n    not container.resources.requests.cpu\n    \n}
-    else = \"MEM\" {\n\t\n    not container.resources.requests.memory\n    \n}"
+    = {\n\t# Set MagTape Policy Info\n\t\"name\": \"policy-resource-requests\",\n\t\"severity\":
+    \"LOW\",\n\t\"errcode\": \"MT1004\",\n\t\"targets\": {\"Deployment\", \"StatefulSet\",
+    \"DaemonSet\", \"Pod\"},\n}\n\nservicetype = input.request.kind.kind\n\nmatches
+    {\n\t# Verify request object type matches targets\n\tpolicy_metadata.targets[servicetype]\n}\n\ndeny[info]
+    {\n\t# Find container spec\n\tcontainers := find_containers(servicetype, policy_metadata)\n\n\t#
+    Check for livenessProbe in each container spec\n\tcontainer := containers[_]\n\tname
+    := container.name\n\tresource_type := get_resource_type(container)\n\n\t# Build
+    message to return\n\tmsg := sprintf(\"[FAIL] %v - Resource requests missing (%v)
+    for container \\\"%v\\\" (%v)\", [policy_metadata.severity, resource_type, name,
+    policy_metadata.errcode])\n\n\tinfo := {\n\t\t\"name\": policy_metadata.name,\n\t\t\"severity\":
+    policy_metadata.severity,\n\t\t\"errcode\": policy_metadata.errcode,\n\t\t\"msg\":
+    msg,\n\t}\n}\n\n# find_containers accepts a value (k8s object type) and returns
+    the container spec\nfind_containers(type, metadata) = input.request.object.spec.containers
+    {\n\ttype == \"Pod\"\n} else = input.request.object.spec.template.spec.containers
+    {\n\tmetadata.targets[type]\n}\n\n# get_resource_type accepts a value (containers)
+    and returns the missing resource type based on missing limits\nget_resource_type(container)
+    = \"CPU/MEM\" {\n\tnot container.resources.requests.cpu\n\tnot container.resources.requests.memory\n}
+    else = \"CPU\" {\n\tnot container.resources.requests.cpu\n} else = \"MEM\" {\n\tnot
+    container.resources.requests.memory\n}\n"
 kind: ConfigMap
 metadata:
   creationTimestamp: null
@@ -811,47 +799,16 @@ metadata:
 
 apiVersion: v1
 data:
-  policy-singleton-pod-check.rego: |
-    package kubernetes.admission.policy_singleton_pod_check
-
-    policy_metadata = {
-
-        # Set MagTape Policy Info
-        "name": "policy-singleton-pod-check",
-        "severity": "LOW",
-        "errcode": "MT1007",
-        "targets": {"Pod"},
-
-    }
-
-    kind = input.request.kind.kind
-
-    matches {
-
-        # Verify request object type matches targets
-        policy_metadata.targets[kind]
-
-    }
-
-    deny[info] {
-
-        name := input.request.object.metadata.name
-
-        # Check for ownerReferences, will only be present if something is dependent on the Pod
-        not input.request.object.metadata.ownerReferences
-
-        # Build message to return
-        msg := sprintf("[FAIL] %v - \"%v\" is a singleton pod. (%v)", [policy_metadata.severity, name, policy_metadata.errcode])
-
-        info := {
-
-            "name": policy_metadata.name,
-            "severity": policy_metadata.severity,
-            "errcode": policy_metadata.errcode,
-            "msg": msg,
-
-        }
-    }
+  policy-singleton-pod-check.rego: "package kubernetes.admission.policy_singleton_pod_check\n\npolicy_metadata
+    = {\n\t# Set MagTape Policy Info\n\t\"name\": \"policy-singleton-pod-check\",\n\t\"severity\":
+    \"LOW\",\n\t\"errcode\": \"MT1007\",\n\t\"targets\": {\"Pod\"},\n}\n\nkind = input.request.kind.kind\n\nmatches
+    {\n\t# Verify request object type matches targets\n\tpolicy_metadata.targets[kind]\n}\n\ndeny[info]
+    {\n\tname := input.request.object.metadata.name\n\n\t# Check for ownerReferences,
+    will only be present if something is dependent on the Pod\n\tnot input.request.object.metadata.ownerReferences\n\n\t#
+    Build message to return\n\tmsg := sprintf(\"[FAIL] %v - \\\"%v\\\" is a singleton
+    pod. (%v)\", [policy_metadata.severity, name, policy_metadata.errcode])\n\n\tinfo
+    := {\n\t\t\"name\": policy_metadata.name,\n\t\t\"severity\": policy_metadata.severity,\n\t\t\"errcode\":
+    policy_metadata.errcode,\n\t\t\"msg\": msg,\n\t}\n}\n"
 kind: ConfigMap
 metadata:
   creationTimestamp: null
