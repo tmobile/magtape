@@ -24,8 +24,10 @@ jobs:
     - name: Install Dependencies
       timeout-minutes: 5
       run: |
-        curl -L -o opa https://openpolicyagent.org/downloads/${{ matrix.opa-version }}/opa_linux_amd64
-        mv opa /usr/local/bin
+        mkdir -p "${GITHUB_WORKSPACE}/bin"
+        curl -L -o "${GITHUB_WORKSPACE}/bin/opa" https://openpolicyagent.org/downloads/${{ matrix.opa-version }}/opa_linux_amd64
+        chmod +x "${GITHUB_WORKSPACE}/bin/opa"
+        echo "::add-path::${GITHUB_WORKSPACE}/bin"
 
     - name: Lint
       timeout-minutes: 5
@@ -43,6 +45,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+
+    - name: Install Dependencies
+      timeout-minutes: 5
+      run: |
+        mkdir -p "${GITHUB_WORKSPACE}/bin"
+        curl -L -o "${GITHUB_WORKSPACE}/bin/opa" https://openpolicyagent.org/downloads/${{ matrix.opa-version }}/opa_linux_amd64
+        chmod +x "${GITHUB_WORKSPACE}/bin/opa"
+        echo "::add-path::${GITHUB_WORKSPACE}/bin"
 
     - name: Execute Unit Tests
       timeout-minutes: 5
