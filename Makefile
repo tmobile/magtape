@@ -96,29 +96,53 @@ clean: uninstall
 ###############################################################################
 
 # Run unit tests for MagTape/MagTape-Init
-.PHONY: unit
-unit:
+.PHONY: unit-python
+unit-python:
 
 	hack/run-python-tests.sh
 
 # Run unit tests for MagTape/MagTape-Init
-.PHONY: test
-test: unit
+.PHONY: test-python
+test-python: unit-python
 
-# Cut new MagTape release
-.PHONY: release
-release: echo
-
-# Lint and update python code
-.Phony: lint
-lint:
+# Lint Python and update python code
+.Phony: lint-python
+lint-python:
 
 	black app/magtape-init/
 	black app/magtape/
 
-# Verify lint during CI
-.PHONY: ci-lint
-ci-lint:
+# Verify linting of Python during CI
+.PHONY: ci-lint-python
+ci-lint-python:
+
+	black --check app/magtape-init/
+	black --check app/magtape/
+
+###############################################################################
+# Rego Targets ################################################################
+###############################################################################
+
+# Run unit tests for MagTape/MagTape-Init
+.PHONY: unit-rego
+unit-rego:
+
+	hack/run-python-tests.sh
+
+# Run unit tests for MagTape/MagTape-Init
+.PHONY: test-rego
+test-rego: unit-rego
+
+# Lint Python and update python code
+.Phony: lint-rego
+lint-rego:
+
+	opa fmt ./policies
+	opa fmt 
+
+# Verify linting of Python during CI
+.PHONY: ci-lint-rego
+ci-lint-rego:
 
 	black --check app/magtape-init/
 	black --check app/magtape/
@@ -172,6 +196,10 @@ set-release-version:
 	sed -i='' "s/\(image: tmobile\/magtape:\).*/\1${MAGTAPE_VERSION}/" deploy/manifests/magtape-deploy.yaml
 	sed -i='' "s/\(image: openpolicyagent\/opa:\).*/\1${OPA_VERSION}/" deploy/manifests/magtape-deploy.yaml
 	sed -i='' "s/\(image: openpolicyagent\/kube-mgmt:\).*/\1${KUBE_MGMT_VERSION}/" deploy/manifests/magtape-deploy.yaml
+
+# Cut new MagTape release
+.PHONY: release
+release: echo
 
 ###############################################################################
 # Container Image Targets #####################################################

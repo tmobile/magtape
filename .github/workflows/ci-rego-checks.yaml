@@ -1,4 +1,4 @@
-name: python-checks
+name: rego-checks
 
 on:
   pull_request:
@@ -15,45 +15,44 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version:
-          - 3.8
+        opa-version:
+          - 0.19.2
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python ${{ matrix.opa-version }}
       uses: actions/setup-python@v1
       with:
-        python-version: ${{ matrix.python-version }}
+        opa-version: ${{ matrix.opa-version }}
 
     - name: Install dependencies
       timeout-minutes: 5
       run: |
-        python -m pip install --upgrade pip
+        curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
 
-    - name: Lint with Black
+    - name: Lint
       timeout-minutes: 5
       # Pinning Black at 19.x for now. Have seen flakey results with 20.x
       run: |
-        pip install black==19.10b0
-        make ci-lint-python
+        make ci-rego-lint
   # Job to execute unit tests
   unit-test:
     needs: lint
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version:
-          - 3.8
+        opa-version:
+          - 0.19.2
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python ${{ matrix.opa-version }}
       timeout-minutes: 5
       uses: actions/setup-python@v1
       with:
-        python-version: ${{ matrix.python-version }}
+        opa-version: ${{ matrix.opa-version }}
 
     - name: Install dependencies
       timeout-minutes: 5
@@ -69,4 +68,4 @@ jobs:
       timeout-minutes: 5
       run: |
         pip install coverage
-        make test-python
+        make test
