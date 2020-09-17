@@ -143,15 +143,14 @@ test-rego: unit-rego coverage-rego
 .Phony: lint-rego
 lint-rego:
 
-	opa fmt ./policies
-	opa fmt 
+	opa fmt -l policies/
+	opa fmt -w policies/
 
 # Verify linting of Python during CI
 .PHONY: ci-lint-rego
-ci-lint-rego:
+ci-lint-rego: 
 
-	black --check app/magtape-init/
-	black --check app/magtape/
+	hack/run-rego-lint.sh
 
 ###############################################################################
 # Functional Test Targets #####################################################
