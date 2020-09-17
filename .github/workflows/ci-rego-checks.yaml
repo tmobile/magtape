@@ -21,11 +21,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python ${{ matrix.opa-version }}
-      uses: actions/setup-python@v1
-      with:
-        opa-version: ${{ matrix.opa-version }}
-
     - name: Install Dependencies
       timeout-minutes: 5
       run: |
