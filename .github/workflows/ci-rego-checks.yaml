@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         opa-version:
-          - 0.19.2
+          - v0.19.2
 
     steps:
     - uses: actions/checkout@v2
@@ -41,7 +41,7 @@ jobs:
     strategy:
       matrix:
         opa-version:
-          - 0.19.2
+          - v0.19.2
 
     steps:
     - uses: actions/checkout@v2
