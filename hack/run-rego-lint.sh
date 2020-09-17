@@ -33,6 +33,8 @@ else
     echo
     echo "${unformatted_policies}"
     echo
+    opa fmt -d policies/
+    echo
     exit 1
 
 fi
