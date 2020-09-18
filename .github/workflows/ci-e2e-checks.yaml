@@ -41,7 +41,7 @@ jobs:
     - name: Build magtape-init Container Image
       #if: github.repository == 'tmobile/magtape'
       timeout-minutes: 10
-      uses: docker/build-push-action@v1
+      uses: docker/build-push-action@v2
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
@@ -53,7 +53,7 @@ jobs:
     - name: Build magtape Container Image
       #if: github.repository == 'tmobile/magtape'
       timeout-minutes: 10
-      uses: docker/build-push-action@v1
+      uses: docker/build-push-action@v2
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
