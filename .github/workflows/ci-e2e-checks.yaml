@@ -70,7 +70,7 @@ jobs:
           image: ${{ matrix.kind-node-image }}
 
     - name: Install MagTape
-      timeout-minutes: 5
+      timeout-minutes: 10
       run: |
         echo "Loading MagTape images to KinD nodes"
         GIT_SHA=${{github.sha}}
