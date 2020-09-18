@@ -455,10 +455,10 @@ data:
     three values (volume, exceed_err_msg, sizeLimit) \n# returns whether there the
     sizeLimit configuration for emptyDir is present, in megaBytes, and below the sizeLimit
     set above\ncheck_emptydir(volume, exceed_err_msg, sizeLimit) = \"is not set\"
-    {\n\tvolume.emptyDir\n\tnot volume.emptyDir.sizeLimit\n} else = \"is not in Megabytes\"
-    {\n\tvolume.emptyDir.sizeLimit\n\tnot endswith(trim_space(volume.emptyDir.sizeLimit),
-    \"M\")\n} else = exceed_err_msg {\n\tvolume.emptyDir.sizeLimit\n\tlimit := to_number(trim(trim_space(volume.emptyDir.sizeLimit),
-    \"M\"))\n\tlimit > sizeLimit\n}\n"
+    {\n\tvolume.emptyDir\n\tnot volume.emptyDir.sizeLimit\n}\n\nelse = \"is not in
+    Megabytes\" {\n\tvolume.emptyDir.sizeLimit\n\tnot endswith(trim_space(volume.emptyDir.sizeLimit),
+    \"M\")\n}\n\nelse = exceed_err_msg {\n\tvolume.emptyDir.sizeLimit\n\tlimit :=
+    to_number(trim(trim_space(volume.emptyDir.sizeLimit), \"M\"))\n\tlimit > sizeLimit\n}\n"
 kind: ConfigMap
 metadata:
   creationTimestamp: null
@@ -535,7 +535,7 @@ data:
     policy_metadata.name,\n\t\t\"severity\": policy_metadata.severity,\n\t\t\"errcode\":
     policy_metadata.errcode,\n\t\t\"msg\": msg,\n\t}\n}\n\n# find_containers accepts
     a value (k8s object type) and returns the container spec\nfind_containers(type,
-    metadata) = input.request.object.spec.containers {\n\ttype == \"Pod\"\n} else
+    metadata) = input.request.object.spec.containers {\n\ttype == \"Pod\"\n}\n\nelse
     = input.request.object.spec.template.spec.containers {\n\tmetadata.targets[type]\n}\n"
 kind: ConfigMap
 metadata:
@@ -587,13 +587,13 @@ data:
     = \"is out of defined range\" {\n\tcontains(np_range, \"-\")\n\tcontains(np_range,
     \",\")\n\tre_match(`^[-, ]*[0-9 ]+(?:-[0-9 ]+)?(,[0-9 ]+(?:-[0-9 ]+)?)*[-, ]*$`,
     trim_space(np_range))\n\trange_split := split(np_range, \",\")\n\tnot range_matches_any(np,
-    range_split)\n} else = \"is out of defined range\" {\n\tcontains(np_range, \"-\")\n\tnot
-    contains(np_range, \",\")\n\tre_match(`^[-, ]*[0-9 ]+(?:-[0-9 ]+)?(,[0-9 ]+(?:-[0-9
-    ]+)?)*[-, ]*$`, trim_space(np_range))\n\tnot range_matches(np, np_range)\n} else
+    range_split)\n}\n\nelse = \"is out of defined range\" {\n\tcontains(np_range,
+    \"-\")\n\tnot contains(np_range, \",\")\n\tre_match(`^[-, ]*[0-9 ]+(?:-[0-9 ]+)?(,[0-9
+    ]+(?:-[0-9 ]+)?)*[-, ]*$`, trim_space(np_range))\n\tnot range_matches(np, np_range)\n}\n\nelse
     = \"is out of defined range\" {\n\tcontains(np_range, \",\")\n\tnot contains(np_range,
     \"-\")\n\tre_match(`^[-, ]*[0-9 ]+(?:-[0-9 ]+)?(,[0-9 ]+(?:-[0-9 ]+)?)*[-, ]*$`,
     trim_space(np_range))\n\trange_split := split(np_range, \",\")\n\tnot range_matches_any(np,
-    range_split)\n} else = \"is out of defined range\" {\n\tnot contains(np_range,
+    range_split)\n}\n\nelse = \"is out of defined range\" {\n\tnot contains(np_range,
     \",\")\n\tnot contains(np_range, \"-\")\n\tre_match(`^\\d+$`, trim_space(np_range))\n\tto_number(trim_space(np_range))
     != to_number(np)\n}\n\nrange_matches_any(npNum, list) {\n\trange_matches(npNum,
     list[_])\n}\n\n# Checks if nodePort is in comma separated list\nrange_matches(npNum,
@@ -641,8 +641,8 @@ data:
     indicating whether the\n# input value could be converted to a numeric percentage.\n#\n#
     Examples:\n#\n#   get_percentage(50) == [0, false]\n#   get_percentage(\"50\")
     == [0, false]\n#   get_percentage(\"50%\") == [50, true]\nget_percentage(value)
-    = [0, false] {\n\tnot is_string(value)\n} else = [0, false] {\n\tnot contains(value,
-    \"%\")\n} else = [percent, true] {\n\tpercent := to_number(trim(value, \"%\"))\n}\n"
+    = [0, false] {\n\tnot is_string(value)\n}\n\nelse = [0, false] {\n\tnot contains(value,
+    \"%\")\n}\n\nelse = [percent, true] {\n\tpercent := to_number(trim(value, \"%\"))\n}\n"
 kind: ConfigMap
 metadata:
   creationTimestamp: null
@@ -694,7 +694,7 @@ data:
     policy_metadata.severity,\n\t\t\"errcode\": policy_metadata.errcode,\n\t\t\"msg\":
     msg,\n\t}\n}\n\n# find_containers accepts a value (k8s object type) and returns
     the container spec\nfind_containers(type, metadata) = input.request.object.spec.containers
-    {\n\ttype == \"Pod\"\n} else = input.request.object.spec.template.spec.containers
+    {\n\ttype == \"Pod\"\n}\n\nelse = input.request.object.spec.template.spec.containers
     {\n\tmetadata.targets[type]\n}\n"
 kind: ConfigMap
 metadata:
@@ -721,7 +721,7 @@ data:
     policy_metadata.name,\n\t\t\"severity\": policy_metadata.severity,\n\t\t\"errcode\":
     policy_metadata.errcode,\n\t\t\"msg\": msg,\n\t}\n}\n\n# find_containers accepts
     a value (k8s object type) and returns the container spec\nfind_containers(type,
-    metadata) = input.request.object.spec.containers {\n\ttype == \"Pod\"\n} else
+    metadata) = input.request.object.spec.containers {\n\ttype == \"Pod\"\n}\n\nelse
     = input.request.object.spec.template.spec.containers {\n\tmetadata.targets[type]\n}\n"
 kind: ConfigMap
 metadata:
@@ -749,11 +749,11 @@ data:
     policy_metadata.severity,\n\t\t\"errcode\": policy_metadata.errcode,\n\t\t\"msg\":
     msg,\n\t}\n}\n\n# find_containers accepts a value (k8s object type) and returns
     the container spec\nfind_containers(type, metadata) = input.request.object.spec.containers
-    {\n\ttype == \"Pod\"\n} else = input.request.object.spec.template.spec.containers
+    {\n\ttype == \"Pod\"\n}\n\nelse = input.request.object.spec.template.spec.containers
     {\n\tmetadata.targets[type]\n}\n\n# get_resource_type accepts a value (containers)
     and returns the missing resource type based on missing limits\nget_resource_type(container)
-    = \"CPU/MEM\" {\n\tnot container.resources.limits.cpu\n\tnot container.resources.limits.memory\n}
-    else = \"CPU\" {\n\tnot container.resources.limits.cpu\n} else = \"MEM\" {\n\tnot
+    = \"CPU/MEM\" {\n\tnot container.resources.limits.cpu\n\tnot container.resources.limits.memory\n}\n\nelse
+    = \"CPU\" {\n\tnot container.resources.limits.cpu\n}\n\nelse = \"MEM\" {\n\tnot
     container.resources.limits.memory\n}\n"
 kind: ConfigMap
 metadata:
@@ -781,11 +781,11 @@ data:
     policy_metadata.severity,\n\t\t\"errcode\": policy_metadata.errcode,\n\t\t\"msg\":
     msg,\n\t}\n}\n\n# find_containers accepts a value (k8s object type) and returns
     the container spec\nfind_containers(type, metadata) = input.request.object.spec.containers
-    {\n\ttype == \"Pod\"\n} else = input.request.object.spec.template.spec.containers
+    {\n\ttype == \"Pod\"\n}\n\nelse = input.request.object.spec.template.spec.containers
     {\n\tmetadata.targets[type]\n}\n\n# get_resource_type accepts a value (containers)
     and returns the missing resource type based on missing limits\nget_resource_type(container)
-    = \"CPU/MEM\" {\n\tnot container.resources.requests.cpu\n\tnot container.resources.requests.memory\n}
-    else = \"CPU\" {\n\tnot container.resources.requests.cpu\n} else = \"MEM\" {\n\tnot
+    = \"CPU/MEM\" {\n\tnot container.resources.requests.cpu\n\tnot container.resources.requests.memory\n}\n\nelse
+    = \"CPU\" {\n\tnot container.resources.requests.cpu\n}\n\nelse = \"MEM\" {\n\tnot
     container.resources.requests.memory\n}\n"
 kind: ConfigMap
 metadata:
