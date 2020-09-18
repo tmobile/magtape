@@ -38,7 +38,9 @@ deny[info] {
 # find_containers accepts a value (k8s object type) and returns the container spec
 find_containers(type, metadata) = input.request.object.spec.containers {
 	type == "Pod"
-} else = input.request.object.spec.template.spec.containers {
+}
+
+else = input.request.object.spec.template.spec.containers {
 	metadata.targets[type]
 }
 
@@ -46,8 +48,12 @@ find_containers(type, metadata) = input.request.object.spec.containers {
 get_resource_type(container) = "CPU/MEM" {
 	not container.resources.limits.cpu
 	not container.resources.limits.memory
-} else = "CPU" {
+}
+
+else = "CPU" {
 	not container.resources.limits.cpu
-} else = "MEM" {
+}
+
+else = "MEM" {
 	not container.resources.limits.memory
 }

@@ -86,24 +86,27 @@ check_nodeport_range(np, np_range) = "is out of defined range" {
 	re_match(`^[-, ]*[0-9 ]+(?:-[0-9 ]+)?(,[0-9 ]+(?:-[0-9 ]+)?)*[-, ]*$`, trim_space(np_range))
 	range_split := split(np_range, ",")
 	not range_matches_any(np, range_split)
-} else = "is out of defined range" {
+}
+
+else = "is out of defined range" {
 	contains(np_range, "-")
 	not contains(np_range, ",")
 	re_match(`^[-, ]*[0-9 ]+(?:-[0-9 ]+)?(,[0-9 ]+(?:-[0-9 ]+)?)*[-, ]*$`, trim_space(np_range))
 	not range_matches(np, np_range)
-} else = "is out of defined range" {
+}
+else = "is out of defined range" {
 	contains(np_range, ",")
 	not contains(np_range, "-")
 	re_match(`^[-, ]*[0-9 ]+(?:-[0-9 ]+)?(,[0-9 ]+(?:-[0-9 ]+)?)*[-, ]*$`, trim_space(np_range))
 	range_split := split(np_range, ",")
 	not range_matches_any(np, range_split)
-} else = "is out of defined range" {
+}
+else = "is out of defined range" {
 	not contains(np_range, ",")
 	not contains(np_range, "-")
 	re_match(`^\d+$`, trim_space(np_range))
 	to_number(trim_space(np_range)) != to_number(np)
 }
-
 range_matches_any(npNum, list) {
 	range_matches(npNum, list[_])
 }

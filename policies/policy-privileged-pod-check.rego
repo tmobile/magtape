@@ -37,6 +37,8 @@ deny[info] {
 # find_containers accepts a value (k8s object type) and returns the container spec
 find_containers(type, metadata) = input.request.object.spec.containers {
 	type == "Pod"
-} else = input.request.object.spec.template.spec.containers {
+}
+
+else = input.request.object.spec.template.spec.containers {
 	metadata.targets[type]
 }

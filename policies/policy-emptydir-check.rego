@@ -43,10 +43,14 @@ deny[info] {
 check_emptydir(volume, exceed_err_msg, sizeLimit) = "is not set" {
 	volume.emptyDir
 	not volume.emptyDir.sizeLimit
-} else = "is not in Megabytes" {
+}
+
+else = "is not in Megabytes" {
 	volume.emptyDir.sizeLimit
 	not endswith(trim_space(volume.emptyDir.sizeLimit), "M")
-} else = exceed_err_msg {
+}
+
+else = exceed_err_msg {
 	volume.emptyDir.sizeLimit
 	limit := to_number(trim(trim_space(volume.emptyDir.sizeLimit), "M"))
 	limit > sizeLimit

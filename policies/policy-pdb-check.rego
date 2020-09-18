@@ -78,8 +78,12 @@ within_range(x, [_min, _max]) {
 #   get_percentage("50%") == [50, true]
 get_percentage(value) = [0, false] {
 	not is_string(value)
-} else = [0, false] {
+}
+
+else = [0, false] {
 	not contains(value, "%")
-} else = [percent, true] {
+}
+
+else = [percent, true] {
 	percent := to_number(trim(value, "%"))
 }
