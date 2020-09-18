@@ -133,7 +133,7 @@ unit-rego:
 .PHONY: coverage-rego
 coverage-rego:
 
-	opa coverage --threshold 80.0 policies/
+	opa test -c --threshold 80.0 policies/
 
 # Run test suite for MagTape Policies
 .PHONY: test-rego
