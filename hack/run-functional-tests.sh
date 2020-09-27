@@ -81,13 +81,19 @@ run_resource_tests() {
   local resource_index="${2}"
 
   #grab local resource from ${TESTS_MANIFEST}
-  local resource=$(yq read "${TESTS_MANIFEST}" "resources.[${resource_index}].kind")
+  local resource
+  
+  resource=$(yq read "${TESTS_MANIFEST}" "resources.[${resource_index}].kind")
 
   #grab local test type from ${TESTS_MANIFEST}
-  local test_type=$(yq read "${TESTS_MANIFEST}" "resources.[${resource_index}].desired")
+  local test_type
+  
+  test_type=$(yq read "${TESTS_MANIFEST}" "resources.[${resource_index}].desired")
 
   #grab local list of test manifests to use
-  local manifest_list=$(yq read -P "${TESTS_MANIFEST}" "resources.[${resource_index}].manifests" | sed 's/^-[ ]*//')
+  local manifest_list
+  
+  manifest_list=$(yq read -P "${TESTS_MANIFEST}" "resources.[${resource_index}].manifests" | sed 's/^-[ ]*//')
 
   if [ "${manifest_list}" == "" ]; then
 
@@ -107,7 +113,20 @@ run_resource_tests() {
 
             echo "[INFO] ${action}: \"${testfile}\""
             
-            kubectl ${action} -f "${test_file_path}" -n ${TEST_NAMESPACE}
+            if [ "${action}" == "delete" ]; then
+              
+              # kubectl doesn't like double quites here. disable checking for double quotes around variables
+              # shellcheck disable=SC2086
+              kubectl ${action} -f "${test_file_path}" -n ${TEST_NAMESPACE} --ignore-not-found
+
+            else
+
+              # kubectl doesn't like double quites here. disable checking for double quotes around variables
+              # shellcheck disable=SC2086
+              kubectl ${action} -f "${test_file_path}" -n ${TEST_NAMESPACE}
+
+            fi
+
             local exit_code=$?
 
             if [ "${action}" == "apply" ]; then
@@ -153,18 +172,20 @@ scope_and_run_tests() {
   local action="${1}"
 
   #size the array of resources
-  local resource_array_length=$(yq read -l "${TESTS_MANIFEST}" 'resources')
+  local resource_array_length
+  resource_array_length=$(yq read -l "${TESTS_MANIFEST}" 'resources')
 
 
   #loop through all resources in the supplied manifest
     #determine which indicies meet the supplied criteria in ${TEST_RESOURCE_KIND} and ${TEST_RESOURCE_DESIRED}
-  for ((i = 0 ; i < ${resource_array_length} ; i++)); do
+  for ((i = 0 ; i < resource_array_length ; i++)); do
 
     #check if we're doing all resources or if the resource kind at $i matches the requested kind
-    if [[ "${TEST_RESOURCE_KIND}" == "all" || "${TEST_RESOURCE_KIND}" == $(yq read "${TESTS_MANIFEST}" "resources.[${i}].kind") ]]; then
+    #double brackets are technically correct; the BEST kind of correct!
+    if [[ "${TEST_RESOURCE_KIND}" == "all" ]] || [[ "${TEST_RESOURCE_KIND}" == $(yq read "${TESTS_MANIFEST}" "resources.[${i}].kind") ]]; then
 
       #check if we're doing all desired results or if the resoured desired result at $i matches the requested desired result
-      if [[ "${TEST_RESOURCE_DESIRED}" == "all" || "${TEST_RESOURCE_DESIRED}" == $(yq read "${TESTS_MANIFEST}" "resources.[${i}].desired") ]]; then
+      if [[ "${TEST_RESOURCE_DESIRED}" == "all" ]] || [[ "${TEST_RESOURCE_DESIRED}" == $(yq read "${TESTS_MANIFEST}" "resources.[${i}].desired") ]]; then
 
         #indexes_to_process+=("${i}")
 
