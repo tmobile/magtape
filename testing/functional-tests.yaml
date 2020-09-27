@@ -1,7 +1,7 @@
 resources:
   - kind: deployments
     desired: pass
-    setup:
+    script:
     manifests:
       - test-deploy01.yaml
       - test-deploy03.yaml
@@ -15,18 +15,18 @@ resources:
       - test-deploy11.yaml
   - kind: deployments
     desired: fail
-    setup: 
+    script: 
     manifests:
       - test-deploy02.yaml
   - kind: pdbs
     desired: pass
-    setup:
+    script:
     manifests:
       - test-pdb02.yaml
       - test-pdb05.yaml
   - kind: pdbs
     desired: fail
-    setup:
+    script:
     manifests:
       - test-pdb01.yaml
       - test-pdb03.yaml
@@ -34,7 +34,7 @@ resources:
       - test-pdb06.yaml
   - kind: pods
     desired: pass
-    setup:
+    script:
     manifests:
       - test-pod02.yaml
       - test-pod03.yaml
@@ -43,12 +43,12 @@ resources:
       - test-pod06.yaml
   - kind: pods
     desired: fail
-    setup:
+    script:
     manifests:
       - test-pod01.yaml
   - kind: services
     desired: pass
-    setup:
+    script:
     manifests:
         - test-svc01.yaml
         - test-svc02.yaml
