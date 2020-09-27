@@ -23,8 +23,8 @@
 ################################################################################
 
 RUN_TYPE="${1}"
-TEST_RESOURCE_TYPE="${2}"
-TEST_TYPE="${3}"
+TEST_RESOURCE_KIND="${2}"
+TEST_RESOURCE_DESIRED="${3}"
 TEST_NAMESPACE="${4}"
 TESTS_MANIFEST="testing/functional-tests.yaml"
 
@@ -50,7 +50,7 @@ help_message() {
 # **********************************************
 check_arguments() {
 
-  if [ "${RUN_TYPE}" == "" ] || [ "${TEST_RESOURCE_TYPE}" == "" ] || [ "${TEST_TYPE}" == "" ] || [ "${TEST_NAMESPACE}" == "" ]; then
+  if [ "${RUN_TYPE}" == "" ] || [ "${TEST_RESOURCE_KIND}" == "" ] || [ "${TEST_RESOURCE_DESIRED}" == "" ] || [ "${TEST_NAMESPACE}" == "" ]; then
 
     help_message
     exit 1
@@ -60,7 +60,7 @@ check_arguments() {
     help_message
     exit 1
 
-  elif [ "${TEST_TYPE}" != "pass" ] && [ "${TEST_TYPE}" != "fail" ] && [ "${TEST_TYPE}" != "all" ]; then
+  elif [ "${TEST_RESOURCE_DESIRED}" != "pass" ] && [ "${TEST_RESOURCE_DESIRED}" != "fail" ] && [ "${TEST_RESOURCE_DESIRED}" != "all" ]; then
 
     help_message
     exit 1
@@ -73,64 +73,74 @@ check_arguments() {
 # Run tests/cleanup
 # **********************************************
 run_resource_tests() {
+  
+  #define local action from first argument
+  local action="${1}"
 
-    local action="${1}"
-    local resource="${2}"
-    local test_type="${3}"
-    local manifest_list=$(yq read -P "${TESTS_MANIFEST}" "resources.[name==${resource}].tests.${test_type}" | sed 's/^-[ ]*//')
+  #define local index from second argument
+  local resource_index="${2}"
 
-    if [ "${manifest_list}" == "" ]; then
+  #grab local resource from ${TESTS_MANIFEST}
+  local resource=$(yq read "${TESTS_MANIFEST}" "resources.[${resource_index}].kind")
 
-      echo "[WARN] No \"${test_type}\" tests for \"${resource}\". Skipping..."
-      echo "============================================================================"
+  #grab local test type from ${TESTS_MANIFEST}
+  local test_type=$(yq read "${TESTS_MANIFEST}" "resources.[${resource_index}].desired")
 
-    else
+  #grab local list of test manifests to use
+  local manifest_list=$(yq read -P "${TESTS_MANIFEST}" "resources.[${resource_index}].manifests" | sed 's/^-[ ]*//')
 
-      echo "[INFO] **** Running \"${test_type}\" tests for \"${resource}\" ****"
-      echo "============================================================================"
+  if [ "${manifest_list}" == "" ]; then
 
-      for testfile in ${manifest_list}; do
+    echo "[WARN] No \"${test_type}\" tests for \"${resource}\". Skipping..."
+    echo "============================================================================"
 
-          local test_file_path="testing/${resource}/${testfile}"
+  else
 
-          if [ -f "${test_file_path}" ]; then
+    echo "[INFO] **** Running \"${test_type}\" tests for \"${resource}\" ****"
+    echo "============================================================================"
 
-              echo "[INFO] ${action}: \"${testfile}\""
-              
-              kubectl ${action} -f "${test_file_path}" -n ${TEST_NAMESPACE}
-              local exit_code=$?
+    for testfile in ${manifest_list}; do
 
-              if [ "${action}" == "apply" ]; then
+        local test_file_path="testing/${resource}/${testfile}"
 
-                  if [ "${test_type}"  == "pass" ] && [ ${exit_code} -ne 0 ]; then
+        if [ -f "${test_file_path}" ]; then
 
-                      echo "[ERROR] Test did not pass. Exiting..."
-                      exit 1
+            echo "[INFO] ${action}: \"${testfile}\""
+            
+            kubectl ${action} -f "${test_file_path}" -n ${TEST_NAMESPACE}
+            local exit_code=$?
 
-                  elif [ "${test_type}"  == "fail" ] && [ ${exit_code} -ne 1 ]; then
+            if [ "${action}" == "apply" ]; then
 
-                      echo "[ERROR] Test did not pass. Exiting..."
-                      exit 1
+                if [ "${test_type}"  == "pass" ] && [ ${exit_code} -ne 0 ]; then
 
-                  else
+                    echo "[ERROR] Test did not pass. Exiting..."
+                    exit 1
 
-                      echo "[INFO] Test Passed"
+                elif [ "${test_type}"  == "fail" ] && [ ${exit_code} -ne 1 ]; then
 
-                  fi
+                    echo "[ERROR] Test did not pass. Exiting..."
+                    exit 1
 
-              fi
+                else
 
-          else
+                    echo "[INFO] Test Passed"
 
-              echo "[WARN] File \"${test_file_path}\" not found. Skipping..."
+                fi
 
-          fi
+            fi
 
-          echo "============================================================================"
-          
-      done
+        else
 
-    fi
+            echo "[WARN] File \"${test_file_path}\" not found. Skipping..."
+
+        fi
+
+        echo "============================================================================"
+        
+    done
+
+  fi
 
 }
 
@@ -139,41 +149,34 @@ run_resource_tests() {
 # **********************************************
 scope_and_run_tests() {
 
+  #create identifiable local variable for argument 1, the action to perform
   local action="${1}"
 
-  if [ "${TEST_RESOURCE_TYPE}" == "all" ]; then
+  #size the array of resources
+  local resource_array_length=$(yq read -l "${TESTS_MANIFEST}" 'resources')
 
-    resources=$(yq read "${TESTS_MANIFEST}" 'resources.[*].name')
 
-    for resource in ${resources}; do
+  #loop through all resources in the supplied manifest
+    #determine which indicies meet the supplied criteria in ${TEST_RESOURCE_KIND} and ${TEST_RESOURCE_DESIRED}
+  for ((i = 0 ; i < ${resource_array_length} ; i++)); do
 
-      if [ "${TEST_TYPE}" == "all" ]; then
+    #check if we're doing all resources or if the resource kind at $i matches the requested kind
+    if [[ "${TEST_RESOURCE_KIND}" == "all" || "${TEST_RESOURCE_KIND}" == $(yq read "${TESTS_MANIFEST}" "resources.[${i}].kind") ]]; then
 
-        run_resource_tests "${action}" "${resource}" "pass"
-        run_resource_tests "${action}" "${resource}" "fail"
+      #check if we're doing all desired results or if the resoured desired result at $i matches the requested desired result
+      if [[ "${TEST_RESOURCE_DESIRED}" == "all" || "${TEST_RESOURCE_DESIRED}" == $(yq read "${TESTS_MANIFEST}" "resources.[${i}].desired") ]]; then
 
-      else
+        #indexes_to_process+=("${i}")
 
-        run_resource_tests "${action}" "${resource}" "${TEST_TYPE}"
-
+        run_resource_tests "${action}" "${i}"
       fi
-
-    done
-
-  else
-
-    if [ "${TEST_TYPE}" == "all" ]; then
-
-        run_resource_tests "${action}" "${resource}" "pass"
-        run_resource_tests "${action}" "${resource}" "fail"
-
-    else
-
-      run_resource_tests "${action}" "${resource}" "${TEST_TYPE}"
 
     fi
 
-  fi
+  done
+
+  #echo ${indexes_to_process[@]}
+
 }
 
 ################################################################################
