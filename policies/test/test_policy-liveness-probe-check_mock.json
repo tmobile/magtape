@@ -1,0 +1,347 @@
+{
+  "mock": {
+    "liveness_probe_allowed": {
+      "apiVersion": "admission.k8s.io/v1beta1",
+      "kind": "AdmissionReview",
+      "request": {
+        "dryRun": false,
+        "kind": {
+          "group": "apps",
+          "kind": "Deployment",
+          "version": "v1"
+        },
+        "namespace": "test1",
+        "object": {
+          "apiVersion": "apps/v1",
+          "kind": "Deployment",
+          "metadata": {
+            "annotations": {
+              "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app\":\"test-deploy01\"},\"name\":\"test-deploy01\",\"namespace\":\"test1\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app\":\"test-deploy01\"}},\"template\":{\"metadata\":{\"labels\":{\"app\":\"test-deploy01\"}},\"spec\":{\"containers\":[{\"args\":[\"/server\"],\"image\":\"k8s.gcr.io/liveness\",\"livenessProbe\":{\"httpGet\":{\"httpHeaders\":[{\"name\":\"X-Custom-Header\",\"value\":\"Awesome\"}],\"path\":\"/healthz\",\"port\":8080},\"initialDelaySeconds\":3,\"periodSeconds\":3},\"name\":\"test-deploy01\",\"readinessProbe\":{\"httpGet\":{\"httpHeaders\":[{\"name\":\"X-Custom-Header\",\"value\":\"Awesome\"}],\"path\":\"/healthz\",\"port\":8080},\"initialDelaySeconds\":3,\"periodSeconds\":3},\"resources\":{\"limits\":{\"cpu\":\"50m\",\"memory\":\"128Mi\"},\"requests\":{\"memory\":\"128Mi\"}}}]}}}}\n"
+            },
+            "creationTimestamp": "2019-08-05T05:25:18Z",
+            "generation": 1,
+            "labels": {
+              "app": "test-deploy01"
+            },
+            "name": "test-deploy01",
+            "namespace": "test1",
+            "uid": "dfac7fb5-46f9-4a73-b2ec-e38a05e3d2c6"
+          },
+          "spec": {
+            "progressDeadlineSeconds": 600,
+            "replicas": 1,
+            "revisionHistoryLimit": 10,
+            "selector": {
+              "matchLabels": {
+                "app": "test-deploy01"
+              }
+            },
+            "strategy": {
+              "rollingUpdate": {
+                "maxSurge": "25%",
+                "maxUnavailable": "25%"
+              },
+              "type": "RollingUpdate"
+            },
+            "template": {
+              "metadata": {
+                "creationTimestamp": null,
+                "labels": {
+                  "app": "test-deploy01"
+                }
+              },
+              "spec": {
+                "containers": [
+                  {
+                    "args": [
+                      "/server"
+                    ],
+                    "image": "k8s.gcr.io/liveness",
+                    "imagePullPolicy": "Always",
+                    "livenessProbe": {
+                      "failureThreshold": 3,
+                      "httpGet": {
+                        "httpHeaders": [
+                          {
+                            "name": "X-Custom-Header",
+                            "value": "Awesome"
+                          }
+                        ],
+                        "path": "/healthz",
+                        "port": 8080,
+                        "scheme": "HTTP"
+                      },
+                      "initialDelaySeconds": 3,
+                      "periodSeconds": 3,
+                      "successThreshold": 1,
+                      "timeoutSeconds": 1
+                    },
+                    "name": "test-deploy01",
+                    "readinessProbe": {
+                      "failureThreshold": 3,
+                      "httpGet": {
+                        "httpHeaders": [
+                          {
+                            "name": "X-Custom-Header",
+                            "value": "Awesome"
+                          }
+                        ],
+                        "path": "/healthz",
+                        "port": 8080,
+                        "scheme": "HTTP"
+                      },
+                      "initialDelaySeconds": 3,
+                      "periodSeconds": 3,
+                      "successThreshold": 1,
+                      "timeoutSeconds": 1
+                    },
+                    "resources": {
+                      "limits": {
+                        "cpu": "50m",
+                        "memory": "128Mi"
+                      },
+                      "requests": {
+                        "memory": "128Mi"
+                      }
+                    },
+                    "terminationMessagePath": "/dev/termination-log",
+                    "terminationMessagePolicy": "File"
+                  }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "terminationGracePeriodSeconds": 30
+              }
+            }
+          },
+          "status": {}
+        },
+        "oldObject": null,
+        "operation": "CREATE",
+        "options": {
+          "apiVersion": "meta.k8s.io/v1",
+          "kind": "CreateOptions"
+        },
+        "requestKind": {
+          "group": "apps",
+          "kind": "Deployment",
+          "version": "v1"
+        },
+        "requestResource": {
+          "group": "apps",
+          "resource": "deployments",
+          "version": "v1"
+        },
+        "resource": {
+          "group": "apps",
+          "resource": "deployments",
+          "version": "v1"
+        },
+        "uid": "38abb20b-8368-48b7-a4d3-d75c2ee3a1b5",
+        "userInfo": {
+          "groups": [
+            "system:masters",
+            "system:authenticated"
+          ],
+          "username": "kubernetes-admin"
+        }
+      }
+    },
+    "liveness_probe_denied": {
+      "apiVersion": "admission.k8s.io/v1beta1",
+      "kind": "AdmissionReview",
+      "request": {
+        "dryRun": false,
+        "kind": {
+          "group": "apps",
+          "kind": "Deployment",
+          "version": "v1"
+        },
+        "namespace": "test1",
+        "object": {
+          "apiVersion": "apps/v1",
+          "kind": "Deployment",
+          "metadata": {
+            "annotations": {
+              "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app\":\"test-deploy01\"},\"name\":\"test-deploy01\",\"namespace\":\"test1\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app\":\"test-deploy01\"}},\"template\":{\"metadata\":{\"labels\":{\"app\":\"test-deploy01\"}},\"spec\":{\"containers\":[{\"args\":[\"/server\"],\"image\":\"k8s.gcr.io/liveness\",\"livenessProbe\":{\"httpGet\":{\"httpHeaders\":[{\"name\":\"X-Custom-Header\",\"value\":\"Awesome\"}],\"path\":\"/healthz\",\"port\":8080},\"initialDelaySeconds\":3,\"periodSeconds\":3},\"name\":\"test-deploy01\",\"readinessProbe\":{\"httpGet\":{\"httpHeaders\":[{\"name\":\"X-Custom-Header\",\"value\":\"Awesome\"}],\"path\":\"/healthz\",\"port\":8080},\"initialDelaySeconds\":3,\"periodSeconds\":3},\"resources\":{\"limits\":{\"cpu\":\"50m\",\"memory\":\"128Mi\"},\"requests\":{\"memory\":\"128Mi\"}}}]}}}}\n"
+            },
+            "creationTimestamp": "2019-08-05T05:25:18Z",
+            "generation": 1,
+            "labels": {
+              "app": "test-deploy01"
+            },
+            "name": "test-deploy01",
+            "namespace": "test1",
+            "uid": "dfac7fb5-46f9-4a73-b2ec-e38a05e3d2c6"
+          },
+          "spec": {
+            "progressDeadlineSeconds": 600,
+            "replicas": 1,
+            "revisionHistoryLimit": 10,
+            "selector": {
+              "matchLabels": {
+                "app": "test-deploy01"
+              }
+            },
+            "strategy": {
+              "rollingUpdate": {
+                "maxSurge": "25%",
+                "maxUnavailable": "25%"
+              },
+              "type": "RollingUpdate"
+            },
+            "template": {
+              "metadata": {
+                "creationTimestamp": null,
+                "labels": {
+                  "app": "test-deploy01"
+                }
+              },
+              "spec": {
+                "containers": [
+                  {
+                    "args": [
+                      "/server"
+                    ],
+                    "image": "k8s.gcr.io/liveness",
+                    "imagePullPolicy": "Always",
+                    "name": "test-deploy01",
+                    "readinessProbe": {
+                      "failureThreshold": 3,
+                      "httpGet": {
+                        "httpHeaders": [
+                          {
+                            "name": "X-Custom-Header",
+                            "value": "Awesome"
+                          }
+                        ],
+                        "path": "/healthz",
+                        "port": 8080,
+                        "scheme": "HTTP"
+                      },
+                      "initialDelaySeconds": 3,
+                      "periodSeconds": 3,
+                      "successThreshold": 1,
+                      "timeoutSeconds": 1
+                    },
+                    "resources": {
+                      "limits": {
+                        "cpu": "50m",
+                        "memory": "128Mi"
+                      },
+                      "requests": {
+                        "memory": "128Mi"
+                      }
+                    },
+                    "terminationMessagePath": "/dev/termination-log",
+                    "terminationMessagePolicy": "File"
+                  }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "terminationGracePeriodSeconds": 30
+              }
+            }
+          },
+          "status": {}
+        },
+        "oldObject": null,
+        "operation": "CREATE",
+        "options": {
+          "apiVersion": "meta.k8s.io/v1",
+          "kind": "CreateOptions"
+        },
+        "requestKind": {
+          "group": "apps",
+          "kind": "Deployment",
+          "version": "v1"
+        },
+        "requestResource": {
+          "group": "apps",
+          "resource": "deployments",
+          "version": "v1"
+        },
+        "resource": {
+          "group": "apps",
+          "resource": "deployments",
+          "version": "v1"
+        },
+        "uid": "38abb20b-8368-48b7-a4d3-d75c2ee3a1b5",
+        "userInfo": {
+          "groups": [
+            "system:masters",
+            "system:authenticated"
+          ],
+          "username": "kubernetes-admin"
+        }
+      }
+    },
+    "unmatched_resource": {
+      "apiVersion": "admission.k8s.io/v1beta1",
+      "kind": "AdmissionReview",
+      "request": {
+        "dryRun": false,
+        "kind": {
+          "group": "",
+          "kind": "Service",
+          "version": "v1"
+        },
+        "namespace": "default",
+        "object": {
+          "apiVersion": "v1",
+          "kind": "Service",
+          "metadata": {
+            "annotations": {
+              "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"Service\",\"metadata\":{\"annotations\":{},\"creationTimestamp\":null,\"labels\":{\"app\":\"test-svc\"},\"name\":\"test-svc\",\"namespace\":\"default\"},\"spec\":{\"ports\":[{\"name\":\"http\",\"port\":443,\"protocol\":\"TCP\",\"targetPort\":443}],\"selector\":{\"app\":\"test-svc\"},\"type\":\"ClusterIP\"},\"status\":{\"loadBalancer\":{}}}\n"
+            },
+            "creationTimestamp": "2020-02-04T01:16:07Z",
+            "labels": {
+              "app": "test-svc"
+            },
+            "name": "test-svc01",
+            "namespace": "default",
+            "uid": "ebaa71f7-46eb-11ea-85fd-005056a7b324"
+          },
+          "spec": {
+            "clusterIP": "198.19.241.208",
+            "ports": [
+              {
+                "name": "http",
+                "port": 443,
+                "protocol": "TCP",
+                "targetPort": 443
+              }
+            ],
+            "selector": {
+              "app": "test-svc"
+            },
+            "sessionAffinity": "None",
+            "type": "ClusterIP"
+          },
+          "status": {
+            "loadBalancer": {}
+          }
+        },
+        "oldObject": null,
+        "operation": "CREATE",
+        "resource": {
+          "group": "",
+          "resource": "services",
+          "version": "v1"
+        },
+        "uid": "ebaa77b8-46eb-11ea-85fd-005056a7b324",
+        "userInfo": {
+          "groups": [
+            "group1",
+            "group2"
+          ],
+          "username": "user2"
+        }
+      }
+    }    
+  }
+}
