@@ -9,8 +9,13 @@ test_liveness_probe_allowed {
 
 test_liveness_probe_denied {
 
-	result = deny with input as data.mock.liveness_probe_denied
-	count(result) == 1
+	result = deny[_] with input as data.mock.liveness_probe_denied
+	result == {
+		"errcode": "MT1001",
+		"msg": "[FAIL] LOW - Liveness Probe missing for container \"test-deploy01\" (MT1001)",
+		"name": "policy-liveness-probe",
+		"severity": "LOW"
+	}
 
 }
 
