@@ -74,26 +74,34 @@ check_arguments() {
 # **********************************************
 run_resource_tests() {
   
-  #define local action from first argument
+  # define local action from first argument
   local action="${1}"
 
-  #define local index from second argument
+  # define local index from second argument
   local resource_index="${2}"
 
-  #grab local resource from ${TESTS_MANIFEST}
+  # grab local resource from ${TESTS_MANIFEST}
   local resource
   
   resource=$(yq read "${TESTS_MANIFEST}" "resources.[${resource_index}].kind")
 
-  #grab local test type from ${TESTS_MANIFEST}
+  # grab local test type from ${TESTS_MANIFEST}
   local test_type
   
   test_type=$(yq read "${TESTS_MANIFEST}" "resources.[${resource_index}].desired")
 
-  #grab local list of test manifests to use
+  # grab local list of test manifests to use
   local manifest_list
   
   manifest_list=$(yq read -P "${TESTS_MANIFEST}" "resources.[${resource_index}].manifests" | sed 's/^-[ ]*//')
+
+  # grab local user_script specified for pre/post/between running
+  local user_script
+  
+  user_script=$(yq read -P "${TESTS_MANIFEST}" "resources.[${resource_index}].script")
+
+  # full path to the user specified script associate with this stanza in the manifest
+  local user_script_path="testing/${resource}/scripts/${user_script}"
 
   if [ "${manifest_list}" == "" ]; then
 
@@ -105,6 +113,17 @@ run_resource_tests() {
     echo "[INFO] **** Running \"${test_type}\" tests for \"${resource}\" ****"
     echo "============================================================================"
 
+    # check to see if the user specified a script to be associated with this stanza
+    # only run script for apply actions
+    if [[ ${user_script} != "" ]] && [[ "${action}" == "apply" ]]; then 
+
+      # if they did specify a script run it with the setup argument and pass the namespace in
+      ${user_script_path} "setup" "${TEST_NAMESPACE}"
+
+      echo "============================================================================"
+
+    fi
+
     for testfile in ${manifest_list}; do
 
         local test_file_path="testing/${resource}/${testfile}"
@@ -115,7 +134,8 @@ run_resource_tests() {
             
             if [ "${action}" == "delete" ]; then
               
-              # kubectl doesn't like double quites here. disable checking for double quotes around variables
+              # kubectl doesn't like double quites here.
+              # disable checking for double quotes around variables.
               # shellcheck disable=SC2086
               kubectl ${action} -f "${test_file_path}" -n ${TEST_NAMESPACE} --ignore-not-found
 
@@ -155,9 +175,29 @@ run_resource_tests() {
 
         fi
 
+        # check to see if the user specified a script to be associated with this stanza
+        # only run script for apply actions
+        if [[ ${user_script} != "" ]] && [[ "${action}" == "apply" ]]; then
+
+          # if they did specify a script run it with the between argument and pass the namespace in
+          ${user_script_path} "between" "${TEST_NAMESPACE}"
+
+        fi
+
         echo "============================================================================"
         
     done
+
+    # check to see if the user specified a script to be associated with this stanza
+    # only run script for apply actions
+    if [[ ${user_script} != "" ]] && [[ "${action}" == "apply" ]]; then
+
+      # if they did specify a script run it with the teardown argument and pass the namespace in
+      ${user_script_path} "teardown" "${TEST_NAMESPACE}"
+
+      echo "============================================================================"
+
+    fi
 
   fi
 
