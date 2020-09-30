@@ -13,4 +13,6 @@ resources:
 configMapGenerator:
 - name: magtape-vwc-template
   files:
-    -   magtape-vwc=magtape-vwc.yaml
+  -  magtape-vwc=magtape-vwc.yaml
+  options:
+    disableNameSuffixHash: true
