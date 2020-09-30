@@ -115,10 +115,10 @@ run_resource_tests() {
 
     # check to see if the user specified a script to be associated with this stanza
     # only run script for apply actions
-    if [[ ${user_script} != "" ]] && [[ "${action}" == "apply" ]]; then 
+    if [[ "${user_script}" != "" ]] && [[ "${action}" == "apply" ]]; then 
 
       # if they did specify a script run it with the setup argument and pass the namespace in
-      ${user_script_path} "setup" "${TEST_NAMESPACE}"
+      "${user_script_path}" "setup" "${TEST_NAMESPACE}"
 
       echo "============================================================================"
 
@@ -134,14 +134,15 @@ run_resource_tests() {
             
             if [ "${action}" == "delete" ]; then
               
-              # kubectl doesn't like double quites here.
+              # kubectl doesn't like double quotes here.
               # disable checking for double quotes around variables.
               # shellcheck disable=SC2086
               kubectl ${action} -f "${test_file_path}" -n ${TEST_NAMESPACE} --ignore-not-found
 
             else
 
-              # kubectl doesn't like double quites here. disable checking for double quotes around variables
+              # kubectl doesn't like double quotes here.
+              # disable checking for double quotes around variables
               # shellcheck disable=SC2086
               kubectl ${action} -f "${test_file_path}" -n ${TEST_NAMESPACE}
 
@@ -177,10 +178,10 @@ run_resource_tests() {
 
         # check to see if the user specified a script to be associated with this stanza
         # only run script for apply actions
-        if [[ ${user_script} != "" ]] && [[ "${action}" == "apply" ]]; then
+        if [[ "${user_script}" != "" ]] && [[ "${action}" == "apply" ]]; then
 
           # if they did specify a script run it with the between argument and pass the namespace in
-          ${user_script_path} "between" "${TEST_NAMESPACE}"
+          "${user_script_path}" "between" "${TEST_NAMESPACE}"
 
         fi
 
@@ -190,10 +191,10 @@ run_resource_tests() {
 
     # check to see if the user specified a script to be associated with this stanza
     # only run script for apply actions
-    if [[ ${user_script} != "" ]] && [[ "${action}" == "apply" ]]; then
+    if [[ "${user_script}" != "" ]] && [[ "${action}" == "apply" ]]; then
 
       # if they did specify a script run it with the teardown argument and pass the namespace in
-      ${user_script_path} "teardown" "${TEST_NAMESPACE}"
+      "${user_script_path}" "teardown" "${TEST_NAMESPACE}"
 
       echo "============================================================================"
 
@@ -208,26 +209,24 @@ run_resource_tests() {
 # **********************************************
 scope_and_run_tests() {
 
-  #create identifiable local variable for argument 1, the action to perform
+  # create identifiable local variable for argument 1, the action to perform
   local action="${1}"
 
-  #size the array of resources
+  # size the array of resources
   local resource_array_length
   resource_array_length=$(yq read -l "${TESTS_MANIFEST}" 'resources')
 
 
-  #loop through all resources in the supplied manifest
-    #determine which indicies meet the supplied criteria in ${TEST_RESOURCE_KIND} and ${TEST_RESOURCE_DESIRED}
+  # loop through all resources in the supplied manifest
+  # determine which indicies meet the supplied criteria in ${TEST_RESOURCE_KIND} and ${TEST_RESOURCE_DESIRED}
   for ((i = 0 ; i < resource_array_length ; i++)); do
 
-    #check if we're doing all resources or if the resource kind at $i matches the requested kind
-    #double brackets are technically correct; the BEST kind of correct!
-    if [[ "${TEST_RESOURCE_KIND}" == "all" ]] || [[ "${TEST_RESOURCE_KIND}" == $(yq read "${TESTS_MANIFEST}" "resources.[${i}].kind") ]]; then
+    # check if we're doing all resources or if the resource kind at $i matches the requested kind
+    # double brackets are technically correct; the BEST kind of correct!
+    if [[ "${TEST_RESOURCE_KIND}" == "all" ]] || [[ "${TEST_RESOURCE_KIND}" == "$(yq read "${TESTS_MANIFEST}" "resources.[${i}].kind")" ]]; then
 
-      #check if we're doing all desired results or if the resoured desired result at $i matches the requested desired result
-      if [[ "${TEST_RESOURCE_DESIRED}" == "all" ]] || [[ "${TEST_RESOURCE_DESIRED}" == $(yq read "${TESTS_MANIFEST}" "resources.[${i}].desired") ]]; then
-
-        #indexes_to_process+=("${i}")
+      # check if we're doing all desired results or if the resoured desired result at $i matches the requested desired result
+      if [[ "${TEST_RESOURCE_DESIRED}" == "all" ]] || [[ "${TEST_RESOURCE_DESIRED}" == "$(yq read "${TESTS_MANIFEST}" "resources.[${i}].desired")" ]]; then
 
         run_resource_tests "${action}" "${i}"
       fi
@@ -235,8 +234,6 @@ scope_and_run_tests() {
     fi
 
   done
-
-  #echo ${indexes_to_process[@]}
 
 }
 
