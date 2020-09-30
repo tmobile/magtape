@@ -1,42 +1,55 @@
 resources:
-  - name: deployments
-    tests:
-      pass:
-        - test-deploy01.yaml
-        - test-deploy03.yaml
-        - test-deploy04.yaml
-        - test-deploy05.yaml
-        - test-deploy06.yaml
-        - test-deploy07.yaml
-        - test-deploy08.yaml
-        - test-deploy09.yaml
-        - test-deploy10.yaml
-        - test-deploy11.yaml
-      fail:
-        - test-deploy02.yaml
-  - name: pdbs
-    tests:
-      pass:
-        - test-pdb02.yaml
-        - test-pdb05.yaml
-      fail:
-        - test-pdb01.yaml
-        - test-pdb03.yaml
-        - test-pdb04.yaml
-        - test-pdb06.yaml
-  - name: pods
-    tests:
-      pass:
-        - test-pod02.yaml
-        - test-pod03.yaml
-        - test-pod04.yaml
-        - test-pod05.yaml
-        - test-pod06.yaml
-      fail:
-        - test-pod01.yaml
-  - name: services
-    tests:
-      pass:
+  - kind: deployments
+    desired: pass
+    script:
+    manifests:
+      - test-deploy01.yaml
+      - test-deploy03.yaml
+      - test-deploy04.yaml
+      - test-deploy05.yaml
+      - test-deploy06.yaml
+      - test-deploy07.yaml
+      - test-deploy08.yaml
+      - test-deploy09.yaml
+      - test-deploy10.yaml
+      - test-deploy11.yaml
+  - kind: deployments
+    desired: fail
+    script: 
+    manifests:
+      - test-deploy02.yaml
+  - kind: pdbs
+    desired: pass
+    script:
+    manifests:
+      - test-pdb02.yaml
+      - test-pdb05.yaml
+  - kind: pdbs
+    desired: fail
+    script:
+    manifests:
+      - test-pdb01.yaml
+      - test-pdb03.yaml
+      - test-pdb04.yaml
+      - test-pdb06.yaml
+  - kind: pods
+    desired: pass
+    script:
+    manifests:
+      - test-pod02.yaml
+      - test-pod03.yaml
+      - test-pod04.yaml
+      - test-pod05.yaml
+      - test-pod06.yaml
+  - kind: pods
+    desired: fail
+    script:
+    manifests:
+      - test-pod01.yaml
+  - kind: services
+    desired: pass
+    script:
+    manifests:
         - test-svc01.yaml
         - test-svc02.yaml
         - test-svc03.yaml

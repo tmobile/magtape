@@ -23,8 +23,8 @@
 ################################################################################
 
 RUN_TYPE="${1}"
-TEST_RESOURCE_TYPE="${2}"
-TEST_TYPE="${3}"
+TEST_RESOURCE_KIND="${2}"
+TEST_RESOURCE_DESIRED="${3}"
 TEST_NAMESPACE="${4}"
 TESTS_MANIFEST="testing/functional-tests.yaml"
 
@@ -50,7 +50,7 @@ help_message() {
 # **********************************************
 check_arguments() {
 
-  if [ "${RUN_TYPE}" == "" ] || [ "${TEST_RESOURCE_TYPE}" == "" ] || [ "${TEST_TYPE}" == "" ] || [ "${TEST_NAMESPACE}" == "" ]; then
+  if [ "${RUN_TYPE}" == "" ] || [ "${TEST_RESOURCE_KIND}" == "" ] || [ "${TEST_RESOURCE_DESIRED}" == "" ] || [ "${TEST_NAMESPACE}" == "" ]; then
 
     help_message
     exit 1
@@ -60,7 +60,7 @@ check_arguments() {
     help_message
     exit 1
 
-  elif [ "${TEST_TYPE}" != "pass" ] && [ "${TEST_TYPE}" != "fail" ] && [ "${TEST_TYPE}" != "all" ]; then
+  elif [ "${TEST_RESOURCE_DESIRED}" != "pass" ] && [ "${TEST_RESOURCE_DESIRED}" != "fail" ] && [ "${TEST_RESOURCE_DESIRED}" != "all" ]; then
 
     help_message
     exit 1
@@ -73,64 +73,134 @@ check_arguments() {
 # Run tests/cleanup
 # **********************************************
 run_resource_tests() {
+  
+  # define local action from first argument
+  local action="${1}"
 
-    local action="${1}"
-    local resource="${2}"
-    local test_type="${3}"
-    local manifest_list=$(yq read -P "${TESTS_MANIFEST}" "resources.[name==${resource}].tests.${test_type}" | sed 's/^-[ ]*//')
+  # define local index from second argument
+  local resource_index="${2}"
 
-    if [ "${manifest_list}" == "" ]; then
+  # grab local resource from ${TESTS_MANIFEST}
+  local resource
+  
+  resource=$(yq read "${TESTS_MANIFEST}" "resources.[${resource_index}].kind")
 
-      echo "[WARN] No \"${test_type}\" tests for \"${resource}\". Skipping..."
+  # grab local test type from ${TESTS_MANIFEST}
+  local test_type
+  
+  test_type=$(yq read "${TESTS_MANIFEST}" "resources.[${resource_index}].desired")
+
+  # grab local list of test manifests to use
+  local manifest_list
+  
+  manifest_list=$(yq read -P "${TESTS_MANIFEST}" "resources.[${resource_index}].manifests" | sed 's/^-[ ]*//')
+
+  # grab local user_script specified for pre/post/between running
+  local user_script
+  
+  user_script=$(yq read -P "${TESTS_MANIFEST}" "resources.[${resource_index}].script")
+
+  # full path to the user specified script associate with this stanza in the manifest
+  local user_script_path="testing/${resource}/scripts/${user_script}"
+
+  if [ "${manifest_list}" == "" ]; then
+
+    echo "[WARN] No \"${test_type}\" tests for \"${resource}\". Skipping..."
+    echo "============================================================================"
+
+  else
+
+    echo "[INFO] **** Running \"${test_type}\" tests for \"${resource}\" ****"
+    echo "============================================================================"
+
+    # check to see if the user specified a script to be associated with this stanza
+    # only run script for apply actions
+    if [[ "${user_script}" != "" ]] && [[ "${action}" == "apply" ]]; then 
+
+      # if they did specify a script run it with the setup argument and pass the namespace in
+      "${user_script_path}" "setup" "${TEST_NAMESPACE}"
+
       echo "============================================================================"
-
-    else
-
-      echo "[INFO] **** Running \"${test_type}\" tests for \"${resource}\" ****"
-      echo "============================================================================"
-
-      for testfile in ${manifest_list}; do
-
-          local test_file_path="testing/${resource}/${testfile}"
-
-          if [ -f "${test_file_path}" ]; then
-
-              echo "[INFO] ${action}: \"${testfile}\""
-              
-              kubectl ${action} -f "${test_file_path}" -n ${TEST_NAMESPACE}
-              local exit_code=$?
-
-              if [ "${action}" == "apply" ]; then
-
-                  if [ "${test_type}"  == "pass" ] && [ ${exit_code} -ne 0 ]; then
-
-                      echo "[ERROR] Test did not pass. Exiting..."
-                      exit 1
-
-                  elif [ "${test_type}"  == "fail" ] && [ ${exit_code} -ne 1 ]; then
-
-                      echo "[ERROR] Test did not pass. Exiting..."
-                      exit 1
-
-                  else
-
-                      echo "[INFO] Test Passed"
-
-                  fi
-
-              fi
-
-          else
-
-              echo "[WARN] File \"${test_file_path}\" not found. Skipping..."
-
-          fi
-
-          echo "============================================================================"
-          
-      done
 
     fi
+
+    for testfile in ${manifest_list}; do
+
+        local test_file_path="testing/${resource}/${testfile}"
+
+        if [ -f "${test_file_path}" ]; then
+
+            echo "[INFO] ${action}: \"${testfile}\""
+            
+            if [ "${action}" == "delete" ]; then
+              
+              # kubectl doesn't like double quotes here.
+              # disable checking for double quotes around variables.
+              # shellcheck disable=SC2086
+              kubectl ${action} -f "${test_file_path}" -n ${TEST_NAMESPACE} --ignore-not-found
+
+            else
+
+              # kubectl doesn't like double quotes here.
+              # disable checking for double quotes around variables
+              # shellcheck disable=SC2086
+              kubectl ${action} -f "${test_file_path}" -n ${TEST_NAMESPACE}
+
+            fi
+
+            local exit_code=$?
+
+            if [ "${action}" == "apply" ]; then
+
+                if [ "${test_type}"  == "pass" ] && [ ${exit_code} -ne 0 ]; then
+
+                    echo "[ERROR] Test did not pass. Exiting..."
+                    exit 1
+
+                elif [ "${test_type}"  == "fail" ] && [ ${exit_code} -ne 1 ]; then
+
+                    echo "[ERROR] Test did not pass. Exiting..."
+                    exit 1
+
+                else
+
+                    echo "[INFO] Test Passed"
+
+                fi
+
+            fi
+
+        else
+
+            echo "[WARN] File \"${test_file_path}\" not found. Skipping..."
+
+        fi
+
+        # check to see if the user specified a script to be associated with this stanza
+        # only run script for apply actions
+        if [[ "${user_script}" != "" ]] && [[ "${action}" == "apply" ]]; then
+
+          # if they did specify a script run it with the between argument and pass the namespace in
+          "${user_script_path}" "between" "${TEST_NAMESPACE}"
+
+        fi
+
+        echo "============================================================================"
+        
+    done
+
+    # check to see if the user specified a script to be associated with this stanza
+    # only run script for apply actions
+    if [[ "${user_script}" != "" ]] && [[ "${action}" == "apply" ]]; then
+
+      # if they did specify a script run it with the teardown argument and pass the namespace in
+      "${user_script_path}" "teardown" "${TEST_NAMESPACE}"
+
+      echo "============================================================================"
+
+    fi
+
+  fi
 
 }
 
@@ -139,41 +209,32 @@ run_resource_tests() {
 # **********************************************
 scope_and_run_tests() {
 
+  # create identifiable local variable for argument 1, the action to perform
   local action="${1}"
 
-  if [ "${TEST_RESOURCE_TYPE}" == "all" ]; then
+  # size the array of resources
+  local resource_array_length
+  resource_array_length=$(yq read -l "${TESTS_MANIFEST}" 'resources')
 
-    resources=$(yq read "${TESTS_MANIFEST}" 'resources.[*].name')
 
-    for resource in ${resources}; do
+  # loop through all resources in the supplied manifest
+  # determine which indicies meet the supplied criteria in ${TEST_RESOURCE_KIND} and ${TEST_RESOURCE_DESIRED}
+  for ((i = 0 ; i < resource_array_length ; i++)); do
 
-      if [ "${TEST_TYPE}" == "all" ]; then
+    # check if we're doing all resources or if the resource kind at $i matches the requested kind
+    # double brackets are technically correct; the BEST kind of correct!
+    if [[ "${TEST_RESOURCE_KIND}" == "all" ]] || [[ "${TEST_RESOURCE_KIND}" == "$(yq read "${TESTS_MANIFEST}" "resources.[${i}].kind")" ]]; then
 
-        run_resource_tests "${action}" "${resource}" "pass"
-        run_resource_tests "${action}" "${resource}" "fail"
+      # check if we're doing all desired results or if the resoured desired result at $i matches the requested desired result
+      if [[ "${TEST_RESOURCE_DESIRED}" == "all" ]] || [[ "${TEST_RESOURCE_DESIRED}" == "$(yq read "${TESTS_MANIFEST}" "resources.[${i}].desired")" ]]; then
 
-      else
-
-        run_resource_tests "${action}" "${resource}" "${TEST_TYPE}"
-
+        run_resource_tests "${action}" "${i}"
       fi
-
-    done
-
-  else
-
-    if [ "${TEST_TYPE}" == "all" ]; then
-
-        run_resource_tests "${action}" "${resource}" "pass"
-        run_resource_tests "${action}" "${resource}" "fail"
-
-    else
-
-      run_resource_tests "${action}" "${resource}" "${TEST_TYPE}"
 
     fi
 
-  fi
+  done
+
 }
 
 ################################################################################
