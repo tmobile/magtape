@@ -47,3 +47,18 @@ This release adds new policies and enhances several CI workflow components.
 ### Misc Enhancements
 
 - Enhancements for Advanced install workflow with Kustomize
+
+## 2.2.0
+
+This release focuses on some security enhancements.
+
+### Enhancements
+
+- Add securityContext and non-root user for pod/containers (#47)
+- Hardcode Gunicorn workers/threads to fix #48 (#49)
+- Add HPA resource for horizontal scaling (#50)
+- Add new framework for executing setup/teardown code between functional tests (#45)
+
+### Misc Notes
+
+- Changes OPA container listening port from `443` to `8443` since a non-root user can't bind to ports below 1000. The OPA container isn't exposed outside of localhost, so this shouldn't present any issues
