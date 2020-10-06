@@ -95,21 +95,21 @@ spec:
           - "--server"
           - "--tls-cert-file=/tls/cert.pem"
           - "--tls-private-key-file=/tls/key.pem"
-          - "--addr=0.0.0.0:443"
+          - "--addr=0.0.0.0:8443"
           - "--addr=http://127.0.0.1:8181"
         securityContext:
             allowPrivilegeEscalation: false
         readinessProbe:
           httpGet:
             scheme: HTTPS
-            port: 443
+            port: 8443
             path: /health
           initialDelaySeconds: 3
           periodSeconds: 5
         livenessProbe:
           httpGet:
             scheme: HTTPS
-            port: 443
+            port: 8443
             path: /health
           initialDelaySeconds: 3
           periodSeconds: 5
