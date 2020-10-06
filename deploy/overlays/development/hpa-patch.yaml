@@ -1,0 +1,8 @@
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: magtape
+  namespace: magtape-system
+spec:
+  maxReplicas: 3
+  minReplicas: 1

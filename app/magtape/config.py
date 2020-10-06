@@ -25,7 +25,7 @@ magtape_tls_path = "/tls"
 
 # Gunicorn config
 bind = ":" + str(APP_PORT)
-workers = multiprocessing.cpu_count() * 2 + 1
-threads = 2 * multiprocessing.cpu_count()
+workers = 2
+threads = 2
 certfile = magtape_tls_path + "/cert.pem"
 keyfile = magtape_tls_path + "/key.pem"

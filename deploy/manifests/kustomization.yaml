@@ -2,6 +2,7 @@ resources:
   - magtape-cluster-rbac.yaml
   - magtape-deploy.yaml
   - magtape-env-cm.yaml
+  - magtape-hpa.yaml
   - magtape-ns-rbac.yaml
   - magtape-ns.yaml
   - magtape-opa-cm.yaml
