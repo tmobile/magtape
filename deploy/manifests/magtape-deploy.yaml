@@ -16,11 +16,16 @@ spec:
         app: magtape
     spec:
       serviceAccountName: magtape-sa
+      securityContext:
+        runAsUser: 1900
+        runAsGroup: 1900
       initContainers:
         - name: magtape-init
           image: tmobile/magtape-init:v2.1.5
           command: [/app/magtape-init.py]
           imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
           env:
           - name: MAGTAPE_POD_NAME
             valueFrom:
@@ -45,6 +50,8 @@ spec:
         - containerPort: 5000
         command: ["gunicorn", "magtape:app", "--config=config.py"]
         imagePullPolicy: Always
+        securityContext:
+            allowPrivilegeEscalation: false
         livenessProbe:
           httpGet:
             scheme: HTTPS
@@ -90,6 +97,8 @@ spec:
           - "--tls-private-key-file=/tls/key.pem"
           - "--addr=0.0.0.0:443"
           - "--addr=http://127.0.0.1:8181"
+        securityContext:
+            allowPrivilegeEscalation: false
         readinessProbe:
           httpGet:
             scheme: HTTPS
@@ -119,6 +128,8 @@ spec:
         args:
           - "--policies=magtape-system"
           - "--require-policy-label=true"
+        securityContext:
+            allowPrivilegeEscalation: false
         resources:
           limits:
             cpu: 500m
