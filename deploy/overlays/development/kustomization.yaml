@@ -4,3 +4,4 @@ resources:
 patches:
 - env-cm-patch.yaml
 - deployment-patch.yaml
+- hpa-patch.yaml
