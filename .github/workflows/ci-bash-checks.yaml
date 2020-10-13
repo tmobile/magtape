@@ -27,4 +27,4 @@ jobs:
       - name: Lint with shellcheck
         timeout-minutes: 5
         run: |
-          for file in $(git ls-files --exclude-from=hack/.shellcheck-selection --ignored); do shellcheck --color=auto ${file}; done
+          make lint-shell
