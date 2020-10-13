@@ -28,8 +28,17 @@ SELECTION_FILE="hack/.shellcheck-selection"
 #### Main ######################################################################
 ################################################################################
 
+files_with_errors=0
+
 for file in $(git ls-files --exclude-from=$SELECTION_FILE --ignored); do 
 
-    shellcheck --color=auto ${file}
+    # run shellcheck, if it doesn't exit clean increment the number of files with errors
+    shellcheck --color=auto "${file}" || (( files_with_errors += 1 ))
     
 done
+
+if (( files_with_errors > 0 )); then
+
+    exit 1
+
+fi
