@@ -27,4 +27,4 @@ jobs:
       - name: Lint with shellcheck
         timeout-minutes: 5
         run: |
-          make lint-shell
+          make lint-shell-ci

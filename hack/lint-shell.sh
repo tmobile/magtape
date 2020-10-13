@@ -22,21 +22,35 @@
 #### Variables, Arrays, and Hashes #############################################
 ################################################################################
 
+RUN_TYPE="${1}"
 SELECTION_FILE="hack/.shellcheck-selection"
 
 ################################################################################
 #### Main ######################################################################
 ################################################################################
 
+# check to see if being run for ci, if yes exclude legacy scripts from linting
+if [[ "ci" == "${RUN_TYPE}" ]]; then
+
+    files_to_check="$(git ls-files --exclude-from=$SELECTION_FILE --ignored)"
+
+else
+    
+    files_to_check="$(git ls-files --exclude='*.sh' --ignored)"
+
+fi
+
+# variable to count up files that did not lint cleanly
 files_with_errors=0
 
-for file in $(git ls-files --exclude-from=$SELECTION_FILE --ignored); do 
+for file in ${files_to_check}; do 
 
     # run shellcheck, if it doesn't exit clean increment the number of files with errors
     shellcheck --color=auto "${file}" || (( files_with_errors += 1 ))
     
 done
 
+# if any of the files didn't come back clean from shellcheck exit with status 1
 if (( files_with_errors > 0 )); then
 
     exit 1
