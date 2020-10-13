@@ -1,0 +1,9 @@
+# Select all .sh files
+*.sh
+
+# Exclude the following files under temporary legacy exemption
+!hack/build-single-manifest.sh
+!hack/patch-ca-bundle.sh
+!hack/run-python-tests.sh
+!hack/ssl-cert-gen.sh
+!testing/export-env.sh

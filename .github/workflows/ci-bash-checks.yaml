@@ -27,4 +27,4 @@ jobs:
       - name: Lint with shellcheck
         timeout-minutes: 5
         run: |
-          git ls-files --exclude='*.sh' --ignored | xargs shellcheck
+          for file in $(git ls-files --exclude-from=hack/.shellcheck-selection --ignored); do shellcheck ${file}; done
