@@ -30,7 +30,7 @@ SELECTION_FILE="hack/.shellcheck-selection"
 ################################################################################
 
 # check to see if being run for ci, if yes exclude legacy scripts from linting
-if [[ "ci" == "${RUN_TYPE}" ]]; then
+if [[ "${RUN_TYPE}" == "ci" ]]; then
 
     files_to_check="$(git ls-files --exclude-from=$SELECTION_FILE --ignored)"
 
