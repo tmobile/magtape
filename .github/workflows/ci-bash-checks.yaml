@@ -1,7 +1,7 @@
 name: bash-checks
 
 on:
-  pull_requests:
+  pull_request:
     branches:
       - master
   push:
@@ -22,6 +22,7 @@ jobs:
         timeout-minutes: 5
         run: |
           apt-get update
+          
           apt-get install shellcheck
 
       - name: Lint with shellcheck
