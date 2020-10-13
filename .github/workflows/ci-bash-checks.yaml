@@ -21,9 +21,8 @@ jobs:
       - name: Install shellcheck
         timeout-minutes: 5
         run: |
-          apt-get update
-          
-          apt-get install shellcheck
+          sudo apt-get update
+          sudo apt-get install shellcheck
 
       - name: Lint with shellcheck
         timeout-minutes: 5
