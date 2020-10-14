@@ -8,9 +8,8 @@ on:
     branches:
       - master
 
-# Jobs
 jobs:
-  # Job to lint code
+
   e2e-tests:
     runs-on: ubuntu-latest
     strategy:
@@ -33,37 +32,55 @@ jobs:
     name: e2e-tests for K8s ${{ matrix.k8s-version }}
 
     steps:
-    - uses: actions/checkout@v2
 
     - name: Check out the repo
       uses: actions/checkout@v2
 
-    - name: Build magtape-init Container Image
-      if: github.repository == 'tmobile/magtape'
-      timeout-minutes: 10
-      uses: docker/build-push-action@v1
+    # Prepare is used to to collect information needed later in the action and expose it so it can be referenced
+    - name: Prepare
+      id: prep
+      run: |
+        echo ::set-output name=version::sha-${GITHUB_SHA::7}
+
+    # Part of docker/build-push-action@v2; setting up the build system
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
       with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_PASSWORD }}
-        path: ./app/magtape-init/
-        repository: tmobile/magtape-init
-        tag_with_sha: true
+        driver: docker-container
+        driver-opts: image=moby/buildkit:buildx-stable-1
+        use: true
+
+    - name: Build magtape-init Container Image
+      timeout-minutes: 10
+      uses: docker/build-push-action@v2
+      with:
+        context: ./app/magtape-init/
+        # file should be specified relative to the repo root rather than relative to the context
+        file: ./app/magtape-init/Dockerfile
+        # Don't push the image to a registry
         push: false
+        # Load image into local docker default context
+        outputs: type=docker
+        # Uses the version output exposed by the Prepare step to set the tag under v2
+        tags: tmobile/magtape-init:${{ steps.prep.outputs.version }}
+
 
     - name: Build magtape Container Image
-      if: github.repository == 'tmobile/magtape'
       timeout-minutes: 10
-      uses: docker/build-push-action@v1
+      uses: docker/build-push-action@v2
       with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_PASSWORD }}
-        path: ./app/magtape/
-        repository: tmobile/magtape
-        tag_with_sha: true
+        context: ./app/magtape/
+        # file should be specified relative to the repo root rather than relative to the context
+        file: ./app/magtape/Dockerfile
+        # Don't push the image to a registry
         push: false
+        # Load image into local docker default context
+        outputs: type=docker
+        # Uses the version output exposed by the Prepare step to set the tag under v2
+        tags: tmobile/magtape:${{ steps.prep.outputs.version }}
 
     - name: Setup KinD Cluster
-      timeout-minutes: 5
+      timeout-minutes: 10
       uses: engineerd/setup-kind@v0.4.0
       with:
           version: "v0.9.0"
@@ -71,6 +88,7 @@ jobs:
 
     - name: Install MagTape
       timeout-minutes: 10
+      # kind load docker-image: loads image from docker default context into kind local image registry
       run: |
         echo "Loading MagTape images to KinD nodes"
         GIT_SHA=${{github.sha}}

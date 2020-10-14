@@ -2,45 +2,54 @@ name: image-build
 
 on:
   release:
+    # Dynamic version tag is set based on the assumption this ci task only runs on release
     types: [published]
 
-# Jobs
 jobs:
   # Build and push magtape-init container image
   build-magtape-init-image:
-    name: Push magtape-init image to DockerHub using release tag
+    name: Build and push magtape-init images to DockerHub
     runs-on: ubuntu-latest
 
     steps:
-
+      
       - name: Check out the repo
         uses: actions/checkout@v2
 
-      - name: Push release tag to Docker Hub
-        if: github.repository == 'tmobile/magtape'
-        timeout-minutes: 10
-        uses: docker/build-push-action@v1
+      # Prepare is used to to collect information needed later in the action and expose it so it can be referenced
+      - name: Prepare
+        id: prep
+        # GITHUB_REF variable must exist in action; this may rely on {{ on: release: types: [published] }} gating the action
+        run: |
+          echo ::set-output name=version::${GITHUB_REF#refs/tags/}
+          
+      # Part of docker/build-push-action@v2; setting up the build system
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      
+      # Part of docker/build-push-action@v2; login to dockerhub
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          path: ./app/magtape-init/
-          repository: tmobile/magtape-init
-          tag_with_ref: true
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Push magtape-init image to DockerHub using latest tag
-        if: github.repository == 'tmobile/magtape'
+      - name: Build and push magtape-init image to DockerHub
+        #if: github.repository == 'tmobile/magtape'
         timeout-minutes: 10
-        uses: docker/build-push-action@v1
+        uses: docker/build-push-action@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          path: ./app/magtape-init/
-          repository: tmobile/magtape-init
-          tags: latest
-
+          context: ./app/magtape-init/
+          # file should be specified relative to the repo root rather than relative to the context
+          file: ./app/magtape-init/Dockerfile
+          # push is no longer defaulted to true under v2; to push you must specify push is true
+          push: true
+          # Uses the version output exposed by the Prepare step to set the tag under v2
+          tags: tmobile/magtape-init:${{ steps.prep.outputs.version }},tmobile/magtape-init:latest
+ 
   # Build and push magtape container image
   build-magtape-image:
-    name: Push magtape image to DockerHub using release tag
+    name: Build and push magtape images to DockerHub
     runs-on: ubuntu-latest
 
     steps:
@@ -48,24 +57,33 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v2
 
-      - name: Push release tag to Docker Hub
-        if: github.repository == 'tmobile/magtape'
-        timeout-minutes: 10
-        uses: docker/build-push-action@v1
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          path: ./app/magtape/
-          repository: tmobile/magtape
-          tag_with_ref: true
+      # Prepare is used to to collect information needed later in the action and expose it so it can be referenced
+      - name: Prepare
+        id: prep
+        # GITHUB_REF variable must exist in action; this may rely on {{ on: release: types: [published] }} gating the action
+        run: |
+          echo ::set-output name=version::${GITHUB_REF#refs/tags/}
 
-      - name: Push magtape-init image to DockerHub using latest tag
-        if: github.repository == 'tmobile/magtape'
-        timeout-minutes: 10
-        uses: docker/build-push-action@v1
+      # Part of docker/build-push-action@v2; setting up the build system
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      # Part of docker/build-push-action@v2; login to dockerhub
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          path: ./app/magtape/
-          repository: tmobile/magtape
-          tags: latest
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push magtape image to DockerHub
+        #if: github.repository == 'tmobile/magtape'
+        timeout-minutes: 10
+        uses: docker/build-push-action@v2
+        with:
+          context: ./app/magtape/
+          # file should be specified relative to the repo root rather than relative to the context
+          file: ./app/magtape/Dockerfile
+          # push is no longer defaulted to true under v2; to push you must specify push is true
+          push: true
+          # Uses the version output exposed by the Prepare step to set the tag under v2
+          tags: tmobile/magtape:${{ steps.prep.outputs.version }},tmobile/magtape:latest
