@@ -1,0 +1,30 @@
+name: bash-checks
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+# Jobs
+jobs:
+  # lint bash code
+  shellcheck:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+      
+      - name: Install shellcheck
+        timeout-minutes: 5
+        run: |
+          sudo apt-get update
+          sudo apt-get install shellcheck
+
+      - name: Lint with shellcheck
+        timeout-minutes: 5
+        run: |
+          make lint-shell-ci
