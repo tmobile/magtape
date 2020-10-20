@@ -3,31 +3,31 @@ package kubernetes.admission.policy_nodeport_range
 test_np_single_allowed {
 	ns = data.mock.test_np_namespace_single_30100
 	result = deny with input as data.mock.test_np_single_30100 with data.kubernetes.namespaces.test1 as ns
-	count(result) == 0 
+	count(result) == 0
 }
 
 test_np_range_comma_allowed {
 	ns = data.mock.test_np_namespace_range_comma
 	result = deny with input as data.mock.test_np_single_30100 with data.kubernetes.namespaces.test1 as ns
-	count(result) == 0 
+	count(result) == 0
 }
 
 test_np_range_dash_allowed {
 	ns = data.mock.test_np_namespace_range_dash
 	result = deny with input as data.mock.test_np_single_30150 with data.kubernetes.namespaces.test1 as ns
-	count(result) == 0 
+	count(result) == 0
 }
 
 test_np_range_mixed_allowed {
 	ns = data.mock.test_np_namespace_range_dash_and_comma
 	result = deny with input as data.mock.test_np_single_30187 with data.kubernetes.namespaces.test1 as ns
-	count(result) == 0 
+	count(result) == 0
 }
 
 test_np_range_exempt_allowed {
 	ns = data.mock.test_np_namespace_exempt
 	result = deny with input as data.mock.test_np_single_30187 with data.kubernetes.namespaces.test1 as ns
-	count(result) == 0 
+	count(result) == 0
 }
 
 test_np_single_denied {

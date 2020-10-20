@@ -2,7 +2,7 @@ package kubernetes.admission.policy_pdb
 
 test_pdb_allowed_min_high {
 	result = deny with input as data.mock.test_pdb_allowed_min_high
-	count(result) == 0 
+	count(result) == 0
 }
 
 test_pdb_allowed_min_low {
