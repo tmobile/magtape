@@ -74,4 +74,10 @@ There is a pre-built template for bug ticketing that can be used for reporting i
 
 ## MagTape Policies
 
-Since MagTape makes use of the Rego policy language, there are unlimited possibilities for policies. For now we want to keep a carefully curated list of policies included within the project. We will usually open Issues and label them appropriately to signify policies that we're looking for help on. Please always feel free to share a link/gist to any policies you've created for MagTape and we'll try our best to keep a list and give you a shout out!
+Since MagTape makes use of the Rego policy language, there are unlimited possibilities for policies. We welcome new policies from the community, but may not accept all submissions depending on relevancy. We expect all policies contributed to have valid unit tests with a minimum of 80% coverage. The layout of policies, tests, and mocked data should be similar to:
+
+| File Type             | File Name Scheme                                          | Description                                          |
+|---                    |---                                                        |---                                                   |
+| policy                | policies/policy-\<policy-name\>-check.rego                  | The policy itself                                    |
+| tests                 | policies/test/test_policy-\<policy-name\>-check.rego        | Unit tests for the policy                        |
+| test data             | policies/test/test_policy-\<policy-name\>-check_mock.json   | Mock test data in JSON format                        |
