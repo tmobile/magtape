@@ -127,13 +127,13 @@ ci-lint-python:
 .PHONY: unit-rego
 unit-rego:
 
-	opa test -v policies/
+	opa test -v policies/ policies/test/
 
 # Check Coverage for MagTape Policy tests
 .PHONY: coverage-rego
 coverage-rego:
 
-	opa test -c --threshold 80.0 policies/
+	opa test -c --threshold 80.0 policies/ policies/test/
 
 # Run test suite for MagTape Policies
 .PHONY: test-rego

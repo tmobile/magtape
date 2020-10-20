@@ -1,0 +1,334 @@
+{
+	"mock": {
+		"test_np_single_30075": {
+			"apiVersion": "admission.k8s.io/v1beta1",
+			"kind": "AdmissionReview",
+			"request": {
+				"dryRun": false,
+				"kind": {
+					"group": "",
+					"kind": "Service",
+					"version": "v1"
+				},
+				"namespace": "test1",
+				"object": {
+					"apiVersion": "v1",
+					"kind": "Service",
+					"metadata": {
+						"annotations": {"kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"Service\",\"metadata\":{\"annotations\":{},\"creationTimestamp\":null,\"labels\":{\"app\":\"test-svc\"},\"name\":\"test-svc\",\"namespace\":\"test1\"},\"spec\":{\"ports\":[{\"name\":\"http\",\"port\":443,\"protocol\":\"TCP\",\"targetPort\":443}],\"selector\":{\"app\":\"test-svc\"},\"type\":\"ClusterIP\"},\"status\":{\"loadBalancer\":{}}}\n"},
+						"creationTimestamp": "2020-02-04T01:16:07Z",
+						"labels": {"app": "test-svc"},
+						"name": "test-svc",
+						"namespace": "test1",
+						"uid": "ebaa71f7-46eb-11ea-85fd-005056a7b324"
+					},
+					"spec": {
+						"clusterIP": "198.19.241.208",
+						"ports": [{
+							"name": "http",
+							"nodePort": 30075,
+							"port": 443,
+							"protocol": "TCP",
+							"targetPort": 443
+						}],
+						"selector": {"app": "test-svc"},
+						"sessionAffinity": "None",
+						"type": "NodePort"
+					},
+					"status": {"loadBalancer": {}}
+				}
+			}
+		},
+		"test_np_single_30100": {
+			"apiVersion": "admission.k8s.io/v1beta1",
+			"kind": "AdmissionReview",
+			"request": {
+				"dryRun": false,
+				"kind": {
+					"group": "",
+					"kind": "Service",
+					"version": "v1"
+				},
+				"namespace": "test1",
+				"object": {
+					"apiVersion": "v1",
+					"kind": "Service",
+					"metadata": {
+						"annotations": {"kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"Service\",\"metadata\":{\"annotations\":{},\"creationTimestamp\":null,\"labels\":{\"app\":\"test-svc\"},\"name\":\"test-svc\",\"namespace\":\"test1\"},\"spec\":{\"ports\":[{\"name\":\"http\",\"port\":443,\"protocol\":\"TCP\",\"targetPort\":443}],\"selector\":{\"app\":\"test-svc\"},\"type\":\"ClusterIP\"},\"status\":{\"loadBalancer\":{}}}\n"},
+						"creationTimestamp": "2020-02-04T01:16:07Z",
+						"labels": {"app": "test-svc"},
+						"name": "test-svc",
+						"namespace": "test1",
+						"uid": "ebaa71f7-46eb-11ea-85fd-005056a7b324"
+					},
+					"spec": {
+						"clusterIP": "198.19.241.208",
+						"ports": [{
+							"name": "http",
+							"nodePort": 30100,
+							"port": 443,
+							"protocol": "TCP",
+							"targetPort": 443
+						}],
+						"selector": {"app": "test-svc"},
+						"sessionAffinity": "None",
+						"type": "NodePort"
+					},
+					"status": {"loadBalancer": {}}
+				}
+			}
+		},
+		"test_np_single_30101": {
+			"apiVersion": "admission.k8s.io/v1beta1",
+			"kind": "AdmissionReview",
+			"request": {
+				"dryRun": false,
+				"kind": {
+					"group": "",
+					"kind": "Service",
+					"version": "v1"
+				},
+				"namespace": "test1",
+				"object": {
+					"apiVersion": "v1",
+					"kind": "Service",
+					"metadata": {
+						"annotations": {"kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"Service\",\"metadata\":{\"annotations\":{},\"creationTimestamp\":null,\"labels\":{\"app\":\"test-svc\"},\"name\":\"test-svc\",\"namespace\":\"test1\"},\"spec\":{\"ports\":[{\"name\":\"http\",\"port\":443,\"protocol\":\"TCP\",\"targetPort\":443}],\"selector\":{\"app\":\"test-svc\"},\"type\":\"ClusterIP\"},\"status\":{\"loadBalancer\":{}}}\n"},
+						"creationTimestamp": "2020-02-04T01:16:07Z",
+						"labels": {"app": "test-svc"},
+						"name": "test-svc",
+						"namespace": "test1",
+						"uid": "ebaa71f7-46eb-11ea-85fd-005056a7b324"
+					},
+					"spec": {
+						"clusterIP": "198.19.241.208",
+						"ports": [{
+							"name": "http",
+							"nodePort": 30101,
+							"port": 443,
+							"protocol": "TCP",
+							"targetPort": 443
+						}],
+						"selector": {"app": "test-svc"},
+						"sessionAffinity": "None",
+						"type": "NodePort"
+					},
+					"status": {"loadBalancer": {}}
+				}
+			}
+		},
+		"test_np_single_30150": {
+			"apiVersion": "admission.k8s.io/v1beta1",
+			"kind": "AdmissionReview",
+			"request": {
+				"dryRun": false,
+				"kind": {
+					"group": "",
+					"kind": "Service",
+					"version": "v1"
+				},
+				"namespace": "test1",
+				"object": {
+					"apiVersion": "v1",
+					"kind": "Service",
+					"metadata": {
+						"annotations": {"kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"Service\",\"metadata\":{\"annotations\":{},\"creationTimestamp\":null,\"labels\":{\"app\":\"test-svc\"},\"name\":\"test-svc\",\"namespace\":\"test1\"},\"spec\":{\"ports\":[{\"name\":\"http\",\"port\":443,\"protocol\":\"TCP\",\"targetPort\":443}],\"selector\":{\"app\":\"test-svc\"},\"type\":\"ClusterIP\"},\"status\":{\"loadBalancer\":{}}}\n"},
+						"creationTimestamp": "2020-02-04T01:16:07Z",
+						"labels": {"app": "test-svc"},
+						"name": "test-svc",
+						"namespace": "test1",
+						"uid": "ebaa71f7-46eb-11ea-85fd-005056a7b324"
+					},
+					"spec": {
+						"clusterIP": "198.19.241.208",
+						"ports": [{
+							"name": "http",
+							"nodePort": 30150,
+							"port": 443,
+							"protocol": "TCP",
+							"targetPort": 443
+						}],
+						"selector": {"app": "test-svc"},
+						"sessionAffinity": "None",
+						"type": "NodePort"
+					},
+					"status": {"loadBalancer": {}}
+				}
+			}
+		},
+		"test_np_single_30187": {
+			"apiVersion": "admission.k8s.io/v1beta1",
+			"kind": "AdmissionReview",
+			"request": {
+				"dryRun": false,
+				"kind": {
+					"group": "",
+					"kind": "Service",
+					"version": "v1"
+				},
+				"namespace": "test1",
+				"object": {
+					"apiVersion": "v1",
+					"kind": "Service",
+					"metadata": {
+						"annotations": {"kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"Service\",\"metadata\":{\"annotations\":{},\"creationTimestamp\":null,\"labels\":{\"app\":\"test-svc\"},\"name\":\"test-svc\",\"namespace\":\"test1\"},\"spec\":{\"ports\":[{\"name\":\"http\",\"port\":443,\"protocol\":\"TCP\",\"targetPort\":443}],\"selector\":{\"app\":\"test-svc\"},\"type\":\"ClusterIP\"},\"status\":{\"loadBalancer\":{}}}\n"},
+						"creationTimestamp": "2020-02-04T01:16:07Z",
+						"labels": {"app": "test-svc"},
+						"name": "test-svc",
+						"namespace": "test1",
+						"uid": "ebaa71f7-46eb-11ea-85fd-005056a7b324"
+					},
+					"spec": {
+						"clusterIP": "198.19.241.208",
+						"ports": [{
+							"name": "http",
+							"nodePort": 30187,
+							"port": 443,
+							"protocol": "TCP",
+							"targetPort": 443
+						}],
+						"selector": {"app": "test-svc"},
+						"sessionAffinity": "None",
+						"type": "NodePort"
+					},
+					"status": {"loadBalancer": {}}
+				}
+			}
+		},
+		"test_np_namespace_single_30100": {
+			"apiVersion": "v1",
+			"kind": "Namespace",
+			"metadata": {
+				"annotations": {"k8s.t-mobile.com/nodeportRange": " 30100 "},
+				"creationTimestamp": "2019-07-11T04:38:16Z",
+				"labels": {"k8s.t-mobile.com/magtape": "enabled"},
+				"name": "test1",
+				"resourceVersion": "468045109",
+				"selfLink": "/api/v1/namespaces/test1",
+				"uid": "b394f81c-a395-11e9-a86c-005056a71958"
+			},
+			"spec": {"finalizers": ["kubernetes"]},
+			"status": {"phase": "Active"}
+		},
+		"test_np_namespace_range_comma": {
+			"apiVersion": "v1",
+			"kind": "Namespace",
+			"metadata": {
+				"annotations": {"k8s.t-mobile.com/nodeportRange": " 30100, 32000, 33100, 24000 "},
+				"creationTimestamp": "2019-07-11T04:38:16Z",
+				"labels": {"k8s.t-mobile.com/magtape": "enabled"},
+				"name": "test1",
+				"resourceVersion": "468045109",
+				"selfLink": "/api/v1/namespaces/test1",
+				"uid": "b394f81c-a395-11e9-a86c-005056a71958"
+			},
+			"spec": {"finalizers": ["kubernetes"]},
+			"status": {"phase": "Active"}
+		},
+		"test_np_namespace_range_dash": {
+			"apiVersion": "v1",
+			"kind": "Namespace",
+			"metadata": {
+				"annotations": {"k8s.t-mobile.com/nodeportRange": " 30100-30250 "},
+				"creationTimestamp": "2019-07-11T04:38:16Z",
+				"labels": {"k8s.t-mobile.com/magtape": "enabled"},
+				"name": "test1",
+				"resourceVersion": "468045109",
+				"selfLink": "/api/v1/namespaces/test1",
+				"uid": "b394f81c-a395-11e9-a86c-005056a71958"
+			},
+			"spec": {"finalizers": ["kubernetes"]},
+			"status": {"phase": "Active"}
+		},
+		"test_np_namespace_range_dash_and_comma": {
+			"apiVersion": "v1",
+			"kind": "Namespace",
+			"metadata": {
+				"annotations": {"k8s.t-mobile.com/nodeportRange": "30100-30200, 30101,30201,30300-30305, 30180-30305"},
+				"creationTimestamp": "2019-07-11T04:38:16Z",
+				"labels": {"k8s.t-mobile.com/magtape": "enabled"},
+				"name": "test1",
+				"resourceVersion": "468045109",
+				"selfLink": "/api/v1/namespaces/test1",
+				"uid": "b394f81c-a395-11e9-a86c-005056a71958"
+			},
+			"spec": {"finalizers": ["kubernetes"]},
+			"status": {"phase": "Active"}
+		},
+		"test_np_namespace_range_extra_dash": {
+			"apiVersion": "v1",
+			"kind": "Namespace",
+			"metadata": {
+				"annotations": {"k8s.t-mobile.com/nodeportRange": "--30100-30200, ,30101,30201,30300-30305, 30180-30305,-"},
+				"creationTimestamp": "2019-07-11T04:38:16Z",
+				"labels": {"k8s.t-mobile.com/magtape": "enabled"},
+				"name": "test1",
+				"resourceVersion": "468045109",
+				"selfLink": "/api/v1/namespaces/test1",
+				"uid": "b394f81c-a395-11e9-a86c-005056a71958"
+			},
+			"spec": {"finalizers": ["kubernetes"]},
+			"status": {"phase": "Active"}
+		},
+		"test_np_namespace_range_alpha_chars": {
+			"apiVersion": "v1",
+			"kind": "Namespace",
+			"metadata": {
+				"annotations": {"k8s.t-mobile.com/nodeportRange": " unknown"},
+				"creationTimestamp": "2019-07-11T04:38:16Z",
+				"labels": {"k8s.t-mobile.com/magtape": "enabled"},
+				"name": "test1",
+				"resourceVersion": "468045109",
+				"selfLink": "/api/v1/namespaces/test1",
+				"uid": "b394f81c-a395-11e9-a86c-005056a71958"
+			},
+			"spec": {"finalizers": ["kubernetes"]},
+			"status": {"phase": "Active"}
+		},
+		"test_np_namespace_range_special_chars": {
+			"apiVersion": "v1",
+			"kind": "Namespace",
+			"metadata": {
+				"annotations": {"k8s.t-mobile.com/nodeportRange": "30100&20302"},
+				"creationTimestamp": "2019-07-11T04:38:16Z",
+				"labels": {"k8s.t-mobile.com/magtape": "enabled"},
+				"name": "test1",
+				"resourceVersion": "468045109",
+				"selfLink": "/api/v1/namespaces/test1",
+				"uid": "b394f81c-a395-11e9-a86c-005056a71958"
+			},
+			"spec": {"finalizers": ["kubernetes"]},
+			"status": {"phase": "Active"}
+		},
+		"test_np_namespace_exempt": {
+			"apiVersion": "v1",
+			"kind": "Namespace",
+			"metadata": {
+				"annotations": {"k8s.t-mobile.com/nodeportRange": "NA"},
+				"creationTimestamp": "2019-07-11T04:38:16Z",
+				"labels": {"k8s.t-mobile.com/magtape": "enabled"},
+				"name": "test1",
+				"resourceVersion": "468045109",
+				"selfLink": "/api/v1/namespaces/test1",
+				"uid": "b394f81c-a395-11e9-a86c-005056a71958"
+			},
+			"spec": {"finalizers": ["kubernetes"]},
+			"status": {"phase": "Active"}
+		},
+		"test_np_namespace_empty": {
+			"apiVersion": "v1",
+			"kind": "Namespace",
+			"metadata": {
+				"annotations": {"k8s.t-mobile.com/nodeportRange": ""},
+				"creationTimestamp": "2019-07-11T04:38:16Z",
+				"labels": {"k8s.t-mobile.com/magtape": "enabled"},
+				"name": "test1",
+				"resourceVersion": "468045109",
+				"selfLink": "/api/v1/namespaces/test1",
+				"uid": "b394f81c-a395-11e9-a86c-005056a71958"
+			},
+			"spec": {"finalizers": ["kubernetes"]},
+			"status": {"phase": "Active"}
+		}
+	}
+}
