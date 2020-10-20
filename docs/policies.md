@@ -42,12 +42,12 @@ The Pod Disruption Budget allows you to specify a configuration to limit the num
 
 The configuration should follow these recommended rules:
 
-Always use a percentage value for "minAvailable" or "maxUnavailable", never an integer value
-The values should always allow for a failure of one third (a complete Availability Zone loss)
-minAvailable value should be less than or equal to 66%
-maxUnavailable value should be greater than or equal to 33%
-The values for "minAvailable" or "maxUnavailable" should take your workload replica count into consideration (This should prevent PDB configurations from blocking platform level maintenance operations)
-replicacount - (PDB% * replicacount) >= 1
+- Always use a percentage value for "minAvailable" or "maxUnavailable", never an integer value
+- The values should always allow for a failure of one third (a complete Availability Zone loss)
+- minAvailable value should be less than or equal to 66%
+- maxUnavailable value should be greater than or equal to 33%
+- The values for "minAvailable" or "maxUnavailable" should take your workload replica count into consideration (This should prevent PDB configurations from blocking platform level maintenance operations)
+- replicacount - (PDB% * replicacount) >= 1
 
 You can find more information about Pod Disruption Budgets within the [official Kubernetes documentation](https://kubernetes.io/docs/tasks/run-application/configure-pdb)
 

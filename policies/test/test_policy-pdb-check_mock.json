@@ -1,0 +1,58 @@
+{
+	"mock": {
+		"test_pdb_allowed_min_high": {
+			"apiVersion": "policy/v1beta1",
+			"kind": "PodDisruptionBudget",
+			"metadata": {"name": "test1-pdb"},
+			"request": {"object": {"spec": {
+				"minAvailable": "66%",
+				"selector": {"matchLabels": {"app": "test1"}}
+			}}}
+		},
+		"test_pdb_allowed_min_low": {
+				"apiVersion": "policy/v1beta1",
+				"kind": "PodDisruptionBudget",
+				"metadata": {"name": "test1-pdb"},
+				"request": {"object": {"spec": {
+					"maxUnavailable": "33%",
+					"selector": {"matchLabels": {"app": "test1"}}
+				}}}
+		},
+		"test_pdb_denied_min_percent": {
+				"apiVersion": "policy/v1beta1",
+				"kind": "PodDisruptionBudget",
+				"metadata": {"name": "test1-pdb"},
+				"request": {"object": {"spec": {
+					"minAvailable": "67%",
+					"selector": {"matchLabels": {"app": "test1"}}
+				}}}
+		},
+		"test_pdb_denied_min_int": {
+			"apiVersion": "policy/v1beta1",
+			"kind": "PodDisruptionBudget",
+			"metadata": {"name": "test1-pdb"},
+			"request": {"object": {"spec": {
+				"minAvailable": "10",
+				"selector": {"matchLabels": {"app": "test1"}}
+			}}}
+		},
+		"test_pdb_denied_max_percent": {
+			"apiVersion": "policy/v1beta1",
+			"kind": "PodDisruptionBudget",
+			"metadata": {"name": "test1-pdb"},
+			"request": {"object": {"spec": {
+				"maxUnavailable": "32%",
+				"selector": {"matchLabels": {"app": "test1"}}
+			}}}
+		},
+		"test_pdb_denied_max_int": {
+			"apiVersion": "policy/v1beta1",
+			"kind": "PodDisruptionBudget",
+			"metadata": {"name": "test1-pdb"},
+			"request": {"object": {"spec": {
+				"maxUnavailable": "10",
+				"selector": {"matchLabels": {"app": "test1"}}
+			}}}
+		}
+	}
+}
