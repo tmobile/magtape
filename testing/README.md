@@ -45,18 +45,28 @@ Some files listed below don't exist yet. They are listed for tracking purposes a
 
 Functional tests for MagTape are based on the files linked above. Any new tests added will require certain consideration to be picked up by the end-to-end CI tests. 
 
-The [functional-tests.yaml](./functional-tests.yaml) file contains the tests that get executed within the CI workflows and what results are expected (pass or fail). Each test should fall under the appropriate resource and result section of the file. For example, a new test for deployments that should result in a fail would be added like this:
+The [functional-tests.yaml](./functional-tests.yaml) file contains the tests that get executed within the CI workflows and what results are expected (pass or fail). Each test should fall under the appropriate resource and result section of the file. The script field can be used to specify a bash script which can be used to execute setup, teardown and between (each manifest being applied) tasks to modify the environment making it suitable for executing the test. 
+
+- **Setup** tasks would be run before any of the manifests of a specific kind/desired combination are run. 
+- **Teardown** would run after the kind/desired combination's manifests have been tested. 
+- **Between** is run in between applying each manifest for the associated kind/desired combination. 
+
+An [example script](https://gist.github.com/ilrudie/43823733444ba7976b2f567f30706620) can be used as a starting point for implementing these setup, teardown and between functions for your tests.
 
 ```yaml
 resources:
-  - name: deployments
-    tests:
-      pass:
-        - old-test01.yaml
-        - old-test02.yaml
-      fail:
-        - old-test03.yaml
-        - new-test04.yaml
+  - kind: deployments
+    desired: pass
+    script:
+    manifests:
+      - test-deploy01.yaml
+      - test-deploy03.yaml
+  - kind: deployments
+    desired: fail
+    script: 
+    manifests:
+      - test-deploy02.yaml
+      - test-deploy04.yaml
 ```
 
 ## Regression Tests
