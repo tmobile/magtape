@@ -135,7 +135,7 @@ def magtape(request_spec):
     """main function"""
 
     # Zero out specific info per call
-    allowed = True
+    is_allowed = True
     skip_alert = False
     response_message = ""
     alert_should_send = False
@@ -196,12 +196,12 @@ def magtape(request_spec):
 
     app.logger.debug(f"Skip Alert: {skip_alert}")
 
-    # Set allowed value based on DENY_LEVEL and response_message content
+    # Set is_allowed value based on DENY_LEVEL and response_message content
     if magtape_deny_level == "OFF":
 
         app.logger.debug("Deny level detected: OFF")
 
-        allowed = True
+        is_allowed = True
 
     elif magtape_deny_level == "LOW":
 
@@ -213,7 +213,7 @@ def magtape(request_spec):
 
             app.logger.debug("Sev Fail level: HIGH")
 
-            allowed = False
+            is_allowed = False
             alert_should_send = True
 
     elif magtape_deny_level == "MED":
@@ -226,7 +226,7 @@ def magtape(request_spec):
 
             app.logger.debug("Sev Fail level: HIGH/MED")
 
-            allowed = False
+            is_allowed = False
             alert_should_send = True
 
     elif magtape_deny_level == "HIGH":
@@ -239,26 +239,31 @@ def magtape(request_spec):
 
             app.logger.debug("Sev Fail level: HIGH/MED/LOW")
 
-            allowed = False
+            is_allowed = False
             alert_should_send = True
 
     else:
 
         app.logger.debug("Deny level detected: NONE")
 
-        allowed = False
+        is_allowed = False
         alert_should_send = True
 
-    # Set optional message if allowed = false
-    if allowed:
+    # Set optional message if is_allowed = false
+    if is_allowed:
 
-        admission_response = {"allowed": allowed}
+        admission_response = {
+            "uid": uid,
+            "allowed": is_allowed,
+            "warnings": response_message.split(", "),
+        }
 
     else:
 
         admission_response = {
             "uid": uid,
-            "allowed": allowed,
+            "allowed": is_allowed,
+            "warnings": response_message.split(", "),
             "status": {"message": response_message},
         }
 
@@ -318,11 +323,11 @@ def magtape(request_spec):
                     request_user,
                     customer_alert_sent,
                     magtape_deny_level,
-                    allowed,
+                    is_allowed,
                 )
 
             # Increment Prometheus Counters
-            if allowed:
+            if is_allowed:
 
                 magtape_metrics_requests.labels(
                     count_type="allowed", ns=namespace, alert_sent="true"
@@ -345,7 +350,7 @@ def magtape(request_spec):
         app.logger.info(f"Slack alerts are NOT enabled")
 
         # Increment Prometheus Counters
-        if allowed:
+        if is_allowed:
 
             magtape_metrics_requests.labels(
                 count_type="allowed", ns=namespace, alert_sent="false"
@@ -364,7 +369,11 @@ def magtape(request_spec):
             ).inc()
 
     # Build Admission Response
-    admissionReview = {"response": admission_response}
+    admissionReview = {
+        "apiVersion": "admission.k8s.io/v1beta1",
+        "kind": "AdmissionReview",
+        "response": admission_response,
+    }
 
     app.logger.info("Sending Response to K8s API Server")
     app.logger.debug(
@@ -631,7 +640,7 @@ def send_slack_alert(
     request_user,
     customer_alert_sent,
     magtape_deny_level,
-    allowed,
+    is_allowed,
 ):
 
     """Function to format and send Slack alert for policy failures"""
@@ -640,7 +649,7 @@ def send_slack_alert(
     alert_header = "MagTape | Policy Denial Detected"
     alert_color = "danger"
 
-    if allowed:
+    if is_allowed:
 
         alert_header = "MagTape | Policy Failures Detected"
         alert_color = "warning"

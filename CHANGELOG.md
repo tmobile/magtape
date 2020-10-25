@@ -62,3 +62,27 @@ This release focuses on some security enhancements.
 ### Misc Notes
 
 - Changes OPA container listening port from `443` to `8443` since a non-root user can't bind to ports below 1000. The OPA container isn't exposed outside of localhost, so this shouldn't present any issues
+
+## 2.3.0
+
+This release brings some new features, CI enhancements, changes to test mocking, and some updates to documentation.
+
+### Enhancements
+
+- Enable shellcheck linting for bash (#57 authored by @ilrudie)
+- Cleanup Rego testing/mocking (#60)
+- Update docker/build-push-action to v2 (#62 authored by @ilrudie)
+- Update functional testing documentation (#65 authored by @ilrudie)
+- Enable server-side warnings on policy failures ()
+
+**server-side warnings on policy failures**
+
+Server-side warnings were added in Kubernetes v1.19. This enhancement allows for messages to be surfaced to the end-users via kubectl and client-go. This gives MagTape yet another mechanism to display feedback on policy failures to the end-user. This change is transparent for Kubernetes releases prior to v1.19.
+
+- [Kubernetes Blog](https://kubernetes.io/blog/2020/09/03/warnings/#admission-webhooks)
+- [Kubernetes Enhancement Proposal](https://github.com/kubernetes/enhancements/tree/master/keps/sig-api-machinery/1693-warnings#server-side)
+- [Changes to Admission Response Struct](https://github.com/kubernetes/kubernetes/blob/f7a13de36c4584464adc991c7a3d1f38f610232e/pkg/apis/admission/types.go#L141)
+
+**Version 2 for docker/build-push-action**
+
+Adopting version 2 of this action allows us to start consuming Docker `buildx`. This is transparent at the moment, but should allow us to more easily build images for e2e checks and relases across multiple architectures (amd64, ARM, ppc64le, etc.).
