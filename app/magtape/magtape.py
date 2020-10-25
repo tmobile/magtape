@@ -369,7 +369,11 @@ def magtape(request_spec):
             ).inc()
 
     # Build Admission Response
-    admissionReview = {"response": admission_response}
+    admissionReview = {
+        "apiVersion": "admission.k8s.io/v1beta1",
+        "kind": "AdmissionReview",
+        "response": admission_response,
+    }
 
     app.logger.info("Sending Response to K8s API Server")
     app.logger.debug(
