@@ -63,7 +63,7 @@ You can use the following command to install MagTape and the example policies fr
 **NOTE:** The quickstart installation is not meant for production use. Please read through the [Advanced Install](docs/install.md) and [Cautions](#cautions) sections, and as always, use your best judgement when configuring MagTape for production scenarios.
 
 ```
-$ kubectl apply -f https://raw.githubusercontent.com/tmobile/magtape/master/deploy/install.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/tmobile/magtape/v2.2.1/deploy/install.yaml
 ```
 
 #### This will do the following
