@@ -62,3 +62,30 @@ This release focuses on some security enhancements.
 ### Misc Notes
 
 - Changes OPA container listening port from `443` to `8443` since a non-root user can't bind to ports below 1000. The OPA container isn't exposed outside of localhost, so this shouldn't present any issues
+
+## 2.2.1
+
+### Security Fix
+
+- Bump cryptography from 2.9.2 to 3.2 in /app/magtape-init (ref #68)
+
+```
+* **SECURITY ISSUE:** Attempted to make RSA PKCS#1v1.5 decryption more constant
+  time, to protect against Bleichenbacher vulnerabilities. Due to limitations
+  imposed by our API, we cannot completely mitigate this vulnerability and a
+  future release will contain a new API which is designed to be resilient to
+  these for contexts where it is required. Credit to **Hubert Kario** for
+  reporting the issue. *CVE-2020-25659*
+* Support for OpenSSL 1.0.2 has been removed. Users on older version of OpenSSL
+  will need to upgrade.
+* Added basic support for PKCS7 signing (including SMIME) via
+  :class:`~cryptography.hazmat.primitives.serialization.pkcs7.PKCS7SignatureBuilder`.
+.. _v3-1-1:
+
+
+3.1.1 - 2020-09-22
+```
+
+### Enhancements
+
+- Backported some CI changes related to Image Builds (ref #62)
