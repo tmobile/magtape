@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - master
+      - release-*
     # Commenting out paths for now until GH Actions
     # Have good suport for required checks + path filters
     # https://github.community/t5/GitHub-Actions/Feature-request-conditional-required-checks/m-p/36938#M2735
@@ -12,6 +13,7 @@ on:
   push:
     branches:
       - master
+      - release-*
 
 # Jobs
 jobs:
