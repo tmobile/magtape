@@ -79,7 +79,6 @@ This release brings some new features, CI enhancements, changes to test mocking,
 - Add RBAC rules to read secrets for user defined Slack Incoming Webhook URL's ()
 - Add logic to handle custom Slack Webhook even if Default is unset
 
-
 **server-side warnings on policy failures**
 
 Server-side warnings were added in Kubernetes v1.19. This enhancement allows for messages to be surfaced to the end-users via kubectl and client-go. This gives MagTape yet another mechanism to display feedback on policy failures to the end-user. This change is transparent for Kubernetes releases prior to v1.19.
