@@ -304,7 +304,9 @@ def magtape(request_spec):
             alert_targets["default"] = slack_webhook_url_default
 
             # Check Request namespace for custom Slack Webhook
-            namespace_slack = get_namespace_slack(namespace, slack_webhook_secret, alert_targets)
+            namespace_slack = get_namespace_slack(
+                namespace, slack_webhook_secret, alert_targets
+            )
 
             if namespace_slack:
 
@@ -338,7 +340,9 @@ def magtape(request_spec):
 
                 else:
 
-                    app.logger.info(f"Slack target ({slack_target_type}) is blank. Skipping alert(s)")
+                    app.logger.info(
+                        f"Slack target ({slack_target_type}) is blank. Skipping alert(s)"
+                    )
 
             # Increment Prometheus Counters
             if is_allowed:
@@ -528,27 +532,37 @@ def get_namespace_slack(request_namespace, slack_webhook_secret, alert_targets):
 
     try:
 
-        request_ns_secret = v1.read_namespaced_secret(slack_webhook_secret, request_namespace)
+        request_ns_secret = v1.read_namespaced_secret(
+            slack_webhook_secret, request_namespace
+        )
 
     except ApiException as exception:
 
-        if exception.reason == 'Not Found':
+        if exception.reason == "Not Found":
 
             request_ns_secret = ""
 
-            app.logger.debug(f'Slack Webhook Secret not detected for namespace "{request_namespace}": {exception}')
-                
+            app.logger.debug(
+                f'Slack Webhook Secret not detected for namespace "{request_namespace}": {exception}'
+            )
+
         else:
-            
-            app.logger.info(f'Unable to query secrets in request namespace "{request_namespace}": {exception}')
+
+            app.logger.info(
+                f'Unable to query secrets in request namespace "{request_namespace}": {exception}'
+            )
 
     if slack_webhook_secret_key in request_ns_secret.data:
-        
-        slack_webhook_url_customer = base64.b64decode(request_ns_secret.data[slack_webhook_secret_key]).decode()
+
+        slack_webhook_url_customer = base64.b64decode(
+            request_ns_secret.data[slack_webhook_secret_key]
+        ).decode()
 
     else:
 
-        app.logger.info(f'Key "{slack_webhook_secret_key}" not found in Slack Webhook Secret in request namespace "{request_namespace}"')
+        app.logger.info(
+            f'Key "{slack_webhook_secret_key}" not found in Slack Webhook Secret in request namespace "{request_namespace}"'
+        )
 
         return None
 
@@ -562,7 +576,9 @@ def get_namespace_slack(request_namespace, slack_webhook_secret, alert_targets):
 
     else:
 
-        app.logger.info(f'No Slack Incoming Webhook URL Secret Detected for namespace "{request_namespace}')
+        app.logger.info(
+            f'No Slack Incoming Webhook URL Secret Detected for namespace "{request_namespace}'
+        )
 
         return None
 
@@ -732,12 +748,16 @@ def send_slack_alert(
             timeout=5,
         )
 
-        app.logger.info(f"Slack Alert ({slack_target_type}) was successful ({slack_response.status_code})")
+        app.logger.info(
+            f"Slack Alert ({slack_target_type}) was successful ({slack_response.status_code})"
+        )
         app.logger.debug(f"Slack API Response ({slack_target_type}): {slack_response}")
 
     except requests.exceptions.RequestException as exception:
 
-        app.logger.info(f"Problem sending Slack Alert ({slack_target_type}): {exception}")
+        app.logger.info(
+            f"Problem sending Slack Alert ({slack_target_type}): {exception}"
+        )
 
 
 ################################################################################
