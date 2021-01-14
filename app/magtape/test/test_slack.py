@@ -36,6 +36,7 @@ from unittest.mock import patch, Mock
 sys.path.append("./app/")
 from magtape import magtape
 
+
 class TestSlack(unittest.TestCase):
     def setUp(self):
 

@@ -74,6 +74,7 @@ This release brings has a breaking change, changes to RBAC, some new features, C
 **user-defined slack alerts**
 
 For better security the user-defined Slack Incoming Webhook URL is now defined via creation of a `magtape-slack` secret that includes the `webhook-url` key and a value set to the Slack Incoming Webhook URL (typical base64 encoding applies).
+
 ### Enhancements
 
 - Enable shellcheck linting for bash (#57 authored by @ilrudie)
