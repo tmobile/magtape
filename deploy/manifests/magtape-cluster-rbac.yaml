@@ -36,35 +36,36 @@ metadata:
     app: magtape
 rules:
 - apiGroups:
-  - ""
+    - ""
   resources:
-  - namespaces
-  - pods
-  - services
-  - configmaps
+    - namespaces
+    - pods
+    - secrets
+    - services
+    - configmaps
   verbs:
-  - get
-  - list
-  - watch
+    - get
+    - list
+    - watch
 - apiGroups:
-  - apps
-  - extensions
+    - apps
+    - extensions
   resources:
-  - deployments
-  - daemonsets
-  - statefulsets
+    - deployments
+    - daemonsets
+    - statefulsets
   verbs:
-  - get
-  - list
-  - watch
+    - get
+    - list
+    - watch
 - apiGroups:
-  - policy
+    - policy
   resources:
-  - poddisruptionbudgets
+    - poddisruptionbudgets
   verbs:
-  - get
-  - list
-  - watch
+    - get
+    - list
+    - watch
 
 ---
 kind: ClusterRoleBinding
