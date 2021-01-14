@@ -720,14 +720,7 @@ def main():
     app.logger.info("MagTape Startup")
 
     app.run(
-        host="0.0.0.0",
-        port=5000,
-        debug=False,
-        threaded=True,
-        ssl_context=(
-            f"{config.magtape_tls_path}/cert.pem",
-            f"{config.magtape_tls_path}/key.pem",
-        ),
+        host="0.0.0.0", port=5000, debug=False, threaded=True,
     )
 
 

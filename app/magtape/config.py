@@ -19,13 +19,9 @@
 from os import environ as env
 import multiprocessing
 
-APP_PORT = int(env.get("APP_PORT", 5000))
-APP_DEBUG = int(env.get("APP_DEBUG", 1))
-magtape_tls_path = "/tls"
-
 # Gunicorn config
-bind = ":" + str(APP_PORT)
+bind = ":5000"
 workers = 2
 threads = 2
-certfile = magtape_tls_path + "/cert.pem"
-keyfile = magtape_tls_path + "/key.pem"
+certfile = "/tls/cert.pem"
+keyfile = "/tls/key.pem"
