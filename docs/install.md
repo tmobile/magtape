@@ -18,7 +18,6 @@ NOTE: The following environment variable are defined in the `magtape-env-cm.yaml
 | `MAGTAPE_SLACK_PASSIVE`        | Controls whether or not Slack alerts are sent for checks that fail, but aren't denied due to the DENY_LEVEL setting | `TRUE` or `FALSE` |
 | `MAGTAPE_SLACK_WEBHOOK_URL_BASE` | **OPTIONAL** - Overrides the base domain (`hooks.slack.com`) for the Slack Incoming Webhook URL. Used for airgapped environments where a forwarding/proxying service may be needed | `slack-proxy.example.com` |
 | `MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT`  | The URL for the Slack Incoming Webhook. | `https://hooks.slack.com/services/XXXXXXXX/XXXXXXXX/XXXXXXXXXXXXXXXXXX` |
-| `MAGTAPE_SLACK_ANNOTATION`     | Annotation key on Kubernetes namespace to detect customer Slack Incoming Webhook URL | `magtape/slack-webhook-url`|
 | `MAGTAPE_SLACK_USER`           | The user the Slack alerts should be sent as                                     | `mtbot`                     |
 | `MAGTAPE_SLACK_ICON`           | The emoji to use for the user icon in the alert                                 | `:magtape:`                 |
 | `OPA_BASE_URL`                 | The base URL used to contact the OPA API                                        | `http://localhost:8181`     |
