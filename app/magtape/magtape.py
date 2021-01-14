@@ -58,7 +58,8 @@ magtape_pod_name = os.environ["MAGTAPE_POD_NAME"]
 slack_enabled = os.environ["MAGTAPE_SLACK_ENABLED"]
 slack_passive = os.environ["MAGTAPE_SLACK_PASSIVE"]
 slack_webhook_url_default = os.environ["MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT"]
-slack_webhook_annotation = os.environ["MAGTAPE_SLACK_ANNOTATION"]
+slack_webhook_secret = "magtape-slack"
+slack_webhook_secret_key = "webhook-url"
 slack_user = os.environ["MAGTAPE_SLACK_USER"]
 slack_icon = os.environ["MAGTAPE_SLACK_ICON"]
 
