@@ -86,6 +86,7 @@ For better security the user-defined Slack Incoming Webhook URL is now defined v
 - Add logic to handle in-cluster and out-of-cluster kubernetes client configs for API calls ()
 - Add RBAC rules to read secrets for user defined Slack Incoming Webhook URL's ()
 - Add logic to handle custom Slack Webhook even if Default is unset
+- Bump the engineerd/setup-kind Action to v05.0 to support the [deprecations noted here](https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/)
 
 **server-side warnings on policy failures**
 
