@@ -83,10 +83,11 @@ For better security the user-defined Slack Incoming Webhook URL is now defined v
 - Update functional testing documentation (#65 authored by @ilrudie)
 - Enable server-side warnings on policy failures (#66)
 - Bump cryptography Python package from 2.9.2 to 3.2 (#68 authored by dependabot)
-- Add logic to handle in-cluster and out-of-cluster kubernetes client configs for API calls ()
-- Add RBAC rules to read secrets for user defined Slack Incoming Webhook URL's ()
-- Add logic to handle custom Slack Webhook even if Default is unset
-- Bump the engineerd/setup-kind Action to v05.0 to support the [deprecations noted here](https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/)
+- Add logic to handle in-cluster and out-of-cluster kubernetes client configs for API calls (#77)
+- Add RBAC rules to read secrets for user defined Slack Incoming Webhook URL's (#77)
+- Add logic to handle custom Slack Webhook even if Default is unset (#77)
+- Bump the engineerd/setup-kind Action to v05.0 to support the [deprecations noted here](https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/) (#77)
+- Change add-path commands in rego-checks CI jobs (#77)
 
 **server-side warnings on policy failures**
 
