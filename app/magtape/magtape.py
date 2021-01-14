@@ -302,7 +302,7 @@ def magtape(request_spec):
             alert_targets.append(slack_webhook_url_default)
 
             # Check Request namespace for custom Slack Webhook
-            get_namespace_annotation(namespace, slack_webhook_annotation, alert_targets)
+            get_namespace_slack(namespace, slack_webhook_secret, alert_targets)
 
             # Set boolean to show whether a customer alert was sent
             if len(alert_targets) > 1:
@@ -498,51 +498,59 @@ def build_response_message(object_spec, response_message, namespace):
 ################################################################################
 
 
-def get_namespace_annotation(
-    request_namespace, slack_webhook_annotation, alert_targets
-):
+def get_namespace_slack(request_namespace, slack_webhook_secret, alert_targets):
 
-    """Function to check for customer defined Slack Incoming Webhook URL in namespace annotation"""
+    """Function to check for customer defined Slack Incoming Webhook URL in namespaced secret"""
 
-    config.load_incluster_config()
+    try:
+        config.load_incluster_config()
+    except config.ConfigException:
+        try:
+            config.load_kube_config()
+        except config.ConfigException:
+            raise Exception("Could not configure kubernetes python client")
 
     v1 = client.CoreV1Api()
 
     try:
 
-        request_ns_annotations = v1.read_namespace(
-            request_namespace
-        ).metadata.annotations
-
-        app.logger.debug(f"Request Namespace Annotations: {request_ns_annotations}")
+        request_ns_secret = v1.read_namespaced_secret(slack_webhook_secret, request_namespace)
 
     except ApiException as exception:
 
+        if exception.reason == 'Not Found':
+
+            request_ns_secret = ""
+
+            app.logger.debug(f'Slack Webhook Secret not detected for namespace "{request_namespace}": {exception}')
+                
+        else:
+            
+            app.logger.info(f'Unable to query secrets in request namespace "{request_namespace}": {exception}')
+
+    if slack_webhook_secret_key in request_ns_secret.data:
+        
+        slack_webhook_url_customer = base64.b64decode(request_ns_secret.data[slack_webhook_secret_key]).decode()
+
+    else:
+
+        app.logger.info(f'Key "{slack_webhook_secret_key}" not found in Slack Webhook Secret in request namespace "{request_namespace}"')
+
+        return None
+
+    if slack_webhook_url_customer:
+
         app.logger.info(
-            f"Unable to query K8s namespace for Slack Webhook URL annotation: {exception}\n"
+            f'Slack Webhook Secret Detected for namespace "{request_namespace}"'
         )
 
-    if request_ns_annotations and slack_webhook_annotation in request_ns_annotations:
+        return slack_webhook_url_customer
 
-        slack_webhook_url_customer = request_ns_annotations[slack_webhook_annotation]
+    else:
 
-        if slack_webhook_url_customer:
+        app.logger.info(f'No Slack Incoming Webhook URL Secret Detected for namespace "{request_namespace}')
 
-            app.logger.info(
-                f'Slack Webhook Annotation Detected for namespace "{request_namespace}"'
-            )
-            app.logger.debug(
-                f"Slack Webhook Annotation Value: {slack_webhook_url_customer}"
-            )
-
-            alert_targets.append(slack_webhook_url_customer)
-
-        else:
-
-            app.logger.info(
-                f"No Slack Incoming Webhook URL Annotation Detected, using default"
-            )
-            app.logger.debug(f"Default Slack Webhook URL: {slack_webhook_url_default}")
+        return None
 
 
 ################################################################################
