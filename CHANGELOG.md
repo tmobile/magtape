@@ -75,6 +75,10 @@ This release brings some new features, CI enhancements, changes to test mocking,
 - Update functional testing documentation (#65 authored by @ilrudie)
 - Enable server-side warnings on policy failures ()
 - Bump cryptography Python package from 2.9.2 to 3.2 (#68 authored by dependabot)
+- Add logic to handle in-cluster and out-of-cluster kubernetes client configs for API calls ()
+- Add RBAC rules to read secrets for user defined Slack Incoming Webhook URL's ()
+- Add logic to handle custom Slack Webhook even if Default is unset
+
 
 **server-side warnings on policy failures**
 
