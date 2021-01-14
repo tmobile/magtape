@@ -42,35 +42,36 @@ metadata:
     app: magtape
 rules:
 - apiGroups:
-  - ""
+    - ""
   resources:
-  - namespaces
-  - pods
-  - services
-  - configmaps
+    - namespaces
+    - pods
+    - secrets
+    - services
+    - configmaps
   verbs:
-  - get
-  - list
-  - watch
+    - get
+    - list
+    - watch
 - apiGroups:
-  - apps
-  - extensions
+    - apps
+    - extensions
   resources:
-  - deployments
-  - daemonsets
-  - statefulsets
+    - deployments
+    - daemonsets
+    - statefulsets
   verbs:
-  - get
-  - list
-  - watch
+    - get
+    - list
+    - watch
 - apiGroups:
-  - policy
+    - policy
   resources:
-  - poddisruptionbudgets
+    - poddisruptionbudgets
   verbs:
-  - get
-  - list
-  - watch
+    - get
+    - list
+    - watch
 
 ---
 kind: ClusterRoleBinding
@@ -169,7 +170,6 @@ data:
   MAGTAPE_SLACK_ENABLED: "FALSE"
   MAGTAPE_SLACK_PASSIVE: "FALSE"
   MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT: "https://hooks.slack.com/services/XXXXXXXX/XXXXXXXX/XXXXXXXXXXXXXXXXXX"
-  MAGTAPE_SLACK_ANNOTATION: "magtape/slack-webhook-url"
   MAGTAPE_SLACK_USER: "mtbot"
   MAGTAPE_SLACK_ICON: ":magtape:"
   OPA_BASE_URL: "http://127.0.0.1:8181"
