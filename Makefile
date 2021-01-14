@@ -217,6 +217,7 @@ set-release-version:
 	sed -i='' "s/\(image: tmobile\/magtape:\).*/\1${MAGTAPE_VERSION}/" deploy/manifests/magtape-deploy.yaml
 	sed -i='' "s/\(image: openpolicyagent\/opa:\).*/\1${OPA_VERSION}/" deploy/manifests/magtape-deploy.yaml
 	sed -i='' "s/\(image: openpolicyagent\/kube-mgmt:\).*/\1${KUBE_MGMT_VERSION}/" deploy/manifests/magtape-deploy.yaml
+	sed -i='' "s/\(.*version=\)\(\".*\"\)\(.*\)/\1\"${MAGTAPE_VERSION}\"\3/" app/magtape/magtape.py
 
 # Cut new MagTape release
 .PHONY: release
