@@ -142,6 +142,8 @@ def magtape(request_spec):
     alert_should_send = False
     alert_targets = []
     customer_alert_sent = False
+    k8s_object_owner_kind = None
+    k8s_object_owner_name = None
 
     # Set Object specific info from request
     uid = request_spec["request"]["uid"]
@@ -511,6 +513,7 @@ def get_namespace_slack(request_namespace, slack_webhook_secret, alert_targets):
             raise Exception("Could not configure kubernetes python client")
 
     v1 = client.CoreV1Api()
+    request_ns_secret = None
 
     try:
 
