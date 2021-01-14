@@ -56,6 +56,8 @@ NOTE: MagTape has been tested and is known to work for Kubernetes versions 1.13+
 
 MagTape requires cluster-admin permissions to deploy to Kubernetes since it requires access to create/read/update/delete cluster scoped resources (ValidatingWebhookConfigurations, Events, etc.)
 
+MagTape's default RBAC permissions include get, list, and watch access to `Secret` resources across all namespaces in the cluster. This is to allow for lookup of [user-defined Slack Incoming Webhook URL's](#user-defined-alert-target). If this feature is not needed. the `magtape-read` ClusterRole can be adjusted to remove these permissions. 
+
 ### Quickstart
 
 You can use the following command to install MagTape and the example policies from this repo with sane defaults. This won't have all features turned on as they require more configuration up front. Please see the [Advanced Install](docs/install.md) section for more details.

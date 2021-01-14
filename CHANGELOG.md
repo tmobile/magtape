@@ -65,8 +65,15 @@ This release focuses on some security enhancements.
 
 ## 2.3.0
 
-This release brings some new features, CI enhancements, changes to test mocking, and some updates to documentation.
+This release brings has a breaking change, changes to RBAC, some new features, CI enhancements, changes to test mocking, and some updates to documentation.
 
+### Breaking Changes
+
+- the `MAGTAPE_SLACK_ANNOTATION` environment variable has been removed and is no longer used for enabling user-defined slack alerts.
+
+**user-defined slack alerts**
+
+For better security the user-defined Slack Incoming Webhook URL is now defined via creation of a `magtape-slack` secret that includes the `webhook-url` key and a value set to the Slack Incoming Webhook URL (typical base64 encoding applies).
 ### Enhancements
 
 - Enable shellcheck linting for bash (#57 authored by @ilrudie)
@@ -90,3 +97,7 @@ Server-side warnings were added in Kubernetes v1.19. This enhancement allows for
 **Version 2 for docker/build-push-action**
 
 Adopting version 2 of this action allows us to start consuming Docker `buildx`. This is transparent at the moment, but should allow us to more easily build images for e2e checks and relases across multiple architectures (amd64, ARM, ppc64le, etc.).
+
+**RBAC rule changes**
+
+Due to the change in how user-defined Slack Incoming Webhooks are applied, there's a need for the `magtape-sa` service account to read secrets across all namespaces. This includes get, list, and watch actions.
