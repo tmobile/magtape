@@ -12,4 +12,5 @@
 **/pythonenv*
 **/scratch
 **/*slim*
+**=
 deploy/overlays/test
