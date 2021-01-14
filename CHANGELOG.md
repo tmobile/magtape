@@ -100,4 +100,4 @@ Adopting version 2 of this action allows us to start consuming Docker `buildx`. 
 
 **RBAC rule changes**
 
-Due to the change in how user-defined Slack Incoming Webhooks are applied, there's a need for the `magtape-sa` service account to read secrets across all namespaces. This includes get, list, and watch actions.
+Due to the change in how user-defined Slack Incoming Webhooks are applied, there's a need for the `magtape-sa` service account to read Secrets across all namespaces. This includes get, list, and watch actions.
