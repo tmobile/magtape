@@ -565,7 +565,13 @@ def send_k8s_event(
     """Function to create a k8s event in the target namespace upon policy failure"""
 
     # Load k8s client config
-    config.load_incluster_config()
+    try:
+        config.load_incluster_config()
+    except config.ConfigException:
+        try:
+            config.load_kube_config()
+        except config.ConfigException:
+            raise Exception("Could not configure kubernetes python client")
 
     # Create an instance of the API class
     api_instance = client.CoreV1Api()
@@ -600,7 +606,7 @@ def send_k8s_event(
 
     try:
 
-        api_response = api_instance.create_namespaced_event(namespace, k8s_event_body)
+        api_instance.create_namespaced_event(namespace, k8s_event_body)
 
     except ApiException as exception:
 
