@@ -140,7 +140,7 @@ def magtape(request_spec):
     skip_alert = False
     response_message = ""
     alert_should_send = False
-    alert_targets = []
+    alert_targets = {}
     customer_alert_sent = False
     k8s_object_owner_kind = None
     k8s_object_owner_name = None
@@ -301,10 +301,14 @@ def magtape(request_spec):
         ):
 
             # Add default Webhook URL to alert Targets
-            alert_targets.append(slack_webhook_url_default)
+            alert_targets["default"] = slack_webhook_url_default
 
             # Check Request namespace for custom Slack Webhook
-            get_namespace_slack(namespace, slack_webhook_secret, alert_targets)
+            namespace_slack = get_namespace_slack(namespace, slack_webhook_secret, alert_targets)
+
+            if namespace_slack:
+
+                alert_targets["namespace"] = namespace_slack
 
             # Set boolean to show whether a customer alert was sent
             if len(alert_targets) > 1:
@@ -312,22 +316,29 @@ def magtape(request_spec):
                 customer_alert_sent = True
 
             # Send alerts to all target Slack Webhooks
-            for slack_target in alert_targets:
+            for slack_target_type, slack_target in alert_targets.items():
 
-                send_slack_alert(
-                    response_message,
-                    slack_target,
-                    slack_user,
-                    slack_icon,
-                    cluster,
-                    namespace,
-                    workload,
-                    workload_type,
-                    request_user,
-                    customer_alert_sent,
-                    magtape_deny_level,
-                    is_allowed,
-                )
+                if slack_target:
+
+                    send_slack_alert(
+                        response_message,
+                        slack_target_type,
+                        slack_target,
+                        slack_user,
+                        slack_icon,
+                        cluster,
+                        namespace,
+                        workload,
+                        workload_type,
+                        request_user,
+                        customer_alert_sent,
+                        magtape_deny_level,
+                        is_allowed,
+                    )
+
+                else:
+
+                    app.logger.info(f"Slack target ({slack_target_type}) is blank. Skipping alert(s)")
 
             # Increment Prometheus Counters
             if is_allowed:
@@ -648,6 +659,7 @@ def slack_url_sub(slack_webhook_url):
 
 def send_slack_alert(
     response_message,
+    slack_target_type,
     slack_webhook_url,
     slack_user,
     slack_icon,
@@ -720,12 +732,12 @@ def send_slack_alert(
             timeout=5,
         )
 
-        app.logger.info(f"Slack Alert was successful ({slack_response.status_code})")
-        app.logger.debug(f"Slack API Response: {slack_response}")
+        app.logger.info(f"Slack Alert ({slack_target_type}) was successful ({slack_response.status_code})")
+        app.logger.debug(f"Slack API Response ({slack_target_type}): {slack_response}")
 
     except requests.exceptions.RequestException as exception:
 
-        app.logger.info(f"Problem sending Alert to Slack: {exception}")
+        app.logger.info(f"Problem sending Slack Alert ({slack_target_type}): {exception}")
 
 
 ################################################################################
