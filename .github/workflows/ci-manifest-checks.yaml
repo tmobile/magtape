@@ -29,4 +29,5 @@ jobs:
     - name: Check for manifest changes
       timeout-minutes: 5
       run: |
+        make ci-bootstrap
         make compare-single-manifest
