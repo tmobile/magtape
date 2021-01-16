@@ -88,6 +88,7 @@ For better security the user-defined Slack Incoming Webhook URL is now defined v
 - Add logic to handle custom Slack Webhook even if Default is unset (#77)
 - Bump the engineerd/setup-kind Action to v05.0 to support the [deprecations noted here](https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/) (#77)
 - Change add-path commands in rego-checks CI jobs (#77)
+- Add ci-bootstrap Make target to pin versions for specific utilities (ie. kubectl) for more consistent CI (#77)
 
 **server-side warnings on policy failures**
 
