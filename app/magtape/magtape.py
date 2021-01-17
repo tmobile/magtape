@@ -741,6 +741,7 @@ def send_slack_alert(
     )
 
     try:
+        
         slack_response = requests.post(
             slack_webhook_url,
             json=slack_alert_data,
@@ -748,16 +749,18 @@ def send_slack_alert(
             timeout=5,
         )
 
-        app.logger.info(
-            f"Slack Alert ({slack_target_type}) was successful ({slack_response.status_code})"
-        )
-        app.logger.debug(f"Slack API Response ({slack_target_type}): {slack_response}")
-
     except requests.exceptions.RequestException as exception:
 
         app.logger.info(
             f"Problem sending Slack Alert ({slack_target_type}): {exception}"
         )
+
+    else:
+
+        app.logger.info(
+            f"Slack Alert ({slack_target_type}) was successful ({slack_response.status_code})"
+        )
+        app.logger.debug(f"Slack API Response ({slack_target_type}): {slack_response}")
 
 
 ################################################################################
