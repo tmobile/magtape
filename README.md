@@ -254,6 +254,12 @@ When alerts are enabled they will be sent to the Slack Incoming Webhook URL defi
 
 When alerts are enabled they can be sent to a user-defined Slack Incoming Webhook URL in addition to the default mentioned above. This can be configured via a Kubernetes Secret resource in a target namespace. The secret should be named `magtape-slack` and the Slack Incoming Webhook URL should be set as the value (typical base64 encoding) for the `webhook-url` key. This will allow end-users to receive alerts in their desired Slack Channel for request objects targeting their own namespace.
 
+EXAMPLE:
+
+```shell
+$ kubectl create secret generic magtape-slack -n my-cool-namespace --from-literal=webhook-url="https://hooks.slack.com/services/XXXXXXXX/XXXXXXXXXXXX"
+```
+
 ### Alert Format
 
 Slack alert examples:
