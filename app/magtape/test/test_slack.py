@@ -134,6 +134,7 @@ class TestSlack(unittest.TestCase):
         self.assertRaises(config.ConfigException)
         mock_k8s_config.assert_called_once_with()
         mock_k8s_config_in_cluster.assert_called_once_with()
+        mock_k8s_corev1api.assert_not_called()
 
     # Beware...order of patch decorators matters with relation to input arguments.
     # Python processes them bottom up as in:
