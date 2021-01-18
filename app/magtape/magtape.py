@@ -305,7 +305,7 @@ def magtape(request_spec):
 
             # Check Request namespace for custom Slack Webhook
             namespace_slack = get_namespace_slack(
-                namespace, slack_webhook_secret, alert_targets
+                namespace, slack_webhook_secret
             )
 
             if namespace_slack:
@@ -515,7 +515,7 @@ def build_response_message(object_spec, response_message, namespace):
 ################################################################################
 
 
-def get_namespace_slack(request_namespace, slack_webhook_secret, alert_targets):
+def get_namespace_slack(request_namespace, slack_webhook_secret):
 
     """Function to check for customer defined Slack Incoming Webhook URL in namespaced secret"""
 
