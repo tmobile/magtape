@@ -39,7 +39,6 @@ os.environ["MAGTAPE_SLACK_PASSIVE"] = "FALSE"
 os.environ[
     "MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT"
 ] = "https://hooks.slack.com/services/ABC123/XYZ789"
-os.environ["MAGTAPE_SLACK_ANNOTATION"] = "magtape/slack-webhook-url"
 os.environ["MAGTAPE_SLACK_CHANNEL"] = "test"
 os.environ["MAGTAPE_SLACK_USER"] = "test"
 os.environ["MAGTAPE_SLACK_ICON"] = ":magtape:"

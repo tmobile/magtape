@@ -65,7 +65,17 @@ This release focuses on some security enhancements.
 
 ## 2.3.0
 
-This release brings some new features, CI enhancements, changes to test mocking, and some updates to documentation.
+This release brings has a breaking change, changes to RBAC, some new features, CI enhancements, changes to test mocking, and some updates to documentation.
+
+### Breaking Changes
+
+- the `MAGTAPE_SLACK_ANNOTATION` environment variable has been removed and is no longer used for enabling user-defined slack alerts.
+
+**user-defined slack alerts**
+
+For better security the user-defined Slack Incoming Webhook URL is now defined via creation of a `magtape-slack` secret that includes the `webhook-url` key and a value set to the Slack Incoming Webhook URL (typical base64 encoding applies).
+
+The README has [an example](/README.md#User-defined-alert-target) of how you can create a properly formatted secret.
 
 ### Enhancements
 
@@ -73,8 +83,14 @@ This release brings some new features, CI enhancements, changes to test mocking,
 - Cleanup Rego testing/mocking (#60)
 - Update docker/build-push-action to v2 (#62 authored by @ilrudie)
 - Update functional testing documentation (#65 authored by @ilrudie)
-- Enable server-side warnings on policy failures ()
+- Enable server-side warnings on policy failures (#66)
 - Bump cryptography Python package from 2.9.2 to 3.2 (#68 authored by dependabot)
+- Add logic to handle in-cluster and out-of-cluster kubernetes client configs for API calls (#77)
+- Add RBAC rules to read secrets for user defined Slack Incoming Webhook URL's (#77)
+- Add logic to handle custom Slack Webhook even if Default is unset (#77)
+- Bump the engineerd/setup-kind Action to v05.0 to support the [deprecations noted here](https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/) (#77)
+- Change add-path commands in rego-checks CI jobs (#77)
+- Add ci-bootstrap Make target to pin versions for specific utilities (ie. kubectl) for more consistent CI (#77)
 
 **server-side warnings on policy failures**
 
@@ -87,3 +103,7 @@ Server-side warnings were added in Kubernetes v1.19. This enhancement allows for
 **Version 2 for docker/build-push-action**
 
 Adopting version 2 of this action allows us to start consuming Docker `buildx`. This is transparent at the moment, but should allow us to more easily build images for e2e checks and relases across multiple architectures (amd64, ARM, ppc64le, etc.).
+
+**RBAC rule changes**
+
+Due to the change in how user-defined Slack Incoming Webhooks are applied, there's a need for the `magtape-sa` service account to read Secrets across all namespaces. This includes get, list, and watch actions.

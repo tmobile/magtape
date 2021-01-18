@@ -41,7 +41,7 @@ app = Flask(__name__)
 metrics = PrometheusMetrics(app, defaults_prefix="magtape")
 
 # Static information as metric
-metrics.info("app_info", "Application info", version="0.6")
+metrics.info("app_info", "Application info", version="v2.2.0")
 
 # Set logging config
 log = logging.getLogger("werkzeug")
@@ -57,8 +57,9 @@ magtape_pod_name = os.environ["MAGTAPE_POD_NAME"]
 # Set Slack related variables
 slack_enabled = os.environ["MAGTAPE_SLACK_ENABLED"]
 slack_passive = os.environ["MAGTAPE_SLACK_PASSIVE"]
-slack_webhook_url_default = os.environ["MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT"]
-slack_webhook_annotation = os.environ["MAGTAPE_SLACK_ANNOTATION"]
+slack_webhook_url_default = os.getenv("MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT", "")
+slack_webhook_secret = "magtape-slack"
+slack_webhook_secret_key = "webhook-url"
 slack_user = os.environ["MAGTAPE_SLACK_USER"]
 slack_icon = os.environ["MAGTAPE_SLACK_ICON"]
 
@@ -139,8 +140,10 @@ def magtape(request_spec):
     skip_alert = False
     response_message = ""
     alert_should_send = False
-    alert_targets = []
+    alert_targets = {}
     customer_alert_sent = False
+    k8s_object_owner_kind = None
+    k8s_object_owner_name = None
 
     # Set Object specific info from request
     uid = request_spec["request"]["uid"]
@@ -298,10 +301,14 @@ def magtape(request_spec):
         ):
 
             # Add default Webhook URL to alert Targets
-            alert_targets.append(slack_webhook_url_default)
+            alert_targets["default"] = slack_webhook_url_default
 
             # Check Request namespace for custom Slack Webhook
-            get_namespace_annotation(namespace, slack_webhook_annotation, alert_targets)
+            namespace_slack = get_namespace_slack(namespace, slack_webhook_secret)
+
+            if namespace_slack:
+
+                alert_targets["namespace"] = namespace_slack
 
             # Set boolean to show whether a customer alert was sent
             if len(alert_targets) > 1:
@@ -309,22 +316,31 @@ def magtape(request_spec):
                 customer_alert_sent = True
 
             # Send alerts to all target Slack Webhooks
-            for slack_target in alert_targets:
+            for slack_target_type, slack_target in alert_targets.items():
 
-                send_slack_alert(
-                    response_message,
-                    slack_target,
-                    slack_user,
-                    slack_icon,
-                    cluster,
-                    namespace,
-                    workload,
-                    workload_type,
-                    request_user,
-                    customer_alert_sent,
-                    magtape_deny_level,
-                    is_allowed,
-                )
+                if slack_target:
+
+                    send_slack_alert(
+                        response_message,
+                        slack_target_type,
+                        slack_target,
+                        slack_user,
+                        slack_icon,
+                        cluster,
+                        namespace,
+                        workload,
+                        workload_type,
+                        request_user,
+                        customer_alert_sent,
+                        magtape_deny_level,
+                        is_allowed,
+                    )
+
+                else:
+
+                    app.logger.info(
+                        f"Slack target ({slack_target_type}) is blank. Skipping alert(s)"
+                    )
 
             # Increment Prometheus Counters
             if is_allowed:
@@ -497,51 +513,76 @@ def build_response_message(object_spec, response_message, namespace):
 ################################################################################
 
 
-def get_namespace_annotation(
-    request_namespace, slack_webhook_annotation, alert_targets
-):
+def get_namespace_slack(request_namespace, slack_webhook_secret):
 
-    """Function to check for customer defined Slack Incoming Webhook URL in namespace annotation"""
+    """Function to check for customer defined Slack Incoming Webhook URL in namespaced secret"""
 
-    config.load_incluster_config()
+    try:
+        config.load_incluster_config()
+    except config.ConfigException:
+        try:
+            config.load_kube_config()
+        except config.ConfigException:
+            raise Exception("Could not configure kubernetes python client")
 
     v1 = client.CoreV1Api()
+    request_ns_secret = None
 
     try:
 
-        request_ns_annotations = v1.read_namespace(
-            request_namespace
-        ).metadata.annotations
-
-        app.logger.debug(f"Request Namespace Annotations: {request_ns_annotations}")
+        request_ns_secret = v1.read_namespaced_secret(
+            slack_webhook_secret, request_namespace
+        )
 
     except ApiException as exception:
 
-        app.logger.info(
-            f"Unable to query K8s namespace for Slack Webhook URL annotation: {exception}\n"
-        )
+        if exception.reason == "Not Found":
 
-    if request_ns_annotations and slack_webhook_annotation in request_ns_annotations:
+            request_ns_secret = ""
 
-        slack_webhook_url_customer = request_ns_annotations[slack_webhook_annotation]
-
-        if slack_webhook_url_customer:
-
-            app.logger.info(
-                f'Slack Webhook Annotation Detected for namespace "{request_namespace}"'
-            )
             app.logger.debug(
-                f"Slack Webhook Annotation Value: {slack_webhook_url_customer}"
+                f'Slack Webhook Secret not detected for namespace "{request_namespace}": {exception}'
             )
 
-            alert_targets.append(slack_webhook_url_customer)
+            return None
 
         else:
 
             app.logger.info(
-                f"No Slack Incoming Webhook URL Annotation Detected, using default"
+                f'Unable to query secrets in request namespace "{request_namespace}": {exception}'
             )
-            app.logger.debug(f"Default Slack Webhook URL: {slack_webhook_url_default}")
+
+            return None
+
+    if slack_webhook_secret_key in request_ns_secret.data:
+
+        slack_webhook_url_customer = base64.b64decode(
+            request_ns_secret.data[slack_webhook_secret_key]
+        ).decode()
+
+    else:
+
+        app.logger.info(
+            f'Key "{slack_webhook_secret_key}" not found in Slack Webhook Secret in request namespace "{request_namespace}"'
+        )
+
+        return None
+
+    if slack_webhook_url_customer:
+
+        app.logger.info(
+            f'Slack Webhook Secret Detected for namespace "{request_namespace}"'
+        )
+
+        return slack_webhook_url_customer
+
+    else:
+
+        app.logger.info(
+            f'No Slack Incoming Webhook URL Secret Detected for namespace "{request_namespace}'
+        )
+
+        return None
 
 
 ################################################################################
@@ -556,7 +597,13 @@ def send_k8s_event(
     """Function to create a k8s event in the target namespace upon policy failure"""
 
     # Load k8s client config
-    config.load_incluster_config()
+    try:
+        config.load_incluster_config()
+    except config.ConfigException:
+        try:
+            config.load_kube_config()
+        except config.ConfigException:
+            raise Exception("Could not configure kubernetes python client")
 
     # Create an instance of the API class
     api_instance = client.CoreV1Api()
@@ -591,7 +638,7 @@ def send_k8s_event(
 
     try:
 
-        api_response = api_instance.create_namespaced_event(namespace, k8s_event_body)
+        api_instance.create_namespaced_event(namespace, k8s_event_body)
 
     except ApiException as exception:
 
@@ -630,6 +677,7 @@ def slack_url_sub(slack_webhook_url):
 
 def send_slack_alert(
     response_message,
+    slack_target_type,
     slack_webhook_url,
     slack_user,
     slack_icon,
@@ -695,6 +743,7 @@ def send_slack_alert(
     )
 
     try:
+
         slack_response = requests.post(
             slack_webhook_url,
             json=slack_alert_data,
@@ -702,12 +751,18 @@ def send_slack_alert(
             timeout=5,
         )
 
-        app.logger.info(f"Slack Alert was successful ({slack_response.status_code})")
-        app.logger.debug(f"Slack API Response: {slack_response}")
-
     except requests.exceptions.RequestException as exception:
 
-        app.logger.info(f"Problem sending Alert to Slack: {exception}")
+        app.logger.info(
+            f"Problem sending Slack Alert ({slack_target_type}): {exception}"
+        )
+
+    else:
+
+        app.logger.info(
+            f"Slack Alert ({slack_target_type}) was successful ({slack_response.status_code})"
+        )
+        app.logger.debug(f"Slack API Response ({slack_target_type}): {slack_response}")
 
 
 ################################################################################
@@ -720,14 +775,7 @@ def main():
     app.logger.info("MagTape Startup")
 
     app.run(
-        host="0.0.0.0",
-        port=5000,
-        debug=False,
-        threaded=True,
-        ssl_context=(
-            f"{config.magtape_tls_path}/cert.pem",
-            f"{config.magtape_tls_path}/key.pem",
-        ),
+        host="0.0.0.0", port=5000, debug=False, threaded=True,
     )
 
 

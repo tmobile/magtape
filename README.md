@@ -56,6 +56,8 @@ NOTE: MagTape has been tested and is known to work for Kubernetes versions 1.13+
 
 MagTape requires cluster-admin permissions to deploy to Kubernetes since it requires access to create/read/update/delete cluster scoped resources (ValidatingWebhookConfigurations, Events, etc.)
 
+MagTape's default RBAC permissions include get, list, and watch access to `Secret` resources across all namespaces in the cluster. This is to allow for lookup of [user-defined Slack Incoming Webhook URL's](#user-defined-alert-target). If this feature is not needed. the `magtape-read` ClusterRole can be adjusted to remove these permissions. 
+
 ### Quickstart
 
 You can use the following command to install MagTape and the example policies from this repo with sane defaults. This won't have all features turned on as they require more configuration up front. Please see the [Advanced Install](docs/install.md) section for more details.
@@ -222,7 +224,6 @@ Slack alerts can be enabled and controlled via environment variables (noted abov
 - MAGTAPE_SLACK_PASSIVE
 - MAGTAPE_SLACK_WEBHOOK_URL_BASE
 - MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT
-- MAGTAPE_SLACK_ANNOTATION
 - MAGTAPE_SLACK_USER
 - MAGTAPE_SLACK_ICON
 
@@ -249,9 +250,15 @@ https://slack-proxy.example.com/services/XXXXXXXX/XXXXXXXXXXXX
 
 When alerts are enabled they will be sent to the Slack Incoming Webhook URL defined in the `MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT` environment variable. This is meant to be a channel controlled by the MagTape Webhook administrators.
 
-### Custom Alert Target
+### User-defined Alert Target
 
-When alerts are enabled they can be sent to a custom Slack Incoming Webhook URL in addition to the default mentioned above. This can be configured via an annotation on the Kubernetes namespace. The annotation key is defined by the `MAGTAPE_SLACK_ANNOTATION` environment variable. This will allow customers to configure the expected annotation along with their own Slack Incoming Webhook URL as the value to target alerts at their own Slack Channel. Customers will only receive alerts for request objects targeted for their own namespace.
+When alerts are enabled they can be sent to a user-defined Slack Incoming Webhook URL in addition to the default mentioned above. This can be configured via a Kubernetes Secret resource in a target namespace. The secret should be named `magtape-slack` and the Slack Incoming Webhook URL should be set as the value (typical base64 encoding) for the `webhook-url` key. This will allow end-users to receive alerts in their desired Slack Channel for request objects targeting their own namespace.
+
+EXAMPLE:
+
+```shell
+$ kubectl create secret generic magtape-slack -n my-cool-namespace --from-literal=webhook-url="https://hooks.slack.com/services/XXXXXXXX/XXXXXXXXXXXX"
+```
 
 ### Alert Format
 

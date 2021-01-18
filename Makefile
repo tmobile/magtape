@@ -29,6 +29,22 @@ WEBHOOK_NAMESPACE ?= "magtape-system"
 TEST_NAMESPACE ?= "test1"
 DOCKER := docker
 
+# Pin utilities at specific versions for CI stability
+KUBECTL_VERSION ?= v1.19.1
+
+###############################################################################
+# CI Bootstrap Related Targets ################################################
+###############################################################################
+
+# Download and install required utilities
+.PHONY: ci-bootstrap
+ci-bootstrap:
+
+	# Create local bin directory
+	mkdir -p "${GITHUB_WORKSPACE}/bin"
+	# Download and install kubectl
+	curl -L https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl -o ${GITHUB_WORKSPACE}/bin/kubectl && chmod +x ${GITHUB_WORKSPACE}/bin/kubectl && sudo mv "${GITHUB_WORKSPACE}/bin/kubectl" /usr/local/bin/
+
 ###############################################################################
 # K8s Related Targets #########################################################
 ###############################################################################
@@ -217,6 +233,7 @@ set-release-version:
 	sed -i='' "s/\(image: tmobile\/magtape:\).*/\1${MAGTAPE_VERSION}/" deploy/manifests/magtape-deploy.yaml
 	sed -i='' "s/\(image: openpolicyagent\/opa:\).*/\1${OPA_VERSION}/" deploy/manifests/magtape-deploy.yaml
 	sed -i='' "s/\(image: openpolicyagent\/kube-mgmt:\).*/\1${KUBE_MGMT_VERSION}/" deploy/manifests/magtape-deploy.yaml
+	sed -i='' "s/\(.*version=\)\(\".*\"\)\(.*\)/\1\"${MAGTAPE_VERSION}\"\3/" app/magtape/magtape.py
 
 # Cut new MagTape release
 .PHONY: release
