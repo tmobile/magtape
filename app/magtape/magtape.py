@@ -304,9 +304,7 @@ def magtape(request_spec):
             alert_targets["default"] = slack_webhook_url_default
 
             # Check Request namespace for custom Slack Webhook
-            namespace_slack = get_namespace_slack(
-                namespace, slack_webhook_secret
-            )
+            namespace_slack = get_namespace_slack(namespace, slack_webhook_secret)
 
             if namespace_slack:
 
@@ -745,7 +743,7 @@ def send_slack_alert(
     )
 
     try:
-        
+
         slack_response = requests.post(
             slack_webhook_url,
             json=slack_alert_data,
