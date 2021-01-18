@@ -96,8 +96,7 @@ class TestSlack(unittest.TestCase):
 
         value = magtape.get_namespace_slack(
             self.request_namespace, 
-            self.slack_webhook_secret, 
-            self.alert_targets
+            self.slack_webhook_secret,
             )
         
         self.assertRaises(config.ConfigException)
@@ -122,8 +121,7 @@ class TestSlack(unittest.TestCase):
     
             magtape.get_namespace_slack(
                 self.request_namespace, 
-                self.slack_webhook_secret, 
-                self.alert_targets
+                self.slack_webhook_secret,
                 )
         
         self.assertRaises(config.ConfigException)
@@ -151,8 +149,7 @@ class TestSlack(unittest.TestCase):
 
         value = magtape.get_namespace_slack(
             self.request_namespace, 
-            self.slack_webhook_secret, 
-            self.alert_targets
+            self.slack_webhook_secret,
             )
         
         self.assertEqual(value, expected_result)
@@ -171,8 +168,7 @@ class TestSlack(unittest.TestCase):
 
         value = magtape.get_namespace_slack(
             self.request_namespace, 
-            self.slack_webhook_secret, 
-            self.alert_targets
+            self.slack_webhook_secret,
             )
 
         self.assertRaises(ApiException)
@@ -192,8 +188,7 @@ class TestSlack(unittest.TestCase):
 
         value = magtape.get_namespace_slack(
             self.request_namespace, 
-            self.slack_webhook_secret, 
-            self.alert_targets
+            self.slack_webhook_secret,
             )
         
         self.assertRaises(ApiException)
@@ -214,8 +209,7 @@ class TestSlack(unittest.TestCase):
 
         value = magtape.get_namespace_slack(
             self.request_namespace, 
-            self.slack_webhook_secret, 
-            self.alert_targets
+            self.slack_webhook_secret,
             )
         
         self.assertEqual(value, expected_result)
@@ -235,8 +229,7 @@ class TestSlack(unittest.TestCase):
 
         value = magtape.get_namespace_slack(
             self.request_namespace, 
-            self.slack_webhook_secret, 
-            self.alert_targets
+            self.slack_webhook_secret,
             )
         
         self.assertEqual(value, expected_result)
