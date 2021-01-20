@@ -22,13 +22,51 @@ We don't follow a strict coding style, but we do have a few preferences:
 - Prefer kebab case for file names where possible (ie. `some-file-name.md` and NOT `Some-file_name.md`)
 - Always use `.yaml` and never `.yml`
 
+## Code Linting, Formatting, and Testing
 ### Python
 
 For Python code we use [black](https://github.com/psf/black) for code formatting. Run the following if you make changes to any Python code:
 
 ```shell
 # Lint and apply formatting
-$ make lint
+$ make lint-python
+# Run unit-testing and coverage report
+$ make test-python
+```
+
+### Rego
+
+Run the following if you make changes to any Rego code:
+
+```shell
+# Lint and apply formatting
+$ make lint-lint
+# Run unit-testing and coverage report
+$ make test-rego
+```
+
+### BASH
+
+Run the following if you make changes to any BASH code:
+
+```shell
+# Lint and apply formatting
+$ make lint-shell
+```
+
+## YAML Manifests
+
+The YAML manifests to manage the installation and configuration of MagTape are stored in the [/deploy/manifests](/deploy/manifests) directory. These are managed separately for readability and maximum flexibility in configuration (Kustomize), but they are also combined together with some sane defaults into one single install manifest at [/deploy/install.yaml](/deploy/install.yaml) for an easy on-liner POC install.
+
+There are some Kustomize files related to the advanced install process documented [here](/docs/install.md). If you make changed to any of the manifests, please maintain functionality with Kustomize in a way that is accurate the docs (or update the docs where applicable).
+
+NOTE: DO NOT edit `/deploy/install.yaml` directly, it should always be generated
+
+If you edit any of the YAML manifets in `/deploy/manifests` you will need to regenerate the single install manifest by running the following:
+
+```shell
+# Generate updated single instal manifest
+$ make build-single-manifest
 ```
 
 ## Copyright Boilerplate
