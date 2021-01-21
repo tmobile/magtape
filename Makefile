@@ -243,38 +243,74 @@ release: echo
 # Container Image Targets #####################################################
 ###############################################################################
 
-# Build MagTape-Init container image
+# Build MagTape-Init container (Latest) image
+.PHONY: build-magtape-init-latest
+build-magtape-init-latest:
+
+	$(DOCKER) build -t tmobile/magtape-init:latest app/magtape-init/
+
+# Push MagTape-Init container image (Latest) to DockerHub
+.PHONY: push-magtape-init-latest
+push-magtape-init-latest:
+
+	$(DOCKER) push tmobile/magtape-init:latest
+
+# Build MagTape container image (Latest)
+.PHONY: build-magtape-latest
+build-magtape-latest:
+
+	$(DOCKER) build -t tmobile/magtape:latest app/magtape/
+
+# Push MagTape container image (Latest) to DockerHub
+.PHONY: push-magtape-latest
+push-magtape-latest:
+
+	$(DOCKER) push tmobile/magtape:latest
+
+# Build and push all MagTape container images (Latest) to DockerHub
+.PHONY: build-latest
+build-latest: build-magtape-init-latest push-magtape-init-latest build-magtape-latest push-magtape-latest
+
+# Build and push MagTape-Init container image (Latest) to DockerHub
+.PHONY: new-magtape-init-latest
+new-magtape-init-latest: build-magtape-init-latest push-magtape-init-latest
+
+# Build and push MagTape container image (Latest) to DockerHub
+.PHONY: new-magtape-latest
+new-magtape-latest: build-magtape-latest push-magtape-latest
+
+# Build MagTape-Init container image (Specific Release)
 .PHONY: build-magtape-init
 build-magtape-init:
 
 	$(DOCKER) build -t tmobile/magtape-init:latest app/magtape-init/
 
-# Push MagTape-Init container image to DockerHub
+# Push MagTape-Init container image (Specific Release) to DockerHub
 .PHONY: push-magtape-init
 push-magtape-init:
 
 	$(DOCKER) push tmobile/magtape-init:latest
 
-# Build MagTape container image
+# Build MagTape container image (Specific Release)
 .PHONY: build-magtape
 build-magtape:
 
 	$(DOCKER) build -t tmobile/magtape:latest app/magtape/
 
-# Push MagTape container image to DockerHub
+# Push MagTape container image (Specific Release) to DockerHub
 .PHONY: push-magtape
 push-magtape:
 
 	$(DOCKER) push tmobile/magtape:latest
 
-# Build and push all MagTape container images to DockerHub
+# Build and push all MagTape container (Specific Release) images to DockerHub
 .PHONY: build
 build: build-magtape-init push-magtape-init build-magtape push-magtape
 
-# Build and push MagTape-Init container image to DockerHub
+# Build and push MagTape-Init container image (Specific Release) to DockerHub
 .PHONY: new-magtape-init
 new-magtape-init: build-magtape-init push-magtape-init
 
-# Build and push MagTape container image to DockerHub
+# Build and push MagTape container image (Specific Release) to DockerHub
 .PHONY: new-magtape
 new-magtape: build-magtape push-magtape
