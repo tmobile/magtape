@@ -41,7 +41,7 @@ app = Flask(__name__)
 metrics = PrometheusMetrics(app, defaults_prefix="magtape")
 
 # Static information as metric
-metrics.info("app_info", "Application info", version="v2.2.0")
+metrics.info("app_info", "Application info", version="v2.3.0-prerelease")
 
 # Set logging config
 log = logging.getLogger("werkzeug")
