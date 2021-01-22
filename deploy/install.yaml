@@ -2,6 +2,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: magtape-system
+  labels:
+    app: magtape
 
 ---
 kind: ClusterRole
@@ -111,6 +113,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: magtape-ops
   namespace: magtape-system
+  labels:
+    app: magtape
 rules:
 - apiGroups:
   - ""
@@ -141,6 +145,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: magtape-ops-rb
   namespace: magtape-system
+  labels:
+    app: magtape
 roleRef:
   kind: Role
   name: magtape-ops
@@ -154,12 +160,16 @@ kind: ServiceAccount
 metadata:
   name: magtape-sa
   namespace: magtape-system
+  labels:
+    app: magtape
 ---
 kind: ConfigMap
 apiVersion: v1
 metadata:
   name: magtape-env
   namespace: magtape-system
+  labels:
+    app: magtape
 data:
   FLASK_ENV: "production"
   PYTHONUNBUFFERED: "TRUE"
@@ -182,6 +192,8 @@ data:
     kind: ValidatingWebhookConfiguration
     metadata:
       name: magtape-webhook
+      labels:
+        app: magtape
     webhooks:
       - name: magtape.webhook.k8s.t-mobile.com
         clientConfig:
@@ -220,6 +232,8 @@ apiVersion: v1
 metadata:
   name: magtape-opa-default-main
   namespace: magtape-system
+  labels:
+    app: magtape
 data:
   main: |
     package system
@@ -290,6 +304,8 @@ kind: PodDisruptionBudget
 metadata:
   name: magtape-pdb
   namespace: magtape-system
+  labels:
+    app: magtape
 spec:
   minAvailable: 1
   selector:
