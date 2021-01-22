@@ -3,6 +3,8 @@ kind: PodDisruptionBudget
 metadata:
   name: magtape-pdb
   namespace: magtape-system
+  labels:
+    app: magtape
 spec:
   minAvailable: 1
   selector:
