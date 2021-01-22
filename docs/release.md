@@ -40,6 +40,12 @@ CHANGELOG.md snippet.
     make build-single-manifest
 	```
 
+1. Update the demo install reference in the README (only for stable releases)
+
+	```
+	kubectl apply -f https://raw.githubusercontent.com/tmobile/magtape/<TAG>/deploy/install.yaml
+	```
+
 1. Commit the changes and push to remote repository.
 
 	```
