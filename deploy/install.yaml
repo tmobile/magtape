@@ -162,6 +162,7 @@ metadata:
   namespace: magtape-system
   labels:
     app: magtape
+
 ---
 kind: ConfigMap
 apiVersion: v1
