@@ -4,6 +4,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: magtape-ops
   namespace: magtape-system
+  labels:
+    app: magtape
 rules:
 - apiGroups:
   - ""
@@ -34,6 +36,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: magtape-ops-rb
   namespace: magtape-system
+  labels:
+    app: magtape
 roleRef:
   kind: Role
   name: magtape-ops
