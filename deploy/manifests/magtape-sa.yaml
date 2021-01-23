@@ -3,3 +3,5 @@ kind: ServiceAccount
 metadata:
   name: magtape-sa
   namespace: magtape-system
+  labels:
+    app: magtape

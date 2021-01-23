@@ -3,6 +3,8 @@ apiVersion: v1
 metadata:
   name: magtape-env
   namespace: magtape-system
+  labels:
+    app: magtape
 data:
   # Different name for the cluster
   MAGTAPE_CLUSTER_NAME: "dev-cluster"
