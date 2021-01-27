@@ -3,8 +3,7 @@ resources:
     desired: pass
     script:
     manifests:
-      - file: test-deploy01.yaml
-        name: "Deployment: Pass: 1"
+      - test-deploy01.yaml
       - test-deploy03.yaml
       - test-deploy04.yaml
       - test-deploy05.yaml
