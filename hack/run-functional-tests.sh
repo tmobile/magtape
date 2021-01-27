@@ -90,10 +90,10 @@ run_resource_tests() {
   
   test_type=$(yq read "${TESTS_MANIFEST}" "resources.[${resource_index}].desired")
 
-  # grab local list of test manifests to use
-  local manifest_list
+  # grab local length of the list of test manifests to use
+  local manifest_array_length
   
-  manifest_list=$(yq read -P "${TESTS_MANIFEST}" "resources.[${resource_index}].manifests" | sed 's/^-[ ]*//')
+  manifest_array_length=$(yq read -l "${TESTS_MANIFEST}" "resources.[${resource_index}].manifests")
 
   # grab local user_script specified for pre/post/between running
   local user_script
@@ -103,7 +103,7 @@ run_resource_tests() {
   # full path to the user specified script associate with this stanza in the manifest
   local user_script_path="testing/${resource}/scripts/${user_script}"
 
-  if [ "${manifest_list}" == "" ]; then
+  if (( manifest_array_length == 0 )); then
 
     echo "[WARN] No \"${test_type}\" tests for \"${resource}\". Skipping..."
     echo "============================================================================"
@@ -124,13 +124,53 @@ run_resource_tests() {
 
     fi
 
-    for testfile in ${manifest_list}; do
+    for ((manifest_index = 0 ; manifest_index < manifest_array_length ; manifest_index++)); do
 
-        local test_file_path="testing/${resource}/${testfile}"
+        # declare testfile as local
+        local testfile
+        
+        # try getting the name of the file using the new style 'file' map key
+        testfile=$(yq read -P "${TESTS_MANIFEST}" "resources.[${resource_index}].manifests.[${manifest_index}].file")
 
+        # declare file_description as local
+        local file_description
+        
+        # get the file_description with 'name 'map key
+        file_description=$(yq read -P "${TESTS_MANIFEST}" "resources.[${resource_index}].manifests.[${manifest_index}].name")
+
+        # declare test_file_path as local
+        local test_file_path
+        
+        # create the relative path to the test file (from 'file' map key)
+        test_file_path="testing/${resource}/${testfile}"
+        
+        # check if the file exists at the correct relative path; 
+        # if it doesn't try falling back to the legacy style where the array index contains the filename instead of a map
+        if [[ -z "${testfile}" ]]; then
+
+            testfile=$(yq read -P "${TESTS_MANIFEST}" "resources.[${resource_index}].manifests.[${manifest_index}]")
+
+        fi
+
+        # declare test_file_path as local
+        local test_file_path
+        
+        # create the relative path to the test file (from 'file' map key)
+        test_file_path="testing/${resource}/${testfile}"
+
+        # make sure the file exists using the legacy style name; if it doesn't then we're skipping this file
         if [ -f "${test_file_path}" ]; then
 
-            echo "[INFO] ${action}: \"${testfile}\""
+            # check if file_description is empty, if it is fall back to the older output
+            if [ -z "${file_description}" ]; then
+
+                echo "[INFO] ${action}: \"${testfile}\""
+
+            else
+
+                echo "[INFO] ${file_description}"
+
+            fi
             
             if [ "${action}" == "delete" ]; then
               
@@ -172,7 +212,10 @@ run_resource_tests() {
 
         else
 
-            echo "[WARN] File \"${test_file_path}\" not found. Skipping..."
+            # try to warn that the functional test manifest has a problem with one of the file definitions
+            echo "[WARN] File \"${testfile}\" not found in directory \"testing/${resource}/\". Functional Testing Failed..."
+
+            exit 1
 
         fi
 
