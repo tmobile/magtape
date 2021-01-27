@@ -213,7 +213,7 @@ run_resource_tests() {
         else
 
             # try to warn that the functional test manifest has a problem with one of the file definitions
-            echo "[WARN] File \"${testfile}\" not found in directory \""testing/${resource}/"\". Functional Testing Failed..."
+            echo "[WARN] File \"${testfile}\" not found in directory \"testing/${resource}/\". Functional Testing Failed..."
 
             exit 1
 
