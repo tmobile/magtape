@@ -7,7 +7,7 @@ The release process consists of two phases: versioning and publishing.
 Versioning involves maintaining the following files:
 
 - **CHANGELOG.md** - this file contains a list of all the important changes in each release.
-- **Makefile** - the Makefile contains a VERSION variable that defines the version of the project.
+- **Makefile** - the Makefile contains a few `*_VERSION` variables that define the version of a few components in the project.
 
 The steps below explain how to update these files. In addition, the repository
 should be tagged with the semantic version identifying the release.
@@ -17,48 +17,54 @@ CHANGELOG.md snippet.
 
 ## Versioning
 
-1. Obtain a copy of repository.
+1. Fork and clone the repository.
 
-	```
-	git clone git@github.com:tmobile/magtape.git
+	```shell
+	$ git clone git@github.com:phenixblue/magtape.git
 	```
 
 1. Set version variables within Makefile:
 
-	```
+	```makefile
 	MAGTAPE_VERSION := 1.0.0
-    OPA_VERSION := 0.16.1
-    KUBE_MGMT_VERSION := 0.10
+	OPA_VERSION := 0.16.1
+	KUBE_MGMT_VERSION := 0.10
 	```
 
-    NOTE: This is just for tracking right now. We will make better use of this once we automate the release workflow.
+    NOTE: This version info is used to populate the correct versions throughout several files in the repo.
 
-1. Update version in deployment manifest and generate new single install manifest:
+1. Set the release version and generate new single install manifest:
 
-	```
-	make set-release-version
-    make build-single-manifest
+	```shell
+	$ make set-release-version
+	$ make build-single-manifest
 	```
 
 1. Update the demo install reference in the README (only for stable releases)
 
-	```
-	kubectl apply -f https://raw.githubusercontent.com/tmobile/magtape/<TAG>/deploy/install.yaml
-	```
-
-1. Commit the changes and push to remote repository.
-
-	```
-	git commit -a -s -m "Prepare v<version> release"
-	git push origin master
+	```shell
+	$ kubectl apply -f https://raw.githubusercontent.com/tmobile/magtape/<TAG>/deploy/install.yaml
 	```
 
-1. Tag repository with release version and push tags to remote repository.
+	NOTE: The tip of the master branch may not always provide an ideal user experience so we should keep this link pointed at a stable release tag to provide a smooth experience for visitors browsing the repo.
+
+1. Commit the changes, push to your fork, and open a PR.
+
+	```shell
+	$ git commit -a -s -m "Prepare v<version> release"
+	$ git push
+	```
+
+	NOTE: Verify CI jobs complete successully, have the PR Reviewed, and then Merge the PR
+
+1. Tag repository with release version and push tag.
 
 	```
-	git tag v<semver>
-	git push origin --tags
+	$ git tag v<semver>
+	$ git push origin --tags
 	```
+
+	NOTE: This should be done directly on the MagTape repo, not a fork (ie. You must be a Maintainer)
 
 ## Publishing
 
@@ -66,6 +72,8 @@ CHANGELOG.md snippet.
 
 1. Create a new release for the version.
 	- Copy the changelog content into the message.
+
+	NOTE: You may have to adjust the Markdown Headers (ie. `#`) since the Headers for a specific release in the CHANGELOG.md file are not top level (ie. They start with `##` instead of `#`)
 
 ## Notes
 
