@@ -46,7 +46,7 @@ CHANGELOG.md snippet.
 	$ kubectl apply -f https://raw.githubusercontent.com/tmobile/magtape/<TAG>/deploy/install.yaml
 	```
 
-	NOTE: The stateof the master branch may be in flux, but we should keep this link pointed at a stable release at all times so the experience works for the average visitor to the repo.
+	NOTE: The tip of the master branch may not always provide an ideal user experience so we should keep this link pointed at a stable release tag to provide a smooth experience for visitors browsing the repo.
 
 1. Commit the changes, push to your fork, and open a PR.
 

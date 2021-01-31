@@ -91,7 +91,7 @@ The README has [an example](/README.md#User-defined-alert-target) of how you can
 - Bump the engineerd/setup-kind Action to v05.0 to support the [deprecations noted here](https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/) (#77)
 - Change add-path commands in rego-checks CI jobs (#77)
 - Add ci-bootstrap Make target to pin versions for specific utilities (ie. kubectl) for more consistent CI (#77)
-- Enabled descriptive names for functional tests (#87)
+- Enabled descriptive names for functional tests (#86)
 - OPA version bumped to 0.25.2 (#88)
 
 **server-side warnings on policy failures**
