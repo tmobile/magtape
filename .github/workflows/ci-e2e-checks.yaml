@@ -15,10 +15,10 @@ jobs:
     strategy:
       matrix:
         k8s-version:
+          - v1.20
           - v1.19
           - v1.18
           - v1.17
-          - v1.16
         include:
           - k8s-version: v1.20
             kind-node-image: kindest/node:v1.20.2@sha256:8f7ea6e7642c0da54f04a7ee10431549c0257315b3a634f6ef2fecaaedb19bab
