@@ -3,54 +3,81 @@ resources:
     desired: pass
     script:
     manifests:
-      - test-deploy01.yaml
-      - test-deploy03.yaml
-      - test-deploy04.yaml
-      - test-deploy05.yaml
-      - test-deploy06.yaml
-      - test-deploy07.yaml
-      - test-deploy08.yaml
-      - test-deploy09.yaml
-      - test-deploy10.yaml
-      - test-deploy11.yaml
+      - name: "Deployment - Pass all policies"
+        file: test-deploy01.yaml
+      - name: "Deployment - No Liveness Probe"
+        file: test-deploy03.yaml
+      - name: "Deployment - No Readiness Probe"
+        file: test-deploy04.yaml
+      - name: "Deployment - No CPU Requests"
+        file: test-deploy05.yaml
+      - name: "Deployment - No MEM Requests"
+        file: test-deploy06.yaml
+      - name: "Deployment - No CPU Limits"
+        file: test-deploy07.yaml
+      - name: "Deployment - No MEM Limits"
+        file: test-deploy08.yaml
+      - name: "Deployment No CPU or MEM Requests"
+        file: test-deploy09.yaml
+      - name: "Deployment - No CPU or MEM Limits"
+        file: test-deploy10.yaml
+      - name: "Deployment - Multiple Containers"
+        file: test-deploy11.yaml
   - kind: deployments
     desired: fail
     script: 
     manifests:
-      - test-deploy02.yaml
+      - name: "Deployment - Fail all policies"
+        file: test-deploy02.yaml
   - kind: pdbs
     desired: pass
     script:
     manifests:
-      - test-pdb02.yaml
-      - test-pdb05.yaml
+      - name: "PDB - minAvailable, Percent in range"
+        file: test-pdb02.yaml
+      - name: "PDB - maxUnavailable, Percent in range"
+        file: test-pdb05.yaml
   - kind: pdbs
     desired: fail
     script:
     manifests:
-      - test-pdb01.yaml
-      - test-pdb03.yaml
-      - test-pdb04.yaml
-      - test-pdb06.yaml
+      - name: "PDB - minAvailable, Integer value"
+        file: test-pdb01.yaml
+      - name: "PDB - minAvailable, Percent out or range"
+        file: test-pdb03.yaml
+      - name: "PDB - maxUnavailable, Integer value"
+        file: test-pdb04.yaml
+      - name: "PDB - maxUnavailable, Percent out or range"
+        file: test-pdb06.yaml
   - kind: pods
     desired: pass
     script:
     manifests:
-      - test-pod02.yaml
-      - test-pod03.yaml
-      - test-pod04.yaml
-      - test-pod05.yaml
-      - test-pod06.yaml
+      - name: "Pod - Container with hostPath"
+        file: test-pod02.yaml
+      - name: "Pod - emptyDir over size limit (100M)"
+        file: test-pod03.yaml
+      - name: "Pod - ownerReference"
+        file: test-pod04.yaml
+      - name: "Pod - emptyDir under size limit (100M)"
+        file: test-pod05.yaml
+      - name: "Pod - emptyDir under size limit (100M) + Pod - ownerReference"
+        file: test-pod06.yaml
   - kind: pods
     desired: fail
     script:
     manifests:
-      - test-pod01.yaml
+      - name: "Pod - Container with hostPort"
+        file: test-pod01.yaml
   - kind: services
     desired: pass
     script:
     manifests:
-        - test-svc01.yaml
-        - test-svc02.yaml
-        - test-svc03.yaml
-        - test-svc04.yaml
+      - name: "Service - Pass all policies"
+        file: test-svc01.yaml
+      - name: "Service - nodePort in range"
+        file: test-svc02.yaml
+      - name: "Service nodePort out of range"
+        file: test-svc03.yaml
+      - name: "Service - ???"
+        file: test-svc04.yaml
