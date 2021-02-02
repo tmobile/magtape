@@ -1,12 +1,10 @@
 # Testing Info
 
-Below is a list of test files to use with testing various features and scenarios of the MagTape tool. Most of the test files should also have associated JSON files:
+MagTape uses the files collected in this directory for various testing strategies (unit tests, functional tests, regression test, etc.). Test files will generally fall into one of three categories:
 
 - YAML File - Used for applying directly to a Kubernetes cluster
 - JSON Request Object File - Used for testing the MagTape application outside of Kubernetes
 - JSON Response File - Used for validating responses from various functions/calls of the MagTape application
-
-Some files listed below don't exist yet. They are listed for tracking purposes and will be added in the future.
 
 ## Functional Tests
 
