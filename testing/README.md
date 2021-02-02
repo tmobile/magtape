@@ -8,15 +8,9 @@ Below is a list of test files to use with testing various features and scenarios
 
 Some files listed below don't exist yet. They are listed for tracking purposes and will be added in the future.
 
-## Test Samples Available
-
-Every policy for MagTape should have one or more functional tests associated with it. Functional tests are typically YAML manifests for Kubernetes resources with specific configuration to test the functionality of a policy. Manifests should be placed in the a directory associated with the target resource type (ie. `./testing/deployments/`, `./testing/services/`, etc.). 
-
-All functional tests are defined in [./functional-tests.yaml](./functional-tests.yaml)
-
 ## Functional Tests
 
-Functional tests for MagTape are based on the files mentioned above. Any new tests added will require certain consideration to be picked up by the end-to-end CI tests. 
+Every policy for MagTape should have one or more functional tests associated with it. Functional tests are typically YAML manifests for Kubernetes resources with specific configuration to test the functionality of a policy. Manifests should be placed in the a directory associated with the target resource type (ie. `./testing/deployments/`, `./testing/services/`, etc.). 
 
 The [functional-tests.yaml](./functional-tests.yaml) file contains the tests that get executed within the CI workflows and what results are expected (pass or fail). Each test should fall under the appropriate resource and result section of the file. The script field can be used to specify a bash script which can be used to execute setup, teardown and between (each manifest being applied) tasks to modify the environment making it suitable for executing the test. 
 
