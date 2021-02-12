@@ -109,3 +109,17 @@ Adopting version 2 of this action allows us to start consuming Docker `buildx`. 
 **RBAC rule changes**
 
 Due to the change in how user-defined Slack Incoming Webhooks are applied, there's a need for the `magtape-sa` service account to read Secrets across all namespaces. This includes get, list, and watch actions.
+
+## v2.3.1
+
+This release includes a fix for `CVE-2020-36242` in the Python Cryptography package.
+
+### Fixes
+
+Bump cryptography from 3.2 to 3.3.2 in /app/imageswap-init (Dependabot)
+
+    Bumps [cryptography](https://github.com/pyca/cryptography) from 3.2 to 3.3.2.
+    - [Release notes](https://github.com/pyca/cryptography/releases)
+    - [Changelog](https://github.com/pyca/cryptography/blob/master/CHANGELOG.rst)
+    - [Commits](https://github.com/pyca/cryptography/compare/3.2...3.3.2)
+
