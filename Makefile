@@ -122,7 +122,7 @@ unit-python:
 test-python: unit-python
 
 # Lint Python and update python code
-.Phony: lint-python
+.PHONY: lint-python
 lint-python:
 
 	black app/magtape-init/
@@ -156,7 +156,7 @@ coverage-rego:
 test-rego: unit-rego coverage-rego
 
 # Lint Python and update python code
-.Phony: lint-rego
+.PHONY: lint-rego
 lint-rego:
 
 	opa fmt -l policies/
@@ -173,13 +173,13 @@ ci-lint-rego:
 ###############################################################################
 
 # Lint shell files
-.Phony: lint-shell
+.PHONY: lint-shell
 lint-shell:
 
 	hack/lint-shell.sh
 
 # Lint shell files
-.Phony: lint-shell-ci
+.PHONY: lint-shell-ci
 lint-shell-ci:
 
 	hack/lint-shell.sh ci
