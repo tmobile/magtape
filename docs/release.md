@@ -75,6 +75,14 @@ CHANGELOG.md snippet.
 
 	NOTE: You may have to adjust the Markdown Headers (ie. `#`) since the Headers for a specific release in the CHANGELOG.md file are not top level (ie. They start with `##` instead of `#`)
 
-## Notes
+## Container Images
 
-- The tmobile/magtape-init and tmobile/magtape Docker images are automatically built and published to Docker Hub when a release is created. There are no manual steps involved here.
+The `tmobile/magtape-init` and `tmobile/magtape` Docker images are automatically built and published to Docker Hub when a release is created. 
+
+Images are published for the following platforms:
+
+- linux/amd64
+- linux/arm64
+- linux/ppc64le
+
+There are no manual steps involved here.
