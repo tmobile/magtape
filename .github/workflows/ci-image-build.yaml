@@ -5,7 +5,12 @@ on:
     # Dynamic releasetag tag is set based on the assumption this ci task only runs on release
     types: [published]
 
+# Variables to be used throughout the workflow manifest
+env:
+  TARGET_PLATFORMS: linux/amd64,linux/arm64,linux/ppc64le
+
 jobs:
+
   # Build and push magtape-init container image
   build-magtape-init-image:
     name: Build and push magtape-init images to DockerHub
@@ -22,6 +27,10 @@ jobs:
         # GITHUB_REF variable must exist in action; this may rely on {{ on: release: types: [published] }} gating the action
         run: |
           echo ::set-output name=releasetag::${GITHUB_REF#refs/tags/}
+
+      # Setup QEMU to support multi-arch builds
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
           
       # Part of docker/build-push-action@v2; setting up the build system
       - name: Set up Docker Buildx
@@ -36,12 +45,14 @@ jobs:
 
       - name: Build and push magtape-init image to DockerHub
         if: github.repository == 'tmobile/magtape'
-        timeout-minutes: 10
+        timeout-minutes: 30
         uses: docker/build-push-action@v2
         with:
           context: ./app/magtape-init/
           # file should be specified relative to the repo root rather than relative to the context
           file: ./app/magtape-init/Dockerfile
+          # Defines the target platform architectures images should be built for
+          platforms: ${{ env.TARGET_PLATFORMS }}
           # push is no longer defaulted to true under v2; to push you must specify push is true
           push: true
           # Uses the releasetag output exposed by the Collect Release Tag step to set the tag under v2
@@ -64,6 +75,10 @@ jobs:
         run: |
           echo ::set-output name=releasetag::${GITHUB_REF#refs/tags/}
 
+      # Setup QEMU to support multi-arch builds
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
       # Part of docker/build-push-action@v2; setting up the build system
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -77,12 +92,14 @@ jobs:
 
       - name: Build and push magtape image to DockerHub
         if: github.repository == 'tmobile/magtape'
-        timeout-minutes: 10
+        timeout-minutes: 30
         uses: docker/build-push-action@v2
         with:
           context: ./app/magtape/
           # file should be specified relative to the repo root rather than relative to the context
           file: ./app/magtape/Dockerfile
+          # Defines the target platform architectures images should be built for
+          platforms: ${{ env.TARGET_PLATFORMS }}
           # push is no longer defaulted to true under v2; to push you must specify push is true
           push: true
           # Uses the releasetag output exposed by the Collect Release Tag step to set the tag under v2
