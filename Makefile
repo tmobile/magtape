@@ -16,7 +16,8 @@
 # its contributors may be used to endorse or promote products derived from this
 # software without specific prior written permission.
 
-MAGTAPE_VERSION := v2.3.2
+
+MAGTAPE_VERSION := v2.3.3
 OPA_VERSION := 0.25.2
 KUBE_MGMT_VERSION := 0.11
 
