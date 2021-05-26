@@ -116,10 +116,29 @@ This release includes a fix for `CVE-2020-36242` in the Python Cryptography pack
 
 ### Fixes
 
-Bump cryptography from 3.2 to 3.3.2 in /app/imageswap-init (Dependabot)
+Bump [cryptography](https://github.com/pyca/cryptography) from 3.2 to 3.3.2 in /app/imageswap-init (Dependabot)
 
-    Bumps [cryptography](https://github.com/pyca/cryptography) from 3.2 to 3.3.2.
-    - [Release notes](https://github.com/pyca/cryptography/releases)
-    - [Changelog](https://github.com/pyca/cryptography/blob/master/CHANGELOG.rst)
-    - [Commits](https://github.com/pyca/cryptography/compare/3.2...3.3.2)
+- [Release notes](https://github.com/pyca/cryptography/releases)
+- [Changelog](https://github.com/pyca/cryptography/blob/master/CHANGELOG.rst)
+- [Commits](https://github.com/pyca/cryptography/compare/3.2...3.3.2)
 
+## v2.3.2
+
+Bumps [jinja2](https://github.com/pallets/jinja) from 2.11.2 to 2.11.3. in /app/magtape (ref #99)
+
+- PyPI: https://pypi.org/project/Jinja2/2.11.3/
+- Changes: https://jinja.palletsprojects.com/en/2.11.x/changelog/#version-2-11-3
+
+## v2.3.3
+
+### Enhancements
+
+- Add multi-arch image builds for release workflow, amd64, arm64, and ppc64le to start (#107 authored by @phenixblue)
+- Fix typos in Makefile (#105 authored by @Freakin)
+- Bump urllib3 to 1.26.4 (#101 authored by dependabot)
+
+Bumps [urllib3](https://github.com/urllib3/urllib3) from 1.26.3 to 1.26.4 in /app/magtape-init
+
+- [Release notes](https://github.com/urllib3/urllib3/releases)
+- [Changelog](https://github.com/urllib3/urllib3/blob/main/CHANGES.rst)
+- [Commits](https://github.com/urllib3/urllib3/commit/a8913042b676c510e94fc2b097f6b514ae11a537)
