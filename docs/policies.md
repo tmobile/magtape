@@ -143,7 +143,11 @@ NodePorts are used as a way to expose a Service external to a cluster. Since Nod
 The configuration should follow these recommended rules:
 
 The nodePort range annotation can be a single number, numbers separated by commas, a range split with a hyphen, or a combination of the three
+
 The nodePort annotation on the namespace should be "k8s.t-mobile.com/nodeportRange"
+
 Set the annotation to "na" if no nodePort range will to be set, that is seen as an exception value
+
+Set the annotation to "na" if no nodePort range will not be set, that is seen as an exception value
 
 Read more about NodePorts in the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types)
