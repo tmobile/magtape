@@ -106,7 +106,7 @@ Read more about host ports in the [official Kubernetes documentation](https://ku
 
 ## emptyDir Volume (Check ID: MT1009)
 
-This policy checks that the size limit for the emptyDir volume is both present and less than the desired size limit.
+This policy checks that the sizeLimit for the emptyDir volume is both present and less than the desired size limit.
 
 An emptyDir volume is automatically created when a Pod is assigned to a Node. When the Pod is removed, so is its emptyDir volume. Using emptyDir leads to consumption of ephemeral storage on the underlying nodes and can fill up easily affecting others on the platform.
 
@@ -138,12 +138,12 @@ Read more about Privileged Pods in the [official Kubernetes documentation](https
 
 This policy enforces that a nodePort configured in a Service falls within the nodePort range that is defined in the corresponding namespace annotation.
 
-NodePorts are used as a way to expose a Service external to a cluster. Since NodePorts are a finite resource, this policy aims to control NodePort usage via an allow list model using annotation on a Namespace to designate the allowable NodePort values/range.
+NodePorts are used as a way to expose a Service external to a cluster. Since NodePorts are a finite resource, this policy aims to control NodePort usage via an allow list model using an annotation on a Namespace to designate the allowable NodePort values/range.
 
 The configuration should follow these recommended rules:
 
 The nodePort range annotation can be a single number, numbers separated by commas, a range split with a hyphen, or a combination of the three
 The nodePort annotation on the namespace should be "k8s.t-mobile.com/nodeportRange"
-Set the annotation to "na" if no nodePort range will to be set, that is seen as an exceptional value
+Set the annotation to "na" if no nodePort range will to be set, that is seen as an exception value
 
 Read more about NodePorts in the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types)
