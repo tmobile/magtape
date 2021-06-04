@@ -92,7 +92,7 @@ spec:
 
 This policy checks for singleton Pods by looking for ownerRefrences in the workload configuration.
 
-A singleton pod is one that has no replication control. Without replication control, there may be moments when the pod becomes unavailable and there is no lifecycle management to recreate the pod if it ever dies. If owner references is present in the configuration, the pod is seen as a dependent of a ReplicationController, ReplicaSet, StatefulSet, DaemonSet, Deployment, Job, or CronJob.
+A singleton pod is one that has no replication control. Without replication control, there may be moments when the pod becomes unavailable and there is no lifecycle management to recreate the pod if it ever dies. If ownerReferences is present in the configuration, the pod is seen as a dependent of a ReplicationController, ReplicaSet, StatefulSet, DaemonSet, Deployment, Job, or CronJob.
 
 Read more about Pods in the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/workloads/controllers/garbage-collection/#owners-and-dependents)
 
