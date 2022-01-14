@@ -73,29 +73,19 @@ By default MagTape will handle creation and rotation of the required TLS cert/ke
 
 ### Create the secret
 
-Create the secret name called `magtape-tls` with the annotation `magtape-byoc` in the `magtape-system` namespace. The `cert.pem`, `key.pem` must be provided in the data field of the secret. This secret must exist prior to install MagTape.
+Create the secret name called `magtape-tls` with the annotation `magtape-byoc` in the `magtape-system` namespace. The `cert.pem`, `key.pem` must be provided in the data field of the secret. This secret must exist prior to installing MagTape.
 
-The following YAML contains an example of the secret
-```yaml
-apiVersion: v1
-data:
-  cert.pem: "..."
-  key.pem: "..."
-kind: Secret
-metadata:
-  annotations:
-    magtape-byoc: ""
-  labels:
-    app: magtape
-  name: magtape-tls
-  namespace: magtape-system
-type: tls
+```shell
+kubectl create secret generic magtape-tls --from-file=cert.pem=<path/to/cert.pem> --from-file=key.pem=<path/to/key.pem> --namespace magtape-system
+kubectl annotate secret magtape-tls magtape-byoc=<VALUE>
 ```
-
 ### Root CA
 
-The VWC (Validating Webhook Configuration) needs to be configured with a cert bundle that includes the CA that signed the certificate and key used to secure the MagTape API. For now MagTape assumes this CA certificate exists in the `magtape-tls-ca` secret deployed within the `magtape-system` namespace.  The `rootca.pem` must be provided in the data field of the secret. This secret must exist prior to install MagTape.
+The VWC (Validating Webhook Configuration) needs to be configured with a cert bundle that includes the CA that signed the certificate and key used to secure the MagTape API. For now MagTape assumes this CA certificate exists in the `magtape-tls-ca` secret deployed within the `magtape-system` namespace.  The `rootca.pem` must be provided in the data field of the secret. This secret must exist prior to installing MagTape.
 
+```shell
+kubectl create secret generic magtape-tls-ca --from-file=rootca.pem=</path/to/rootca.pem> --namespace magtape-system
+```
 No validation is done currently to ensure the specified CA actually signed the cert and key used to secure MagTape's API. We plan to add this validation in a future release.
 
 ## VWC Template
