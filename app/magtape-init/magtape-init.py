@@ -542,25 +542,26 @@ def write_tls_pair(
         logging.info(
             f'Using existing secret "{secret_name}" in namespace "{namespace}"'
         )
-        logging.info("Waiting for race winning pod to startup")
+        if not magtape_tls_byoc:
+            logging.info("Waiting for race winning pod to startup")
 
-        start_time = datetime.datetime.now()
-        race_winner_pod = ""
+            start_time = datetime.datetime.now()
+            race_winner_pod = ""
 
-        while (
-            race_winner_pod == "" or (datetime.datetime.now() - start_time).seconds < 30
-        ):
+            while (
+                race_winner_pod == "" or (datetime.datetime.now() - start_time).seconds < 30
+            ):
 
-            logging.info("Still waiting for race winning pod to startup")
+                logging.info("Still waiting for race winning pod to startup")
 
-            if "magtape/updated-by-pod" in tls_secret.metadata.labels:
+                if "magtape/updated-by-pod" in tls_secret.metadata.labels:
 
-                race_winner_pod = tls_secret.metadata.labels["magtape/updated-by-pod"]
-                break
+                    race_winner_pod = tls_secret.metadata.labels["magtape/updated-by-pod"]
+                    break
 
-            else:
+                else:
 
-                time.sleep(5)
+                    time.sleep(5)
 
     else:
 
