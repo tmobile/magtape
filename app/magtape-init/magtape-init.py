@@ -549,14 +549,17 @@ def write_tls_pair(
             race_winner_pod = ""
 
             while (
-                race_winner_pod == "" or (datetime.datetime.now() - start_time).seconds < 30
+                race_winner_pod == ""
+                or (datetime.datetime.now() - start_time).seconds < 30
             ):
 
                 logging.info("Still waiting for race winning pod to startup")
 
                 if "magtape/updated-by-pod" in tls_secret.metadata.labels:
 
-                    race_winner_pod = tls_secret.metadata.labels["magtape/updated-by-pod"]
+                    race_winner_pod = tls_secret.metadata.labels[
+                        "magtape/updated-by-pod"
+                    ]
                     break
 
                 else:
