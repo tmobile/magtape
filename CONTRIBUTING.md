@@ -1,4 +1,4 @@
-	# Contributing to MagTape
+# Contributing to MagTape
 
 ## Welcome
 
