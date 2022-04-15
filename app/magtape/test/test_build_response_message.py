@@ -36,9 +36,7 @@ os.environ["MAGTAPE_POD_NAME"] = "magtape-abc1234"
 os.environ["MAGTAPE_CLUSTER_NAME"] = "cluster1"
 os.environ["MAGTAPE_SLACK_ENABLED"] = "FALSE"
 os.environ["MAGTAPE_SLACK_PASSIVE"] = "FALSE"
-os.environ[
-    "MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT"
-] = "https://hooks.slack.com/services/ABC123/XYZ789"
+os.environ["MAGTAPE_SLACK_WEBHOOK_URL_DEFAULT"] = "https://hooks.slack.com/services/ABC123/XYZ789"
 os.environ["MAGTAPE_SLACK_CHANNEL"] = "test"
 os.environ["MAGTAPE_SLACK_USER"] = "test"
 os.environ["MAGTAPE_SLACK_ICON"] = ":magtape:"
@@ -74,9 +72,7 @@ class TestRoutes(unittest.TestCase):
 
             namespace = "test1"
 
-            result = magtape.build_response_message(
-                request_object_json, response_message, namespace
-            )
+            result = magtape.build_response_message(request_object_json, response_message, namespace)
 
             expected_result = '[FAIL] HIGH - Found privileged Security Context for container "test-deploy02" (MT2001), [FAIL] LOW - Liveness Probe missing for container "test-deploy02" (MT1001), [FAIL] LOW - Readiness Probe missing for container "test-deploy02" (MT1002), [FAIL] LOW - Resource limits missing (CPU/MEM) for container "test-deploy02" (MT1003), [FAIL] LOW - Resource requests missing (CPU/MEM) for container "test-deploy02" (MT1004)'
 
@@ -87,9 +83,7 @@ class TestRoutes(unittest.TestCase):
     @patch("requests.post")
     def test_opa_exception(self, mock_post):
 
-        mock_post.return_value.exceptions.ConnectionError(
-            "Some exception when calling OPA"
-        )
+        mock_post.return_value.exceptions.ConnectionError("Some exception when calling OPA")
         mock_post.return_value.headers = r"""{'Content-Type': 'application/json', 'Date': 'Mon, 19 Aug 2019 22:55:37 GMT', 'Content-Length': '1078'}"""
 
         with open("./testing/deployments/test-deploy02.json") as json_file:
@@ -100,9 +94,7 @@ class TestRoutes(unittest.TestCase):
 
             namespace = "test1"
 
-            result = magtape.build_response_message(
-                request_object_json, response_message, namespace
-            )
+            result = magtape.build_response_message(request_object_json, response_message, namespace)
 
             expected_result = "[FAIL] HIGH - Call to OPA was unsuccessful. Please contact your cluster administrator"
 
@@ -124,9 +116,7 @@ class TestRoutes(unittest.TestCase):
 
             namespace = "test1"
 
-            result = magtape.build_response_message(
-                request_object_json, response_message, namespace
-            )
+            result = magtape.build_response_message(request_object_json, response_message, namespace)
 
             expected_result = "[FAIL] HIGH - Call to OPA was unsuccessful. Please contact your cluster administrator"
 
