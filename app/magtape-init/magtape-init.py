@@ -70,15 +70,11 @@ def check_for_byoc(namespace, secret, core_api):
 
     if secret_annotations and magtape_byoc_annotation in secret_annotations:
 
-        logging.info(
-            f'Detected the "Bring Your Own Cert" annotation for secret "{secret_name}"'
-        )
+        logging.info(f'Detected the "Bring Your Own Cert" annotation for secret "{secret_name}"')
 
         try:
 
-            secret = core_api.read_namespaced_secret(
-                magtape_tls_rootca_secret_name, namespace
-            )
+            secret = core_api.read_namespaced_secret(magtape_tls_rootca_secret_name, namespace)
 
         except ApiException as exception:
 
@@ -102,9 +98,7 @@ def check_for_byoc(namespace, secret, core_api):
 
         else:
 
-            logging.error(
-                f'No key found or value is blank for "rootca.pem" in "{secret.metadata.name}" secret'
-            )
+            logging.error(f'No key found or value is blank for "rootca.pem" in "{secret.metadata.name}" secret')
             sys.exit(1)
 
     else:
@@ -201,9 +195,7 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
 
         if exception.status != 404:
 
-            logging.error(
-                f"Problem reading existing certificate requests: {exception}\n"
-            )
+            logging.error(f"Problem reading existing certificate requests: {exception}\n")
             sys.exit(1)
 
         elif exception.status == 404:
@@ -223,16 +215,12 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
 
             if exception.status != 404:
 
-                logging.error(
-                    f'Unable to delete existing certificate request "{new_k8s_csr_name}": {exception}\n'
-                )
+                logging.error(f'Unable to delete existing certificate request "{new_k8s_csr_name}": {exception}\n')
                 sys.exit(1)
 
             elif exception.status == 404:
 
-                logging.info(
-                    f'Existing certificate request "{new_k8s_csr_name}" not found'
-                )
+                logging.info(f'Existing certificate request "{new_k8s_csr_name}" not found')
                 logging.debug(f"Exception:\n{exception}\n")
         else:
 
@@ -256,15 +244,11 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
     # Read newly created K8s CSR resource
     try:
 
-        new_k8s_csr_body = certificates_api.read_certificate_signing_request_status(
-            new_k8s_csr_name
-        )
+        new_k8s_csr_body = certificates_api.read_certificate_signing_request_status(new_k8s_csr_name)
 
     except ApiException as exception:
 
-        logging.error(
-            f'Unable to read certificate request status for "{new_k8s_csr_name}"\n'
-        )
+        logging.error(f'Unable to read certificate request status for "{new_k8s_csr_name}"\n')
         logging.debug(f"Exception:\n{exception}\n")
         sys.exit(1)
 
@@ -282,15 +266,11 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
     try:
 
         logging.info(f"Patch k8s CSR: {new_k8s_csr_name}")
-        certificates_api.replace_certificate_signing_request_approval(
-            new_k8s_csr_name, new_k8s_csr_body
-        )
+        certificates_api.replace_certificate_signing_request_approval(new_k8s_csr_name, new_k8s_csr_body)
 
     except ApiException as exception:
 
-        logging.info(
-            f'Unable to update certificate request status for "{new_k8s_csr_name}": {exception}\n'
-        )
+        logging.info(f'Unable to update certificate request status for "{new_k8s_csr_name}": {exception}\n')
 
     logging.info(f'Certificate signing request "{new_k8s_csr_name}" is approved')
 
@@ -325,10 +305,7 @@ def get_tls_cert_from_request(namespace, secret_name, k8s_csr_name, certificates
         tls_cert_b64 = k8s_csr.status.certificate
         conditions = k8s_csr.status.conditions or []
 
-        if (
-            "Approved" in [condition.type for condition in conditions]
-            and tls_cert_b64 != None
-        ):
+        if "Approved" in [condition.type for condition in conditions] and tls_cert_b64 != None:
 
             logging.info("Found approved certificate")
 
@@ -359,9 +336,7 @@ def build_tls_pair(namespace, secret_name, service_name, certificates_api):
     """Function to generate signed tls certificate for admission webhook"""
 
     # Generate private key to use for CSR
-    tls_key = rsa.generate_private_key(
-        public_exponent=65537, key_size=2048, backend=default_backend()
-    )
+    tls_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
 
     tls_key_pem = tls_key.private_bytes(
         encoding=serialization.Encoding.PEM,
@@ -422,10 +397,7 @@ def cert_should_update(namespace, secret_exists, tls_secret, magtape_tls_byoc):
 
         if tls_cert_key in tls_secret.data and tls_key_key in tls_secret.data:
 
-            if (
-                tls_secret.data[tls_cert_key] == ""
-                or tls_secret.data[tls_key_key] == ""
-            ):
+            if tls_secret.data[tls_cert_key] == "" or tls_secret.data[tls_key_key] == "":
 
                 if magtape_tls_byoc:
 
@@ -482,17 +454,13 @@ def read_tls_pair(namespace, secret_name, tls_pair, core_api):
 
         if exception.status != 404:
 
-            logging.error(
-                f'Unable to read secret "{secret_name}" in the "{namespace}" namespace\n'
-            )
+            logging.error(f'Unable to read secret "{secret_name}" in the "{namespace}" namespace\n')
             logging.debug(f"Exception:\n{exception}\n")
             sys.exit(1)
 
         else:
 
-            logging.info(
-                f'Did not find secret "{secret_name}" in the "{namespace}" namespace'
-            )
+            logging.info(f'Did not find secret "{secret_name}" in the "{namespace}" namespace')
             logging.debug(f"Exception:\n{exception}\n")
 
             logging.debug(f"Secret:\n{secret}\n")
@@ -539,27 +507,20 @@ def write_tls_pair(
     # If the secret isn't found, create it
     if secret_exists:
 
-        logging.info(
-            f'Using existing secret "{secret_name}" in namespace "{namespace}"'
-        )
+        logging.info(f'Using existing secret "{secret_name}" in namespace "{namespace}"')
         if not magtape_tls_byoc:
             logging.info("Waiting for race winning pod to startup")
 
             start_time = datetime.datetime.now()
             race_winner_pod = ""
 
-            while (
-                race_winner_pod == ""
-                or (datetime.datetime.now() - start_time).seconds < 30
-            ):
+            while race_winner_pod == "" or (datetime.datetime.now() - start_time).seconds < 30:
 
                 logging.info("Still waiting for race winning pod to startup")
 
                 if "magtape/updated-by-pod" in tls_secret.metadata.labels:
 
-                    race_winner_pod = tls_secret.metadata.labels[
-                        "magtape/updated-by-pod"
-                    ]
+                    race_winner_pod = tls_secret.metadata.labels["magtape/updated-by-pod"]
                     break
 
                 else:
@@ -573,7 +534,10 @@ def write_tls_pair(
         secret_metadata = client.V1ObjectMeta(
             name=secret_name,
             namespace=namespace,
-            labels={"app": "magtape", "magtape/updated-by-pod": magtape_pod_name,},
+            labels={
+                "app": "magtape",
+                "magtape/updated-by-pod": magtape_pod_name,
+            },
         )
 
         secret_data = {
@@ -591,9 +555,7 @@ def write_tls_pair(
 
         except ApiException as exception:
 
-            logging.error(
-                f'Unable to create secret "{secret_name}" in the "{namespace}" namespace: {exception}\n'
-            )
+            logging.error(f'Unable to create secret "{secret_name}" in the "{namespace}" namespace: {exception}\n')
             sys.exit(1)
 
         try:
@@ -602,9 +564,7 @@ def write_tls_pair(
 
         except ApiException as exception:
 
-            logging.error(
-                f'Unable to read new secret "{secret_name}" in the "{namespace}" namespace: {exception}\n'
-            )
+            logging.error(f'Unable to read new secret "{secret_name}" in the "{namespace}" namespace: {exception}\n')
             sys.exit(1)
 
         logging.info("New secret created")
@@ -630,9 +590,7 @@ def write_tls_pair(
 
         except ApiException as exception:
 
-            logging.error(
-                f'Unable to update secret "{secret_name}" in the "{namespace}" namespace: {exception}\n'
-            )
+            logging.error(f'Unable to update secret "{secret_name}" in the "{namespace}" namespace: {exception}\n')
             sys.exit(1)
 
         logging.info(f"Patched new cert/key into existing secret")
@@ -679,9 +637,7 @@ def init_tls_pair(namespace):
     logging.info("Starting TLS init process")
 
     # Check if custom secret was specified in ENV vars
-    magtape_tls_secret_name = os.getenv(
-        "magtape_tls_secret_name", magtape_tls_pair_secret_name
-    )
+    magtape_tls_secret_name = os.getenv("magtape_tls_secret_name", magtape_tls_pair_secret_name)
 
     if magtape_tls_secret_name != magtape_tls_pair_secret_name:
 
@@ -718,9 +674,7 @@ def init_tls_pair(namespace):
         logging.info("Existing TLS cert and key found")
 
     # Check if cert should be updated
-    secret_should_update = cert_should_update(
-        namespace, secret_exists, tls_secret, magtape_tls_byoc
-    )
+    secret_should_update = cert_should_update(namespace, secret_exists, tls_secret, magtape_tls_byoc)
 
     if secret_should_update:
 
@@ -804,9 +758,7 @@ def get_rootca(namespace, configuration, magtape_tls_byoc, core_api):
         # Read from secret
         try:
 
-            secret = core_api.read_namespaced_secret(
-                magtape_tls_rootca_secret_name, namespace
-            )
+            secret = core_api.read_namespaced_secret(magtape_tls_rootca_secret_name, namespace)
 
         except ApiException as exception:
 
@@ -820,9 +772,7 @@ def get_rootca(namespace, configuration, magtape_tls_byoc, core_api):
 
             else:
 
-                logging.error(
-                    f'Did not find secret "{magtape_tls_rootca_secret_name}" in the "{namespace}" namespace'
-                )
+                logging.error(f'Did not find secret "{magtape_tls_rootca_secret_name}" in the "{namespace}" namespace')
                 logging.debug(f"Exception:\n{exception}\n")
                 sys.exit(1)
 
@@ -848,25 +798,17 @@ def get_rootca(namespace, configuration, magtape_tls_byoc, core_api):
 
             if exception.status != 404:
 
-                logging.error(
-                    f'Unable to read configmap "{pks_cm}" in the "{kube_system_ns}" namespace\n'
-                )
+                logging.error(f'Unable to read configmap "{pks_cm}" in the "{kube_system_ns}" namespace\n')
                 logging.debug(f"Exception:\n{exception}\n")
                 sys.exit(1)
 
             else:
 
-                logging.error(
-                    f'Did not find configmap "{pks_cm}" in the "{kube_system_ns}" namespace'
-                )
+                logging.error(f'Did not find configmap "{pks_cm}" in the "{kube_system_ns}" namespace')
                 logging.debug(f"Exception:\n{exception}\n")
                 sys.exit(1)
 
-        root_ca = (
-            base64.b64encode(configmap.data["client-ca-file"].encode("utf-8"))
-            .decode("utf-8")
-            .rstrip()
-        )
+        root_ca = base64.b64encode(configmap.data["client-ca-file"].encode("utf-8")).decode("utf-8").rstrip()
 
     else:
 
@@ -1064,9 +1006,7 @@ def vwc_should_update(
 ################################################################################
 
 
-def read_vwc_from_template(
-    namespace, configuration, magtape_tls_byoc, core_api, admission_api
-):
+def read_vwc_from_template(namespace, configuration, magtape_tls_byoc, core_api, admission_api):
 
     """Function to read k8s validating webhook configuration"""
 
@@ -1081,9 +1021,7 @@ def read_vwc_from_template(
 
     except IOError as exception:
 
-        logging.error(
-            f'Error opening VWC template file "{magtape_vwc_template_file}": \n{exception}\n'
-        )
+        logging.error(f'Error opening VWC template file "{magtape_vwc_template_file}": \n{exception}\n')
         sys.exit(1)
 
     # Get Root CA
@@ -1171,9 +1109,7 @@ def write_vwc(namespace, ca_secret_name, vwc, configuration, admission_api, core
     # TO-DO (phenixblue): Need to work out how to validate TLS cert is signed by CA
     # verified = verify_vwc_cert_bundle(magtape_vwc_name, admission_api)
 
-    vwc_template = read_vwc_from_template(
-        namespace, configuration, magtape_tls_byoc, core_api, admission_api
-    )
+    vwc_template = read_vwc_from_template(namespace, configuration, magtape_tls_byoc, core_api, admission_api)
 
     # Figure out if there's an existing VWC that needs to be updated, or
     # if a new VWC should be created
@@ -1198,15 +1134,11 @@ def write_vwc(namespace, ca_secret_name, vwc, configuration, admission_api, core
 
             try:
 
-                admission_api.patch_validating_webhook_configuration(
-                    magtape_vwc_name, vwc
-                )
+                admission_api.patch_validating_webhook_configuration(magtape_vwc_name, vwc)
 
             except ApiException as exception:
 
-                logging.error(
-                    f'Unable to patch VWC "{magtape_vwc_name}": {exception}\n'
-                )
+                logging.error(f'Unable to patch VWC "{magtape_vwc_name}": {exception}\n')
                 sys.exit(1)
 
     else:
@@ -1253,9 +1185,7 @@ def init_vwc(namespace, magtape_tls_byoc):
 
     configuration = client.Configuration()
     core_api = client.CoreV1Api(client.ApiClient(configuration))
-    admission_api = client.AdmissionregistrationV1beta1Api(
-        client.ApiClient(configuration)
-    )
+    admission_api = client.AdmissionregistrationV1Api(client.ApiClient(configuration))
 
     vwc = read_vwc(admission_api)
     write_vwc(

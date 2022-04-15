@@ -41,7 +41,7 @@ app = Flask(__name__)
 metrics = PrometheusMetrics(app, defaults_prefix="magtape")
 
 # Static information as metric
-metrics.info("app_info", "Application info", version="v2.3.3")
+metrics.info("app_info", "Application info", version="v2.4.0-rc1")
 
 # Set logging config
 log = logging.getLogger("werkzeug")
@@ -82,9 +82,7 @@ magtape_metrics_requests = Counter(
     ["count_type", "ns", "alert_sent"],
 )
 # Policy metrics represent individual policy evaluations
-magtape_metrics_policies = Counter(
-    "magtape_policy", "Policy Metrics for MagTape", ["count_type", "policy", "ns"]
-)
+magtape_metrics_policies = Counter("magtape_policy", "Policy Metrics for MagTape", ["count_type", "policy", "ns"])
 
 ################################################################################
 ################################################################################
@@ -152,29 +150,20 @@ def magtape(request_spec):
     namespace = request_spec["request"]["namespace"]
     request_user = request_spec["request"]["userInfo"]["username"]
 
-    app.logger.info(
-        "##################################################################"
-    )
+    app.logger.info("##################################################################")
     app.logger.info(f"Deny Level: {magtape_deny_level}")
     app.logger.info(f"Processing {workload_type}: {namespace}/{workload}")
     app.logger.info(f"Request User: {request_user}")
-    app.logger.debug(
-        f"Request Object: \n{json.dumps(request_spec, indent=2, sort_keys=True)}"
-    )
+    app.logger.debug(f"Request Object: \n{json.dumps(request_spec, indent=2, sort_keys=True)}")
 
     if (
         "ownerReferences" in request_spec["request"]["object"]["metadata"]
-        and request_spec["request"]["object"]["metadata"]["ownerReferences"][0]["kind"]
-        == "ReplicaSet"
+        and request_spec["request"]["object"]["metadata"]["ownerReferences"][0]["kind"] == "ReplicaSet"
     ):
 
         # Set Owner Info
-        k8s_object_owner_kind = request_spec["request"]["object"]["metadata"][
-            "ownerReferences"
-        ][0]["kind"]
-        k8s_object_owner_name = request_spec["request"]["object"]["metadata"][
-            "ownerReferences"
-        ][0]["name"]
+        k8s_object_owner_kind = request_spec["request"]["object"]["metadata"]["ownerReferences"][0]["kind"]
+        k8s_object_owner_name = request_spec["request"]["object"]["metadata"]["ownerReferences"][0]["name"]
 
         # Set Skip for Alert
         skip_alert = True
@@ -182,9 +171,7 @@ def magtape(request_spec):
     else:
 
         # Run MagTape Specific checks on requests objects
-        response_message = build_response_message(
-            request_spec, response_message, namespace
-        )
+        response_message = build_response_message(request_spec, response_message, namespace)
 
         # Output policy decision
         for policy_response in response_message.split(", "):
@@ -277,9 +264,7 @@ def magtape(request_spec):
 
         if "FAIL" in response_message or alert_should_send:
 
-            send_k8s_event(
-                magtape_pod_name, namespace, workload_type, workload, response_message
-            )
+            send_k8s_event(magtape_pod_name, namespace, workload_type, workload, response_message)
 
     else:
 
@@ -296,9 +281,7 @@ def magtape(request_spec):
                 f'Skipping alert for child object of previously validated parent "{k8s_object_owner_kind}/{k8s_object_owner_name}"'
             )
 
-        elif (
-            "FAIL" in response_message and slack_passive == "TRUE" or alert_should_send
-        ):
+        elif "FAIL" in response_message and slack_passive == "TRUE" or alert_should_send:
 
             # Add default Webhook URL to alert Targets
             alert_targets["default"] = slack_webhook_url_default
@@ -338,28 +321,18 @@ def magtape(request_spec):
 
                 else:
 
-                    app.logger.info(
-                        f"Slack target ({slack_target_type}) is blank. Skipping alert(s)"
-                    )
+                    app.logger.info(f"Slack target ({slack_target_type}) is blank. Skipping alert(s)")
 
             # Increment Prometheus Counters
             if is_allowed:
 
-                magtape_metrics_requests.labels(
-                    count_type="allowed", ns=namespace, alert_sent="true"
-                ).inc()
-                magtape_metrics_requests.labels(
-                    count_type="total", ns=namespace, alert_sent="true"
-                ).inc()
+                magtape_metrics_requests.labels(count_type="allowed", ns=namespace, alert_sent="true").inc()
+                magtape_metrics_requests.labels(count_type="total", ns=namespace, alert_sent="true").inc()
 
             else:
 
-                magtape_metrics_requests.labels(
-                    count_type="denied", ns=namespace, alert_sent="true"
-                ).inc()
-                magtape_metrics_requests.labels(
-                    count_type="total", ns=namespace, alert_sent="true"
-                ).inc()
+                magtape_metrics_requests.labels(count_type="denied", ns=namespace, alert_sent="true").inc()
+                magtape_metrics_requests.labels(count_type="total", ns=namespace, alert_sent="true").inc()
 
     else:
 
@@ -368,21 +341,13 @@ def magtape(request_spec):
         # Increment Prometheus Counters
         if is_allowed:
 
-            magtape_metrics_requests.labels(
-                count_type="allowed", ns=namespace, alert_sent="false"
-            ).inc()
-            magtape_metrics_requests.labels(
-                count_type="total", ns=namespace, alert_sent="false"
-            ).inc()
+            magtape_metrics_requests.labels(count_type="allowed", ns=namespace, alert_sent="false").inc()
+            magtape_metrics_requests.labels(count_type="total", ns=namespace, alert_sent="false").inc()
 
         else:
 
-            magtape_metrics_requests.labels(
-                count_type="denied", ns=namespace, alert_sent="false"
-            ).inc()
-            magtape_metrics_requests.labels(
-                count_type="total", ns=namespace, alert_sent="false"
-            ).inc()
+            magtape_metrics_requests.labels(count_type="denied", ns=namespace, alert_sent="false").inc()
+            magtape_metrics_requests.labels(count_type="total", ns=namespace, alert_sent="false").inc()
 
     # Build Admission Response
     admissionReview = {
@@ -392,9 +357,7 @@ def magtape(request_spec):
     }
 
     app.logger.info("Sending Response to K8s API Server")
-    app.logger.debug(
-        f"Admission Review: \n{json.dumps(admissionReview, indent=2, sort_keys=True)}"
-    )
+    app.logger.debug(f"Admission Review: \n{json.dumps(admissionReview, indent=2, sort_keys=True)}")
 
     return admissionReview
 
@@ -486,24 +449,16 @@ def build_response_message(object_spec, response_message, namespace):
                 app.logger.debug(f"Policy Failed")
 
                 # Increment Prometheus Counters
-                magtape_metrics_policies.labels(
-                    count_type="total", policy=policy_name, ns=namespace
-                ).inc()
-                magtape_metrics_policies.labels(
-                    count_type="fail", policy=policy_name, ns=namespace
-                ).inc()
+                magtape_metrics_policies.labels(count_type="total", policy=policy_name, ns=namespace).inc()
+                magtape_metrics_policies.labels(count_type="fail", policy=policy_name, ns=namespace).inc()
 
         else:
 
             app.logger.debug(f"Policy Passed")
 
             # Increment Prometheus Counters
-            magtape_metrics_policies.labels(
-                count_type="total", policy=policy_name, ns=namespace
-            ).inc()
-            magtape_metrics_policies.labels(
-                count_type="pass", policy=policy_name, ns=namespace
-            ).inc()
+            magtape_metrics_policies.labels(count_type="total", policy=policy_name, ns=namespace).inc()
+            magtape_metrics_policies.labels(count_type="pass", policy=policy_name, ns=namespace).inc()
 
     return response_message
 
@@ -530,9 +485,7 @@ def get_namespace_slack(request_namespace, slack_webhook_secret):
 
     try:
 
-        request_ns_secret = v1.read_namespaced_secret(
-            slack_webhook_secret, request_namespace
-        )
+        request_ns_secret = v1.read_namespaced_secret(slack_webhook_secret, request_namespace)
 
     except ApiException as exception:
 
@@ -540,25 +493,19 @@ def get_namespace_slack(request_namespace, slack_webhook_secret):
 
             request_ns_secret = ""
 
-            app.logger.debug(
-                f'Slack Webhook Secret not detected for namespace "{request_namespace}": {exception}'
-            )
+            app.logger.debug(f'Slack Webhook Secret not detected for namespace "{request_namespace}": {exception}')
 
             return None
 
         else:
 
-            app.logger.info(
-                f'Unable to query secrets in request namespace "{request_namespace}": {exception}'
-            )
+            app.logger.info(f'Unable to query secrets in request namespace "{request_namespace}": {exception}')
 
             return None
 
     if slack_webhook_secret_key in request_ns_secret.data:
 
-        slack_webhook_url_customer = base64.b64decode(
-            request_ns_secret.data[slack_webhook_secret_key]
-        ).decode()
+        slack_webhook_url_customer = base64.b64decode(request_ns_secret.data[slack_webhook_secret_key]).decode()
 
     else:
 
@@ -570,17 +517,13 @@ def get_namespace_slack(request_namespace, slack_webhook_secret):
 
     if slack_webhook_url_customer:
 
-        app.logger.info(
-            f'Slack Webhook Secret Detected for namespace "{request_namespace}"'
-        )
+        app.logger.info(f'Slack Webhook Secret Detected for namespace "{request_namespace}"')
 
         return slack_webhook_url_customer
 
     else:
 
-        app.logger.info(
-            f'No Slack Incoming Webhook URL Secret Detected for namespace "{request_namespace}'
-        )
+        app.logger.info(f'No Slack Incoming Webhook URL Secret Detected for namespace "{request_namespace}')
 
         return None
 
@@ -590,9 +533,7 @@ def get_namespace_slack(request_namespace, slack_webhook_secret):
 ################################################################################
 
 
-def send_k8s_event(
-    magtape_pod_name, namespace, workload_type, workload, response_message
-):
+def send_k8s_event(magtape_pod_name, namespace, workload_type, workload, response_message):
 
     """Function to create a k8s event in the target namespace upon policy failure"""
 
@@ -610,9 +551,7 @@ def send_k8s_event(
     k8s_event_time = datetime.datetime.now(datetime.timezone.utc)
 
     # Build involved object for k8s event
-    k8s_involved_object = client.V1ObjectReference(
-        name=workload, kind=workload_type, namespace=namespace
-    )
+    k8s_involved_object = client.V1ObjectReference(name=workload, kind=workload_type, namespace=namespace)
 
     # Build metadata for k8s event
     k8s_event_metadata = client.V1ObjectMeta(
@@ -738,9 +677,7 @@ def send_slack_alert(
         ],
     }
 
-    app.logger.debug(
-        f"Slack Alert Data: \n{json.dumps(slack_alert_data, indent=2, sort_keys=True)}"
-    )
+    app.logger.debug(f"Slack Alert Data: \n{json.dumps(slack_alert_data, indent=2, sort_keys=True)}")
 
     try:
 
@@ -753,15 +690,11 @@ def send_slack_alert(
 
     except requests.exceptions.RequestException as exception:
 
-        app.logger.info(
-            f"Problem sending Slack Alert ({slack_target_type}): {exception}"
-        )
+        app.logger.info(f"Problem sending Slack Alert ({slack_target_type}): {exception}")
 
     else:
 
-        app.logger.info(
-            f"Slack Alert ({slack_target_type}) was successful ({slack_response.status_code})"
-        )
+        app.logger.info(f"Slack Alert ({slack_target_type}) was successful ({slack_response.status_code})")
         app.logger.debug(f"Slack API Response ({slack_target_type}): {slack_response}")
 
 
@@ -775,7 +708,10 @@ def main():
     app.logger.info("MagTape Startup")
 
     app.run(
-        host="0.0.0.0", port=5000, debug=False, threaded=True,
+        host="0.0.0.0",
+        port=5000,
+        debug=False,
+        threaded=True,
     )
 
 
