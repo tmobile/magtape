@@ -7,11 +7,12 @@ verify_ssl = true
 
 [packages]
 flask = "*"
-kubernetes = "~=11.0"
-prometheus-client = "*"
+kubernetes = "~=21.0"
+prometheus-client = "~=0.14"
 prometheus-flask-exporter = "*"
 gunicorn = "*"
 werkzeug = "*"
+click = "~=8.1"
 
 [requires]
 python_version = "3.8"
