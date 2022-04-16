@@ -351,7 +351,7 @@ def magtape(request_spec):
 
     # Build Admission Response
     admissionReview = {
-        "apiVersion": "admission.k8s.io/v1beta1",
+        "apiVersion": "admission.k8s.io/v1",
         "kind": "AdmissionReview",
         "response": admission_response,
     }
@@ -547,7 +547,7 @@ def send_k8s_event(magtape_pod_name, namespace, workload_type, workload, respons
             raise Exception("Could not configure kubernetes python client")
 
     # Create an instance of the API class
-    api_instance = client.CoreV1Api()
+    api_instance = client.EventsV1Api()
     k8s_event_time = datetime.datetime.now(datetime.timezone.utc)
 
     # Build involved object for k8s event
@@ -555,23 +555,21 @@ def send_k8s_event(magtape_pod_name, namespace, workload_type, workload, respons
 
     # Build metadata for k8s event
     k8s_event_metadata = client.V1ObjectMeta(
-        generate_name="magtape-policy-failure.",
+        generate_name="magtape-policy-failure",
         namespace=namespace,
         labels={"magtape-event": "policy-failure"},
     )
 
     # Build body for k8s event
-    k8s_event_body = client.V1Event(
+    k8s_event_body = client.EventsV1Event(
         action="MagTape Policy Failure",
         event_time=k8s_event_time,
-        first_timestamp=k8s_event_time,
-        involved_object=k8s_involved_object,
-        last_timestamp=k8s_event_time,
-        message=response_message,
+        regarding=k8s_involved_object,
+        note=response_message,
         metadata=k8s_event_metadata,
         reason="MagTapePolicyFailure",
         type="Warning",
-        reporting_component="magtape",
+        reporting_controller="magtape",
         reporting_instance=magtape_pod_name,
     )
 
