@@ -660,7 +660,7 @@ def init_tls_pair(namespace):
             logging.error(f"Exception loading local kubeconfig: {exception}")
             sys.exit(1)
 
-    configuration = client.Configuration()
+    configuration = client.Configuration().get_default_copy()
     core_api = client.CoreV1Api(client.ApiClient(configuration))
     certificates_api = client.CertificatesV1beta1Api(client.ApiClient(configuration))
 
@@ -1183,7 +1183,7 @@ def init_vwc(namespace, magtape_tls_byoc):
             logging.error(f"Exception loading local kubeconfig: {exception}")
             sys.exit(1)
 
-    configuration = client.Configuration()
+    configuration = client.Configuration().get_default_copy()
     core_api = client.CoreV1Api(client.ApiClient(configuration))
     admission_api = client.AdmissionregistrationV1Api(client.ApiClient(configuration))
 
