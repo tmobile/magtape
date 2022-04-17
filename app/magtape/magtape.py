@@ -555,7 +555,7 @@ def send_k8s_event(magtape_pod_name, namespace, workload_type, workload, respons
 
     # Build metadata for k8s event
     k8s_event_metadata = client.V1ObjectMeta(
-        generate_name="magtape-policy-failure",
+        generate_name="magtape-policy-failure-",
         namespace=namespace,
         labels={"magtape-event": "policy-failure"},
     )
