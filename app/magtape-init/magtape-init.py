@@ -115,7 +115,7 @@ def build_k8s_csr(namespace, service_name, key):
 
     """Function to generate Kubernetes CSR"""
 
-    logging.info("Got to building client-side CSR")
+    logging.debug("Got to building client-side CSR")
 
     # Store all dns names used for CN/SAN's
     dns_names = list()
@@ -156,14 +156,15 @@ def build_k8s_csr(namespace, service_name, key):
         labels={"app": "magtape"},
     )
 
-    k8s_csr_spec = client.V1beta1CertificateSigningRequestSpec(
+    k8s_csr_spec = client.V1CertificateSigningRequestSpec(
         groups=["system:authenticated"],
-        usages=["digital signature", "key encipherment", "server auth"],
+        usages=["digital signature", "key encipherment", "client auth"],
+        signer_name="kubernetes.io/kube-apiserver-client",
         request=base64.b64encode(csr_pem).decode("utf-8").rstrip(),
     )
 
-    k8s_csr = client.V1beta1CertificateSigningRequest(
-        api_version="certificates.k8s.io/v1beta1",
+    k8s_csr = client.V1CertificateSigningRequest(
+        api_version="certificates.k8s.io/v1",
         kind="CertificateSigningRequest",
         metadata=k8s_csr_meta,
         spec=k8s_csr_spec,
@@ -240,6 +241,7 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
         sys.exit(1)
 
     logging.info(f'Certificate signing request "{new_k8s_csr_name}" has been created')
+    logging.debug(f'Verifying certificate signing request "{new_k8s_csr_name}" after creation')
 
     # Read newly created K8s CSR resource
     try:
@@ -252,15 +254,21 @@ def submit_and_approve_k8s_csr(namespace, certificates_api, k8s_csr):
         logging.debug(f"Exception:\n{exception}\n")
         sys.exit(1)
 
-    new_k8s_csr_approval_conditions = client.V1beta1CertificateSigningRequestCondition(
+    logging.debug(f"K8s CSR Status:\n{new_k8s_csr_body}")
+
+    new_k8s_csr_approval_conditions = client.V1CertificateSigningRequestCondition(
         last_update_time=datetime.datetime.now(datetime.timezone.utc),
         message=f"This certificate was approved by MagTape (pod: {magtape_pod_name})",
         reason="MT-Approve",
         type="Approved",
+        status="True",
     )
 
     # Update the CSR status
     new_k8s_csr_body.status.conditions = [new_k8s_csr_approval_conditions]
+
+    logging.debug(f"New K8s CSR Approval Conditions:\n{new_k8s_csr_body}")
+    logging.debug(f'Approving certificate signing request "{new_k8s_csr_name}"')
 
     # Patch the k8s CSR resource
     try:
@@ -662,7 +670,7 @@ def init_tls_pair(namespace):
 
     configuration = client.Configuration().get_default_copy()
     core_api = client.CoreV1Api(client.ApiClient(configuration))
-    certificates_api = client.CertificatesV1beta1Api(client.ApiClient(configuration))
+    certificates_api = client.CertificatesV1Api(client.ApiClient(configuration))
 
     # Read existing secret
     tls_secret, tls_pair, secret_exists, magtape_tls_byoc = read_tls_pair(
