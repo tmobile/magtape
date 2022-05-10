@@ -12,6 +12,7 @@ on:
   push:
     branches:
       - master
+      - support-new-k8s
 
 # Jobs
 jobs:

@@ -94,9 +94,9 @@ install:
 .PHONY: uninstall
 uninstall:
 
-	kubectl delete -f $(DEPLOY_DIR)/install.yaml
-	kubectl delete validatingwebhookconfiguration magtape-webhook
-	kubectl delete csr magtape-svc.magtape-system.cert-request
+	kubectl delete -f $(DEPLOY_DIR)/install.yaml --ignore-not-found
+	kubectl delete validatingwebhookconfiguration magtape-webhook --ignore-not-found
+	kubectl delete csr magtape-svc.magtape-system.cert-request --ignore-not-found
 
 # Restart Magtape Pods (Demo Install)
 .PHONY: restart

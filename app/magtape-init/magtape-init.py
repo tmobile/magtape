@@ -130,7 +130,12 @@ def build_k8s_csr(namespace, service_name, key):
     csr = x509.CertificateSigningRequestBuilder()
     csr = csr.subject_name(
         # Provide Common Name
-        x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, dns_names[2])])
+        x509.Name(
+            [
+                x509.NameAttribute(NameOID.COMMON_NAME, "system:node:" + dns_names[2]),
+                x509.NameAttribute(NameOID.ORGANIZATION_NAME, "system:nodes")
+            ]
+        )
     )
 
     csr = csr.add_extension(
@@ -158,8 +163,8 @@ def build_k8s_csr(namespace, service_name, key):
 
     k8s_csr_spec = client.V1CertificateSigningRequestSpec(
         groups=["system:authenticated"],
-        usages=["digital signature", "key encipherment", "client auth"],
-        signer_name="kubernetes.io/kube-apiserver-client",
+        usages=["digital signature", "key encipherment", "server auth"],
+        signer_name="kubernetes.io/kubelet-serving",
         request=base64.b64encode(csr_pem).decode("utf-8").rstrip(),
     )
 
