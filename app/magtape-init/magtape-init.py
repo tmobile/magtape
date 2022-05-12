@@ -63,7 +63,7 @@ def check_for_byoc(namespace, secret, core_api):
 
     """Function to check for the "Bring Your Own Cert" annotation"""
 
-    logging.info("We made it to check_for_byoc")
+    logging.debug("We made it to check_for_byoc")
 
     secret_name = secret.metadata.name
     secret_annotations = secret.metadata.annotations
