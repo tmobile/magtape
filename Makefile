@@ -17,7 +17,7 @@
 # software without specific prior written permission.
 
 
-MAGTAPE_VERSION := v2.4.0-rc1
+MAGTAPE_VERSION := v2.4.0
 OPA_VERSION := 0.37.2-static
 KUBE_MGMT_VERSION := 4.1.1
 
