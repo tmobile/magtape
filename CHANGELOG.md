@@ -142,3 +142,27 @@ Bumps [urllib3](https://github.com/urllib3/urllib3) from 1.26.3 to 1.26.4 in /ap
 - [Release notes](https://github.com/urllib3/urllib3/releases)
 - [Changelog](https://github.com/urllib3/urllib3/blob/main/CHANGES.rst)
 - [Commits](https://github.com/urllib3/urllib3/commit/a8913042b676c510e94fc2b097f6b514ae11a537)
+
+## v2.4.0
+
+This release is primarily focused on adding support for newer Kubernetes versions (v1.19+), but does introdice breaking changes for prior Kubernetes versions.
+
+**MagTape v2.3.3 should be used for Kubernetes versions below v1.19.0**
+
+A newer release of the Kubernetes Python Client library are using in MagTape v2.4.0 that remove some previously deprecated API's and change the way the CertificateSigningRequest resource is handled for the webhook Cert Bundle.
+
+### Enhancements
+
+- Bump Kubernetes Python Client to v23.3.0 to support new K8s versions (#120)
+- Bump OPA version to v0.37.2, and move to using the "static" image for arm64 support (#109)
+- Bump kube-mgmt to v4.1.1
+- Bump KinD node images/matrix to test aginst k8s v1.19, v1.20, v1.21, and v1.22 for CI
+- Bump KinD Github Action to v0.12.0 for CI
+- Bump "black" Python linter to v22.3.0 for CI/local tooling
+- Bump kubectl to v1.22.5 for CI
+- Set "black" Python linter line length to 120 characters
+- Move to `admission.k8s.io/v1` for AdmissionReview
+- Move to `events.k8s.io/v1` for Events
+- Move to `admissionregistration.k8s.io/v1` for VWC
+- Add `sign` verb for MagTape cluster RBAC
+- Move to support v4.x of `yq` utility syntax for Makefile/CI
