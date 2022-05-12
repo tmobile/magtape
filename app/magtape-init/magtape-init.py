@@ -133,7 +133,7 @@ def build_k8s_csr(namespace, service_name, key):
         x509.Name(
             [
                 x509.NameAttribute(NameOID.COMMON_NAME, "system:node:" + dns_names[2]),
-                x509.NameAttribute(NameOID.ORGANIZATION_NAME, "system:nodes")
+                x509.NameAttribute(NameOID.ORGANIZATION_NAME, "system:nodes"),
             ]
         )
     )
