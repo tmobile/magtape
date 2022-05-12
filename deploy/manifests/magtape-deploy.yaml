@@ -89,7 +89,7 @@ spec:
           - name: magtape-tls
             mountPath: /tls
       - name: opa
-        image: openpolicyagent/opa:0.37.2
+        image: openpolicyagent/opa:0.37.2-static
         args:
           - "run"
           - "--server"
