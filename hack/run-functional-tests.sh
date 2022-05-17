@@ -18,6 +18,9 @@
 # its contributors may be used to endorse or promote products derived from this
 # software without specific prior written permission.
 
+set -o nounset
+set -o pipefail
+
 ################################################################################
 #### Variables, Arrays, and Hashes #############################################
 ################################################################################
