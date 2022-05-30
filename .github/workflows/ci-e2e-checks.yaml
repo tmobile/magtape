@@ -120,6 +120,8 @@ jobs:
         sudo add-apt-repository ppa:rmescandon/yq
         sudo apt update
         sudo apt install yq -y
+        yq --help
+        yq --version
 
     - name: Execute Functional Tests
       timeout-minutes: 5
