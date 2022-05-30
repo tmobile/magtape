@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - master
+      - support-new-k8s
   push:
     branches:
       - master
