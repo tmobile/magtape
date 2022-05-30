@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -x
+
 # Copyright 2020 T-Mobile, USA, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
