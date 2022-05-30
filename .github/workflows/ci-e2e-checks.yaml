@@ -101,13 +101,7 @@ jobs:
         make build-single-manifest
         echo "Install MagTape"
         make install
-        EXPECTED_REPLICAS=$(kubectl get deploy -n magtape-system magtape -o jsonpath='{.status.replicas}')
-        READY_REPLICAS=$(kubectl get deploy -n magtape-system magtape -o jsonpath='{.status.readyReplicas}')
-        while [ "${READY_REPLICAS}" != "${EXPECTED_REPLICAS}" ]; do
-          READY_REPLICAS=$(kubectl get deploy -n magtape-system magtape -o jsonpath='{.status.readyReplicas}')
-          echo "Replicas aren't all ready yet: ${READY_REPLICAS:=0}/${EXPECTED_REPLICAS}"
-          sleep 2
-        done
+        kubectl wait --for=condition=available --timeout=120s deployment/magtape -n magtape-system
 
     - name: Configure Test Namespace
       timeout-minutes: 5
@@ -120,7 +114,6 @@ jobs:
         sudo add-apt-repository ppa:rmescandon/yq
         sudo apt update
         sudo apt install yq -y
-        yq --help
         yq --version
 
     - name: Execute Functional Tests
