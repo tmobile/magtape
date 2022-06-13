@@ -15,19 +15,19 @@ jobs:
     strategy:
       matrix:
         k8s-version:
+          - v1.22
+          - v1.21
           - v1.20
           - v1.19
-          - v1.18
-          - v1.17
         include:
+          - k8s-version: v1.22
+            kind-node-image: kindest/node:v1.22.7@sha256:1dfd72d193bf7da64765fd2f2898f78663b9ba366c2aa74be1fd7498a1873166
+          - k8s-version: v1.21
+            kind-node-image: kindest/node:v1.21.10@sha256:84709f09756ba4f863769bdcabe5edafc2ada72d3c8c44d6515fc581b66b029c
           - k8s-version: v1.20
-            kind-node-image: kindest/node:v1.20.7@sha256:cbeaf907fc78ac97ce7b625e4bf0de16e3ea725daf6b04f930bd14c67c671ff9
+            kind-node-image: kindest/node:v1.20.15@sha256:393bb9096c6c4d723bb17bceb0896407d7db581532d11ea2839c80b28e5d8deb
           - k8s-version: v1.19
-            kind-node-image: kindest/node:v1.19.11@sha256:07db187ae84b4b7de440a73886f008cf903fcf5764ba8106a9fd5243d6f32729
-          - k8s-version: v1.18
-            kind-node-image: kindest/node:v1.18.19@sha256:7af1492e19b3192a79f606e43c35fb741e520d195f96399284515f077b3b622c
-          - k8s-version: v1.17
-            kind-node-image: kindest/node:v1.17.17@sha256:66f1d0d91a88b8a001811e2f1054af60eef3b669a9a74f9b6db871f2f1eeed00
+            kind-node-image: kindest/node:v1.19.16@sha256:81f552397c1e6c1f293f967ecb1344d8857613fb978f963c30e907c32f598467
 
     name: e2e-tests for K8s ${{ matrix.k8s-version }}
 
@@ -83,7 +83,7 @@ jobs:
       timeout-minutes: 10
       uses: engineerd/setup-kind@v0.5.0
       with:
-          version: "v0.11.1"
+          version: "v0.12.0"
           image: ${{ matrix.kind-node-image }}
 
     - name: Install MagTape
@@ -101,13 +101,7 @@ jobs:
         make build-single-manifest
         echo "Install MagTape"
         make install
-        EXPECTED_REPLICAS=$(kubectl get deploy -n magtape-system magtape -o jsonpath='{.status.replicas}')
-        READY_REPLICAS=$(kubectl get deploy -n magtape-system magtape -o jsonpath='{.status.readyReplicas}')
-        while [ "${READY_REPLICAS}" != "${EXPECTED_REPLICAS}" ]; do
-          READY_REPLICAS=$(kubectl get deploy -n magtape-system magtape -o jsonpath='{.status.readyReplicas}')
-          echo "Replicas aren't all ready yet: ${READY_REPLICAS:=0}/${EXPECTED_REPLICAS}"
-          sleep 2
-        done
+        kubectl wait --for=condition=available --timeout=120s deployment/magtape -n magtape-system
 
     - name: Configure Test Namespace
       timeout-minutes: 5
@@ -120,6 +114,7 @@ jobs:
         sudo add-apt-repository ppa:rmescandon/yq
         sudo apt update
         sudo apt install yq -y
+        yq --version
 
     - name: Execute Functional Tests
       timeout-minutes: 5

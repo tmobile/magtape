@@ -45,12 +45,13 @@ $ kubectl api-versions | grep admissionregistration.k8s.io
 The result should be:
 
 ```shell
-admissionregistration.k8s.io/v1beta1
+admissionregistration.k8s.io/v1
 ```
 
 In addition, the `MutatingAdmissionWebhook` and `ValidatingAdmissionWebhook` admission controllers should be added and listed in the correct order in the admission-control flag of kube-apiserver.
 
 NOTE: MagTape has been tested and is known to work for Kubernetes versions 1.13+ on various Distros/Cloud Providers (DOKS, GKE, EKS, AKS, PKS, and KinD)
+NOTE: MagTape v2.4.0+ no longer supports Kubernetes versions below v1.19.0. Please use MagTape v2.3.3 for earlier versions of Kubernetes
 
 #### Permissions
 
@@ -67,7 +68,7 @@ You can use the following command to install MagTape and the example policies fr
 **NOTE:** The `master` branch of this repository is considered a working branch and may not always be in a functioning state. It's best to select a specific tag for a stable version of MagTape
 
 ```
-$ kubectl apply -f https://raw.githubusercontent.com/tmobile/magtape/v2.3.3/deploy/install.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/tmobile/magtape/v2.4.0/deploy/install.yaml
 ```
 
 #### This will do the following

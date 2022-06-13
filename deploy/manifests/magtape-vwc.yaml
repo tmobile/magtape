@@ -1,4 +1,4 @@
-apiVersion: admissionregistration.k8s.io/v1beta1
+apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: magtape-webhook
@@ -6,6 +6,9 @@ metadata:
     app: magtape
 webhooks:
   - name: magtape.webhook.k8s.t-mobile.com
+    admissionReviewVersions:
+      - v1
+    sideEffects: None
     clientConfig:
       service:
         name: magtape-svc

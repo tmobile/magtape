@@ -17,9 +17,9 @@
 # software without specific prior written permission.
 
 
-MAGTAPE_VERSION := v2.3.3
-OPA_VERSION := 0.25.2
-KUBE_MGMT_VERSION := 0.11
+MAGTAPE_VERSION := v2.4.0
+OPA_VERSION := 0.37.2-static
+KUBE_MGMT_VERSION := 4.1.1
 
 REPO_ROOT := $(CURDIR)
 APP_NAME ?= "magtape.py"
@@ -31,7 +31,7 @@ TEST_NAMESPACE ?= "test1"
 DOCKER := docker
 
 # Pin utilities at specific versions for CI stability
-KUBECTL_VERSION ?= v1.19.1
+KUBECTL_VERSION ?= v1.22.5
 
 ###############################################################################
 # CI Bootstrap Related Targets ################################################
@@ -94,9 +94,9 @@ install:
 .PHONY: uninstall
 uninstall:
 
-	kubectl delete -f $(DEPLOY_DIR)/install.yaml
-	kubectl delete validatingwebhookconfiguration magtape-webhook
-	kubectl delete csr magtape-svc.magtape-system.cert-request
+	kubectl delete -f $(DEPLOY_DIR)/install.yaml --ignore-not-found
+	kubectl delete validatingwebhookconfiguration magtape-webhook --ignore-not-found
+	kubectl delete csr magtape-svc.magtape-system.cert-request --ignore-not-found
 
 # Restart Magtape Pods (Demo Install)
 .PHONY: restart
@@ -126,15 +126,15 @@ test-python: unit-python
 .PHONY: lint-python
 lint-python:
 
-	black app/magtape-init/
-	black app/magtape/
+	black --line-length 120 app/magtape-init/
+	black --line-length 120 app/magtape/
 
 # Verify linting of Python during CI
 .PHONY: ci-lint-python
 ci-lint-python:
 
-	black --check app/magtape-init/
-	black --check app/magtape/
+	black --line-length 120 --check app/magtape-init/
+	black --line-length 120 --check app/magtape/
 
 ###############################################################################
 # Rego Targets ################################################################
@@ -248,7 +248,7 @@ release: echo
 .PHONY: build-magtape-init-latest
 build-magtape-init-latest:
 
-	$(DOCKER) build -t tmobile/magtape-init:latest app/magtape-init/
+	$(DOCKER) build -t tmobile/magtape-init:latest app/magtape-init/ --load
 
 # Push MagTape-Init container image (Latest) to DockerHub
 .PHONY: push-magtape-init-latest
@@ -260,7 +260,7 @@ push-magtape-init-latest:
 .PHONY: build-magtape-latest
 build-magtape-latest:
 
-	$(DOCKER) build -t tmobile/magtape:latest app/magtape/
+	$(DOCKER) build -t tmobile/magtape:latest app/magtape/ --load
 
 # Push MagTape container image (Latest) to DockerHub
 .PHONY: push-magtape-latest
@@ -284,7 +284,7 @@ new-magtape-latest: build-magtape-latest push-magtape-latest
 .PHONY: build-magtape-init
 build-magtape-init:
 
-	$(DOCKER) build -t tmobile/magtape-init:${MAGTAPE_VERSION} app/magtape-init/
+	$(DOCKER) build -t tmobile/magtape-init:${MAGTAPE_VERSION} app/magtape-init/ --load
 
 # Push MagTape-Init container image (Specific Release) to DockerHub
 .PHONY: push-magtape-init
@@ -296,7 +296,7 @@ push-magtape-init:
 .PHONY: build-magtape
 build-magtape:
 
-	$(DOCKER) build -t tmobile/magtape:${MAGTAPE_VERSION} app/magtape/
+	$(DOCKER) build -t tmobile/magtape:${MAGTAPE_VERSION} app/magtape/ --load
 
 # Push MagTape container image (Specific Release) to DockerHub
 .PHONY: push-magtape

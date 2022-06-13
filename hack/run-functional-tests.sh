@@ -18,6 +18,9 @@
 # its contributors may be used to endorse or promote products derived from this
 # software without specific prior written permission.
 
+set -o nounset
+set -o pipefail
+
 ################################################################################
 #### Variables, Arrays, and Hashes #############################################
 ################################################################################
@@ -83,22 +86,22 @@ run_resource_tests() {
   # grab local resource from ${TESTS_MANIFEST}
   local resource
   
-  resource=$(yq read "${TESTS_MANIFEST}" "resources.[${resource_index}].kind")
+  resource=$(yq eval ".resources.[${resource_index}].kind" "${TESTS_MANIFEST}")
 
   # grab local test type from ${TESTS_MANIFEST}
   local test_type
   
-  test_type=$(yq read "${TESTS_MANIFEST}" "resources.[${resource_index}].desired")
+  test_type=$(yq eval ".resources.[${resource_index}].desired" "${TESTS_MANIFEST}")
 
   # grab local length of the list of test manifests to use
   local manifest_array_length
   
-  manifest_array_length=$(yq read -l "${TESTS_MANIFEST}" "resources.[${resource_index}].manifests")
+  manifest_array_length=$(yq eval ".resources.[${resource_index}].manifests | length" "${TESTS_MANIFEST}")
 
   # grab local user_script specified for pre/post/between running
   local user_script
   
-  user_script=$(yq read -P "${TESTS_MANIFEST}" "resources.[${resource_index}].script")
+  user_script=$(yq eval -P ".resources.[${resource_index}].script" "${TESTS_MANIFEST}")
 
   # full path to the user specified script associate with this stanza in the manifest
   local user_script_path="testing/${resource}/scripts/${user_script}"
@@ -130,13 +133,13 @@ run_resource_tests() {
         local testfile
         
         # try getting the name of the file using the new style 'file' map key
-        testfile=$(yq read -P "${TESTS_MANIFEST}" "resources.[${resource_index}].manifests.[${manifest_index}].file")
+        testfile=$(yq eval -P ".resources.[${resource_index}].manifests.[${manifest_index}].file" "${TESTS_MANIFEST}")
 
         # declare file_description as local
         local file_description
         
         # get the file_description with 'name 'map key
-        file_description=$(yq read -P "${TESTS_MANIFEST}" "resources.[${resource_index}].manifests.[${manifest_index}].name")
+        file_description=$(yq eval -P ".resources.[${resource_index}].manifests.[${manifest_index}].name" "${TESTS_MANIFEST}")
 
         # declare test_file_path as local
         local test_file_path
@@ -148,7 +151,7 @@ run_resource_tests() {
         # if it doesn't try falling back to the legacy style where the array index contains the filename instead of a map
         if [[ -z "${testfile}" ]]; then
 
-            testfile=$(yq read -P "${TESTS_MANIFEST}" "resources.[${resource_index}].manifests.[${manifest_index}]")
+            testfile=$(yq eval -P ".resources.[${resource_index}].manifests.[${manifest_index}]" "${TESTS_MANIFEST}")
 
         fi
 
@@ -257,7 +260,7 @@ scope_and_run_tests() {
 
   # size the array of resources
   local resource_array_length
-  resource_array_length=$(yq read -l "${TESTS_MANIFEST}" 'resources')
+  resource_array_length=$(yq eval '.resources | length' "${TESTS_MANIFEST}")
 
 
   # loop through all resources in the supplied manifest
@@ -266,10 +269,10 @@ scope_and_run_tests() {
 
     # check if we're doing all resources or if the resource kind at $i matches the requested kind
     # double brackets are technically correct; the BEST kind of correct!
-    if [[ "${TEST_RESOURCE_KIND}" == "all" ]] || [[ "${TEST_RESOURCE_KIND}" == "$(yq read "${TESTS_MANIFEST}" "resources.[${i}].kind")" ]]; then
+    if [[ "${TEST_RESOURCE_KIND}" == "all" ]] || [[ "${TEST_RESOURCE_KIND}" == "$(yq eval ".resources.[${i}].kind" "${TESTS_MANIFEST}")" ]]; then
 
       # check if we're doing all desired results or if the resoured desired result at $i matches the requested desired result
-      if [[ "${TEST_RESOURCE_DESIRED}" == "all" ]] || [[ "${TEST_RESOURCE_DESIRED}" == "$(yq read "${TESTS_MANIFEST}" "resources.[${i}].desired")" ]]; then
+      if [[ "${TEST_RESOURCE_DESIRED}" == "all" ]] || [[ "${TEST_RESOURCE_DESIRED}" == "$(yq eval ".resources.[${i}].desired" "${TESTS_MANIFEST}")" ]]; then
 
         run_resource_tests "${action}" "${i}"
       fi
