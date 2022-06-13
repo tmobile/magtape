@@ -7,7 +7,7 @@ on:
 
 # Variables to be used throughout the workflow manifest
 env:
-  TARGET_PLATFORMS: linux/amd64,linux/arm64,linux/ppc64le
+  TARGET_PLATFORMS: linux/amd64,linux/arm64
 
 jobs:
 
