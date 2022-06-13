@@ -149,7 +149,7 @@ This release is primarily focused on adding support for newer Kubernetes version
 
 **MagTape v2.3.3 should be used for Kubernetes versions below v1.19.0**
 
-A newer release of the Kubernetes Python Client library are using in MagTape v2.4.0 that remove some previously deprecated API's and change the way the CertificateSigningRequest resource is handled for the webhook Cert Bundle.
+MagTape v2.4.0 is using a newer release of the Kubernetes Python Client library which removed some previously deprecated API's and changed the way the CertificateSigningRequest resource is handled for the webhook Cert Bundle.
 
 ### Enhancements
 
